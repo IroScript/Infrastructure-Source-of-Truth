@@ -1,0 +1,72 @@
+{
+  "snapshot_timestamp_utc": "2026-10-06T16:24:07.914362+00:00",
+  "source_vm": "Azure Cloud VM",
+  "hostname": "azureuser-vm",
+  "target_platform": "Google Cloud VM",
+  "trust_baseline_version": "2.1.0",
+  "manifest_version": "2.0.0",
+  "source_of_truth_repository": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git",
+  "projects_snapshot": {
+    "whatsapp": {
+      "branch": "main",
+      "head_sha": "81e845e89c",
+      "status": "ahead 4"
+    },
+    "yt": {
+      "branch": "main",
+      "head_sha": "7916cd4aff",
+      "status": "ahead 7"
+    },
+    "tg": {
+      "branch": "main",
+      "head_sha": "2323b715e4",
+      "status": "in sync"
+    },
+    "history": {
+      "branch": "main",
+      "head_sha": "afa84c04b5",
+      "status": "in sync"
+    },
+    "kids": {
+      "branch": "main",
+      "head_sha": "dab7ee84a1",
+      "status": "in sync"
+    },
+    "rust": {
+      "branch": "main",
+      "head_sha": "3790391764",
+      "status": "ahead 1"
+    },
+    "game": {
+      "branch": "master",
+      "head_sha": "0ea435fcdf",
+      "status": "in sync"
+    },
+    "article": {
+      "branch": "main",
+      "head_sha": "7a0953d3bf",
+      "status": "behind 1 [692af8175d]"
+    },
+    "frappe_core": {
+      "branch": "version-16",
+      "head_sha": "97a5dd93ca",
+      "status": "in sync"
+    },
+    "erpnext_core": {
+      "branch": "version-16",
+      "head_sha": "af63cde494",
+      "status": "in sync"
+    },
+    "alco_ecommerce": {
+      "branch": "main",
+      "head_sha": "0c451a1ec0",
+      "status": "ahead 1"
+    },
+    "codex": {
+      "branch": "HEAD",
+      "head_sha": "None",
+      "status": "NEEDS GITHUB REMOTE"
+    }
+  },
+  "persistent_data_backup_status": "Google Drive mirror active via rclone ('gdrive:')"
+}

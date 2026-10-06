@@ -1,0 +1,36 @@
+{
+  "protected_operations": [
+    {
+      "category": "Destructive Deletion",
+      "prohibited_commands": [
+        "rm -rf /",
+        "rm -rf /*",
+        "rm -rf ~/.agents*",
+        "rm -rf ~/.gemini*"
+      ],
+      "guard_mechanism": "delete_guard.py (PreToolUse interceptor)",
+      "policy": "BLOCK immediately and raise policy violation"
+    },
+    {
+      "category": "Git History Tampering",
+      "prohibited_commands": [
+        "git push --force",
+        "git push -f",
+        "git reset --hard",
+        "git rebase"
+      ],
+      "guard_mechanism": "BeforeTool gate and completion_gate_stop_hook.py",
+      "policy": "BLOCK immediately unless user explicitly authorized"
+    },
+    {
+      "category": "Database Destruction",
+      "prohibited_commands": [
+        "DROP DATABASE",
+        "TRUNCATE TABLE",
+        "DROP TABLE"
+      ],
+      "guard_mechanism": "PreToolUse SQL query inspector",
+      "policy": "BLOCK immediately; Level 3 Destructive Action"
+    }
+  ]
+}

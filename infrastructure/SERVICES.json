@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Antigravity WhatsApp Multi-Agent Supervisor",
+    "executable": "/home/azureuser/.webterminal/start_all_agents.sh",
+    "working_directory": "/home/azureuser",
+    "user": "azureuser",
+    "startup_command": "systemctl start agy-agents.service",
+    "systemd_unit": "agy-agents.service",
+    "tmux_dependency": "tmux session 'agy' (windows 0 to 13)",
+    "port": null,
+    "environment_config_source": "/home/azureuser/.webterminal",
+    "persistent_data_dependency": "webterminal/baileys_auth_info/",
+    "dependency_order": 1,
+    "health_check_command": "tmux has-session -t agy && tmux list-windows -t agy"
+  },
+  {
+    "name": "Cloud Live Web Preview Tunnel",
+    "executable": "/usr/bin/cloudflared",
+    "working_directory": "/home/azureuser/IroScript_Projects/Whatsapp_Agy_Agents/Antigravity-Global-Notifier/Cloud_VM_Live_Preview",
+    "user": "azureuser",
+    "startup_command": "systemctl start azure-file-explorer-tunnel.service",
+    "systemd_unit": "azure-file-explorer-tunnel.service",
+    "tmux_dependency": null,
+    "port": 8088,
+    "environment_config_source": "start_tunnel.sh",
+    "persistent_data_dependency": "server.py",
+    "dependency_order": 2,
+    "health_check_command": "curl -sI http://127.0.0.1:8088 | head -n 1"
+  },
+  {
+    "name": "Frappe MariaDB Database Service",
+    "executable": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb/bin/mariadbd",
+    "working_directory": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco",
+    "user": "azureuser",
+    "startup_command": "systemctl --user start frappe-mariadb.service",
+    "systemd_unit": "frappe-mariadb.service",
+    "tmux_dependency": null,
+    "port": 3306,
+    "environment_config_source": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-conf/my.cnf",
+    "persistent_data_dependency": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-data",
+    "dependency_order": 3,
+    "health_check_command": "mariadb-admin --defaults-file=/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-conf/my.cnf ping 2>/dev/null || ss -tulpn | grep :3306"
+  },
+  {
+    "name": "Frappe Bench Start (ERPNext v16 Core)",
+    "executable": "bench start",
+    "working_directory": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench",
+    "user": "azureuser",
+    "startup_command": "systemctl --user start frappe-bench.service",
+    "systemd_unit": "frappe-bench.service",
+    "tmux_dependency": null,
+    "port": "8000 (web), 9000 (socketio), 11000 (redis-cache), 13000 (redis-queue)",
+    "environment_config_source": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-env.sh",
+    "persistent_data_dependency": "frappe-bench/sites/ and runtime/mariadb-data/",
+    "dependency_order": 4,
+    "health_check_command": "curl -sI http://127.0.0.1:8000 | head -n 1"
+  },
+  {
+    "name": "Ask and Research Agent REST API",
+    "executable": "/usr/bin/python3 /home/azureuser/IroScript_Projects/Ask-And-Research-Agent/scripts/api_service.py",
+    "working_directory": "/home/azureuser/IroScript_Projects/Ask-And-Research-Agent",
+    "user": "azureuser",
+    "startup_command": "systemctl --user start ask-research-api.service",
+    "systemd_unit": "ask-research-api.service",
+    "tmux_dependency": "agy:11 (research)",
+    "port": 8095,
+    "environment_config_source": "systemd unit environment",
+    "persistent_data_dependency": "ask_and_research.db",
+    "dependency_order": 5,
+    "health_check_command": "curl -s http://127.0.0.1:8095/health || ss -tulpn | grep :8095"
+  }
+]

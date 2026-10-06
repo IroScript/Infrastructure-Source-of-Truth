@@ -1,0 +1,58 @@
+[
+  {
+    "source_repo_path": "configuration/hooks.json",
+    "target_vm_path": "/home/azureuser/.gemini/config/hooks.json",
+    "permissions": "0644",
+    "owner": "azureuser:azureuser",
+    "purpose": "Antigravity PreToolUse, PostToolUse, and Stop hooks wiring"
+  },
+  {
+    "source_repo_path": "configuration/settings.json",
+    "target_vm_path": "/home/azureuser/.agents/settings.json",
+    "permissions": "0644",
+    "owner": "azureuser:azureuser",
+    "purpose": "AGY trust settings and truth enforcement flags"
+  },
+  {
+    "source_repo_path": "projects/gitpush_folder_mapping.json",
+    "target_vm_path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/gitpush_folder_mapping.json",
+    "permissions": "0644",
+    "owner": "azureuser:azureuser",
+    "purpose": "Authoritative operational project directory mapping"
+  },
+  {
+    "source_repo_path": "trust/verification/verify_10_fold.py",
+    "target_vm_path": "/home/azureuser/.agents/verify_10_fold.py",
+    "permissions": "0755",
+    "owner": "azureuser:azureuser",
+    "purpose": "Authoritative 10-level completion gate verification engine"
+  },
+  {
+    "source_repo_path": "trust/verification/delete_guard.py",
+    "target_vm_path": "/home/azureuser/.agents/hooks/delete_guard.py",
+    "permissions": "0755",
+    "owner": "azureuser:azureuser",
+    "purpose": "Hard PreToolUse delete and destructive action gatekeeper"
+  },
+  {
+    "source_repo_path": "trust/verification/completion_gate_stop_hook.py",
+    "target_vm_path": "/home/azureuser/.agents/hooks/completion_gate_stop_hook.py",
+    "permissions": "0755",
+    "owner": "azureuser:azureuser",
+    "purpose": "Hard Stop Hook completion gatekeeper enforcing 10-fold verification"
+  },
+  {
+    "source_repo_path": "trust/verification/tool_audit_hook.py",
+    "target_vm_path": "/home/azureuser/.agents/hooks/tool_audit_hook.py",
+    "permissions": "0755",
+    "owner": "azureuser:azureuser",
+    "purpose": "PostToolUse execution auditor and ledger recorder"
+  },
+  {
+    "source_repo_path": "trust/verification/truth_pre_invocation.py",
+    "target_vm_path": "/home/azureuser/.agents/hooks/truth_pre_invocation.py",
+    "permissions": "0755",
+    "owner": "azureuser:azureuser",
+    "purpose": "PreInvocation context validator and rule injector"
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "file": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform/.env",
+    "permission": "0o644",
+    "required": true,
+    "variable_names": [
+      "DATABASE_URL",
+      "PAYLOAD_SECRET",
+      "PORT",
+      "PAYLOAD_PUBLIC_SERVER_URL",
+      "NEXT_PUBLIC_SERVER_URL"
+    ]
+  },
+  {
+    "file": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/.env",
+    "permission": "0o644",
+    "required": true,
+    "variable_names": [
+      "TG_API_ID",
+      "TG_API_HASH",
+      "TG_PHONE_NUMBER",
+      "TG_TARGET_CHAT",
+      "TG_MESSAGE_LIMIT",
+      "LLM_PROVIDER",
+      "GROQ_API_KEY",
+      "GROQ_MODEL",
+      "GROQ_API_KEY_2",
+      "OPENROUTER_API_KEY",
+      "OPENROUTER_API_KEY_2",
+      "GEMINI_API_KEY",
+      "GEMINI_MODEL",
+      "DEEPSEEK_API_KEY",
+      "CEREBRAS_API_KEY",
+      "SAMBANOVA_API_KEY",
+      "TOGETHER_API_KEY",
+      "MISTRAL_API_KEY",
+      "OPENCODE_API_URL",
+      "OPENCODE_API_KEY",
+      "OPENCODE_MODEL"
+    ]
+  },
+  {
+    "file": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/master_api_vault.env",
+    "permission": "0o644",
+    "required": true,
+    "variable_names": [
+      "GEMINI_API_KEY",
+      "GEMINI_MODEL",
+      "OPENROUTER_API_KEY",
+      "OPENROUTER_API_KEY_2",
+      "GROQ_API_KEY",
+      "GROQ_MODEL",
+      "GROQ_API_KEY_2",
+      "TG_API_ID",
+      "TG_API_HASH",
+      "TG_PHONE_NUMBER",
+      "DEEPSEEK_API_KEY",
+      "CEREBRAS_API_KEY",
+      "SAMBANOVA_API_KEY",
+      "TOGETHER_API_KEY",
+      "MISTRAL_API_KEY",
+      "OPENCODE_API_URL",
+      "OPENCODE_API_KEY"
+    ]
+  },
+  {
+    "file": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/.env.example",
+    "permission": "0o664",
+    "required": false,
+    "variable_names": [
+      "YOUTUBE_CLIENT_ID",
+      "YOUTUBE_CLIENT_SECRET",
+      "YOUTUBE_REFRESH_TOKEN",
+      "YOUTUBE_CHANNEL_ID",
+      "DATABASE_URL",
+      "OPENAI_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "GEMINI_API_KEY"
+    ]
+  },
+  {
+    "file": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note/backend/.env",
+    "permission": "0o664",
+    "required": true,
+    "variable_names": [
+      "DATABASE_URL",
+      "SERVER_HOST",
+      "SERVER_PORT",
+      "CORS_ORIGIN",
+      "RUST_LOG"
+    ]
+  }
+]

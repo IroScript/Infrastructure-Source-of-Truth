@@ -1,0 +1,122 @@
+[
+  {
+    "project_key": "whatsapp",
+    "path": "/home/azureuser/IroScript_Projects/Whatsapp master",
+    "toplevel": "/home/azureuser/IroScript_Projects/Whatsapp master",
+    "branch": "main",
+    "head_sha": "81e845e8b65e913a52e1281881765c92c9066bf9",
+    "remote_fetch": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
+    "remote_push": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
+    "status": "dirty (active incidents / telemetry logs)"
+  },
+  {
+    "project_key": "yt",
+    "path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation",
+    "toplevel": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation",
+    "branch": "main",
+    "head_sha": "7916cd4affb763b422ea524016e7f207bb2beecc",
+    "remote_fetch": "git@github.com:IroScript/Youtube-Pipeline.git",
+    "remote_push": "git@github.com:IroScript/Youtube-Pipeline.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "tg",
+    "path": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot",
+    "toplevel": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot",
+    "branch": "main",
+    "head_sha": "2323b7156ceecf9ee6ff3d8581604a117079d380",
+    "remote_fetch": "https://github.com/IroScript/telegram-scraper-and-automation.git",
+    "remote_push": "https://github.com/IroScript/telegram-scraper-and-automation.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "history",
+    "path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
+    "toplevel": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
+    "branch": "main",
+    "head_sha": "afa84c04297800c8f18cf1e8cb30b501d51c33f7",
+    "remote_fetch": "https://github.com/IroScript/personal_ai_agent.git",
+    "remote_push": "https://github.com/IroScript/personal_ai_agent.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "kids",
+    "path": "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection",
+    "toplevel": "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection",
+    "branch": "main",
+    "head_sha": "dab7ee84f04bc7a0e3fdfd42c57a97262ae350fc",
+    "remote_fetch": "git@github.com:IroScript/kids_tube_with_folder_seection.git",
+    "remote_push": "git@github.com:IroScript/kids_tube_with_folder_seection.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "rust",
+    "path": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note",
+    "toplevel": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note",
+    "branch": "main",
+    "head_sha": "37903917822fe8c2718ce77a9ea1bb363a0bb2f6",
+    "remote_fetch": "git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git",
+    "remote_push": "git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "game",
+    "path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio",
+    "toplevel": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio",
+    "branch": "master",
+    "head_sha": "0ea435fcdfd01507ee34193631b81e9532141713",
+    "remote_fetch": "git@github.com:IroScript/3d-web-templates.git",
+    "remote_push": "git@github.com:IroScript/3d-web-templates.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "article",
+    "path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform",
+    "toplevel": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform",
+    "branch": "main",
+    "head_sha": "7a0953d3bfe2e1dc57131282649acf472f074dc6",
+    "remote_fetch": "git@github.com:IroScript/Article-Publishing-Platform.git",
+    "remote_push": "git@github.com:IroScript/Article-Publishing-Platform.git",
+    "status": "behind 1 commit [origin/main: 692af8175da74e951433f44487e411b51ce092ea]; working tree contains untracked files matching origin/main"
+  },
+  {
+    "project_key": "frappe_core",
+    "path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/frappe",
+    "toplevel": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/frappe",
+    "branch": "version-16",
+    "head_sha": "97a5dd93041a1abfba6368d5ce885ecbda4f8101",
+    "remote_fetch": "https://github.com/frappe/frappe.git",
+    "remote_push": "https://github.com/frappe/frappe.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "erpnext_core",
+    "path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/erpnext",
+    "toplevel": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/erpnext",
+    "branch": "version-16",
+    "head_sha": "af63cde4a7ee52971bb48c6684ce3cff4c23f1f4",
+    "remote_fetch": "https://github.com/frappe/erpnext.git",
+    "remote_push": "https://github.com/frappe/erpnext.git",
+    "status": "clean"
+  },
+  {
+    "project_key": "alco_ecommerce",
+    "path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce",
+    "toplevel": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce",
+    "branch": "main",
+    "head_sha": "0c451a1e05d04ca09088716333bf6eb5fc631378",
+    "remote_fetch": "https://github.com/IroScript/frappe-erp-alco-project",
+    "remote_push": "https://github.com/IroScript/frappe-erp-alco-project",
+    "status": "clean"
+  },
+  {
+    "project_key": "codex",
+    "path": "/home/azureuser/IroScript_Projects/OpenAI_Codex",
+    "toplevel": "/home/azureuser/IroScript_Projects/OpenAI_Codex",
+    "branch": "HEAD",
+    "head_sha": "None (uncommitted local git init)",
+    "remote_fetch": "NO_REMOTE",
+    "remote_push": "NO_REMOTE",
+    "status": "uncommitted local files"
+  }
+]

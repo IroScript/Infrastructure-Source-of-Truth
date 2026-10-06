@@ -1,0 +1,6 @@
+{
+  "installed": false,
+  "docker_version": "/bin/sh: 1: docker: not found",
+  "compose_version": "/bin/sh: 1: docker-compose: not found\n/bin/sh: 1: docker: not found",
+  "note": "Docker daemon is not installed on Azure VM. Workloads run directly on host (Frappe bench, Node, Python, Rust)."
+}

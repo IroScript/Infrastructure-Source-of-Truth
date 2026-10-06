@@ -1,0 +1,48 @@
+{
+  "categories": [
+    {
+      "name": "Python Bytecode",
+      "patterns": [
+        "__pycache__",
+        "*.pyc",
+        "*.pyo"
+      ],
+      "action": "Exclude from migration; regenerated at runtime"
+    },
+    {
+      "name": "Node Dependency and Build Caches",
+      "patterns": [
+        "node_modules",
+        ".next/cache",
+        ".yarn/cache"
+      ],
+      "action": "Exclude from migration; regenerated via clean npm/yarn install"
+    },
+    {
+      "name": "Rust Target Caches",
+      "patterns": [
+        "target/debug/deps",
+        "target/debug/build",
+        "target/release/incremental"
+      ],
+      "action": "Exclude from migration; rebuilt via cargo build"
+    },
+    {
+      "name": "Service and Agent Logs",
+      "patterns": [
+        "*.log",
+        "runtime/logs/*.log",
+        "cli.log"
+      ],
+      "action": "Optional archive; fresh logs initiated on startup"
+    },
+    {
+      "name": "System Temporary Buffers",
+      "patterns": [
+        "/tmp/*",
+        "/var/tmp/*"
+      ],
+      "action": "Zero migration"
+    }
+  ]
+}

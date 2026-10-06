@@ -1,0 +1,20 @@
+{
+  "system_node": {
+    "executable": "/usr/bin/node",
+    "version": "v20.19.2",
+    "npm_version": "9.2.0",
+    "global_packages": {
+      "@openai/codex": {
+        "version": "0.160.0",
+        "overridden": false
+      }
+    }
+  },
+  "nvm_runtimes": [
+    {
+      "version": "v24.21.0",
+      "path": "/home/azureuser/.nvm/versions/node/v24.21.0/bin/node",
+      "usage": "Frappe ERPNext v16 socketio.js realtime service"
+    }
+  ]
+}

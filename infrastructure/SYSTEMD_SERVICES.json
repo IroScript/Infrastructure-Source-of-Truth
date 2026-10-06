@@ -1,0 +1,47 @@
+[
+  {
+    "name": "agy-agents.service",
+    "scope": "system",
+    "file": "/etc/systemd/system/agy-agents.service",
+    "enabled": true,
+    "user": "azureuser",
+    "exec_start": "/home/azureuser/.webterminal/start_all_agents.sh",
+    "description": "Antigravity WhatsApp Multi-Agent Tmux Supervisor (launches windows agy:0 to agy:13)"
+  },
+  {
+    "name": "azure-file-explorer-tunnel.service",
+    "scope": "system",
+    "file": "/etc/systemd/system/azure-file-explorer-tunnel.service",
+    "enabled": true,
+    "user": "azureuser",
+    "exec_start": "/bin/bash /home/azureuser/IroScript_Projects/Whatsapp_Agy_Agents/Antigravity-Global-Notifier/Cloud_VM_Live_Preview/start_tunnel.sh",
+    "description": "Cloudflare Tunnel for Live Web Preview (Port 8088)"
+  },
+  {
+    "name": "frappe-mariadb.service",
+    "scope": "user",
+    "file": "/home/azureuser/.config/systemd/user/frappe-mariadb.service",
+    "enabled": true,
+    "user": "azureuser",
+    "exec_start": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb/bin/mariadbd --defaults-file=/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-conf/my.cnf",
+    "description": "MariaDB 11.8 for Frappe Alco bench (user-space database on port 3306)"
+  },
+  {
+    "name": "frappe-bench.service",
+    "scope": "user",
+    "file": "/home/azureuser/.config/systemd/user/frappe-bench.service",
+    "enabled": true,
+    "user": "azureuser",
+    "exec_start": "/bin/bash -lc 'source /home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-env.sh && exec bench start'",
+    "description": "Frappe bench start (HTTP port 8000, socketio port 9000, redis 11000/13000)"
+  },
+  {
+    "name": "ask-research-api.service",
+    "scope": "user",
+    "file": "/home/azureuser/.config/systemd/user/ask-research-api.service",
+    "enabled": true,
+    "user": "azureuser",
+    "exec_start": "/usr/bin/python3 /home/azureuser/IroScript_Projects/Ask-And-Research-Agent/scripts/api_service.py",
+    "description": "Ask and Research Agent SQLite Database REST API Service on port 8095"
+  }
+]

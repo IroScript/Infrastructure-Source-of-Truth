@@ -1,0 +1,4 @@
+{
+  "active_crontab": "/bin/sh: 1: crontab: not found",
+  "note": "Cron is currently empty. Automated scheduled background tasks are handled by systemd units and tmux supervisor loops."
+}

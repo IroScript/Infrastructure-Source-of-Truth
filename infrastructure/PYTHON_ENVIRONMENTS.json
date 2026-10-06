@@ -1,0 +1,22 @@
+{
+  "system_python": {
+    "executable": "/usr/bin/python3",
+    "version": "Python 3.13.5",
+    "packages_count": 1
+  },
+  "frappe_bench_env": {
+    "executable": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/env/bin/python",
+    "version": "Python 3.14.8",
+    "managed_by": "uv",
+    "uv_python_source": "/home/azureuser/.local/share/uv/python/cpython-3.14.8-linux-x86_64-gnu/bin/python3.14"
+  },
+  "telegram_bot_venv": {
+    "path": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/.venv",
+    "executable": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/.venv/bin/python",
+    "version": "Python 3.13"
+  },
+  "uv_frappe_bench_tool": {
+    "path": "/home/azureuser/.local/share/uv/tools/frappe-bench",
+    "bench_version": "5.31.0"
+  }
+}

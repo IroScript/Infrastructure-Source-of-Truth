@@ -1,0 +1,464 @@
+[
+  {
+    "project_key": "whatsapp",
+    "project_name": "Antigravity Global Notifier & WhatsApp Master",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Whatsapp master",
+    "symlink_aliases": [
+      "/home/azureuser/IroScript_Projects/Whatsapp_Agy_Agents/Antigravity-Global-Notifier",
+      "/home/azureuser/.webterminal"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Whatsapp master",
+    "git_remote_fetch": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
+    "git_remote_push": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
+    "branch": "main",
+    "head_sha": "81e845e8b65e913a52e1281881765c92c9066bf9",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Git clone + restore baileys_auth_info credentials + install npm packages + configure systemd agy-agents.service",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/baileys_auth_info",
+      "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/gitpush_folder_mapping.json",
+      "/etc/systemd/system/agy-agents.service"
+    ],
+    "runtime_dependencies": [
+      "Node.js v20.19.2",
+      "npm 9.2.0",
+      "Python 3.13.5",
+      "tmux 3.5a",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Systemd unit agy-agents.service calling start_all_agents.sh",
+    "ports": [
+      8088
+    ],
+    "databases": [
+      "webterminal/Agy Whatsapp Agents/AGY-MASTER/RECOVERED_DATABASES/*.sqlite"
+    ],
+    "tmux_window": "agy:0 (Master Orchestrator), agy:1 (WhatsApp Bridge), agy:12 (Reporting Sentinel)",
+    "systemd_services": [
+      "agy-agents.service",
+      "azure-file-explorer-tunnel.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": []
+  },
+  {
+    "project_key": "yt",
+    "project_name": "AGY \u00b7 YouTube Pipeline",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation",
+    "symlink_aliases": [],
+    "git_repository": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation",
+    "git_remote_fetch": "git@github.com:IroScript/Youtube-Pipeline.git",
+    "git_remote_push": "git@github.com:IroScript/Youtube-Pipeline.git",
+    "branch": "main",
+    "head_sha": "7916cd4affb763b422ea524016e7f207bb2beecc",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Git clone to exact subfolder 'Social Media/youtube/Youtube Automation' + restore youtube_pipeline.db + restore .env",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/PromptDatabase/database/youtube_pipeline.db"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/.env.example"
+    ],
+    "runtime_dependencies": [
+      "Python 3.13.5",
+      "ffmpeg",
+      "yt-dlp",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Tmux window agy:3 via start_all_agents.sh",
+    "ports": [],
+    "databases": [
+      "PromptDatabase/database/youtube_pipeline.db"
+    ],
+    "tmux_window": "agy:3 (yt)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": [
+      "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/.env.example"
+    ]
+  },
+  {
+    "project_key": "tg",
+    "project_name": "AGY \u00b7 Telegram Bot",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot",
+    "symlink_aliases": [
+      "/home/azureuser/IroScript_Projects/_old_symlinks_20261003/Social_Media_telegram-bot"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot",
+    "git_remote_fetch": "https://github.com/IroScript/telegram-scraper-and-automation.git",
+    "git_remote_push": "https://github.com/IroScript/telegram-scraper-and-automation.git",
+    "branch": "main",
+    "head_sha": "2323b7156ceecf9ee6ff3d8581604a117079d380",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Git clone + re-create virtual environment (.venv) + restore .env & master_api_vault.env",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/*.session",
+      "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/buyer_leads.db"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/.env",
+      "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/master_api_vault.env"
+    ],
+    "runtime_dependencies": [
+      "Python 3.13.5",
+      "Telethon",
+      "Groq SDK",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Tmux window agy:5 via start_all_agents.sh",
+    "ports": [],
+    "databases": [
+      "buyer_leads.db"
+    ],
+    "tmux_window": "agy:5 (tg)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": [
+      "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/.env",
+      "/home/azureuser/IroScript_Projects/Social Media/telegram-bot/master_api_vault.env"
+    ]
+  },
+  {
+    "project_key": "history",
+    "project_name": "AGY \u00b7 Digital History & Personal AI",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
+    "symlink_aliases": [
+      "/home/azureuser/IroScript_Projects/Personal Life/Digital History management/PERSONAL AI AGENT",
+      "/home/azureuser/IroScript_Projects/Digital History"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
+    "git_remote_fetch": "https://github.com/IroScript/personal_ai_agent.git",
+    "git_remote_push": "https://github.com/IroScript/personal_ai_agent.git",
+    "branch": "main",
+    "head_sha": "afa84c04297800c8f18cf1e8cb30b501d51c33f7",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Git clone + restore OpenRecall SQLite databases (recall.db, chrome_history_master.db, vault_index.db)",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/openrecall/recall.db",
+      "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/chrome/chrome_history_master.db",
+      "/home/azureuser/IroScript_Projects/Personal Life/openrecall_vault/vault_index.db"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/config"
+    ],
+    "runtime_dependencies": [
+      "Python 3.13.5",
+      "SQLite3",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Tmux window agy:6 via start_all_agents.sh",
+    "ports": [],
+    "databases": [
+      "data/openrecall/recall.db",
+      "data/chrome/chrome_history_master.db",
+      "vault_index.db"
+    ],
+    "tmux_window": "agy:6 (history)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": []
+  },
+  {
+    "project_key": "kids",
+    "project_name": "AGY \u00b7 Kids Tube",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection",
+    "symlink_aliases": [
+      "/home/azureuser/IroScript_Projects/_old_symlinks_20261003/Personal_Life_kids_tube_with_folder_seection"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection",
+    "git_remote_fetch": "git@github.com:IroScript/kids_tube_with_folder_seection.git",
+    "git_remote_push": "git@github.com:IroScript/kids_tube_with_folder_seection.git",
+    "branch": "main",
+    "head_sha": "dab7ee84f04bc7a0e3fdfd42c57a97262ae350fc",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Git clone + flutter pub get",
+    "persistent_data_locations": [],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection/pubspec.yaml"
+    ],
+    "runtime_dependencies": [
+      "Flutter SDK",
+      "Dart",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Tmux window agy:7 via start_all_agents.sh",
+    "ports": [],
+    "databases": [],
+    "tmux_window": "agy:7 (kids)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": [
+      "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection/.env.example"
+    ]
+  },
+  {
+    "project_key": "rust",
+    "project_name": "AGY \u00b7 Rust Task",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note",
+    "symlink_aliases": [
+      "/home/azureuser/IroScript_Projects/_old_symlinks_20261003/Personal_Life_Rust_Task_With_Time_Keeping_And_Live_Note"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note",
+    "git_remote_fetch": "git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git",
+    "git_remote_push": "git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git",
+    "branch": "main",
+    "head_sha": "37903917822fe8c2718ce77a9ea1bb363a0bb2f6",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Git clone + restore backend/.env + cargo build",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note/output_apk"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note/Cargo.toml",
+      "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note/backend/.env"
+    ],
+    "runtime_dependencies": [
+      "Rust toolchain (cargo/rustc)",
+      "Flutter SDK",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Tmux window agy:8 via start_all_agents.sh",
+    "ports": [],
+    "databases": [
+      "Local SQLite"
+    ],
+    "tmux_window": "agy:8 (rust)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": [
+      "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note/backend/.env"
+    ]
+  },
+  {
+    "project_key": "game",
+    "project_name": "AGY \u00b7 3D Game Design",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio",
+    "symlink_aliases": [
+      "Previous legacy aliases: 3d Article Reading, Publishing Websites/3D-Game-Design-Studio (unlinked Oct 3)"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio",
+    "git_remote_fetch": "git@github.com:IroScript/3d-web-templates.git",
+    "git_remote_push": "git@github.com:IroScript/3d-web-templates.git",
+    "branch": "master",
+    "head_sha": "0ea435fcdfd01507ee34193631b81e9532141713",
+    "upstream": "origin/master",
+    "github_backed": true,
+    "migration_method": "Git clone to 'Article_Publishing_Management/3D-Game-Design-Studio' + npm install",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio/models",
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio/assets"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio/package.json"
+    ],
+    "runtime_dependencies": [
+      "Node.js v20.19.2",
+      "Three.js",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Tmux window agy:10 via start_all_agents.sh",
+    "ports": [],
+    "databases": [],
+    "tmux_window": "agy:10 (game)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": []
+  },
+  {
+    "project_key": "article",
+    "project_name": "AGY \u00b7 Article Publishing Platform",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform",
+    "symlink_aliases": [],
+    "git_repository": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform",
+    "git_remote_fetch": "git@github.com:IroScript/Article-Publishing-Platform.git",
+    "git_remote_push": "git@github.com:IroScript/Article-Publishing-Platform.git",
+    "branch": "main",
+    "head_sha": "7a0953d3bfe2e1dc57131282649acf472f074dc6",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Git clone / pull + restore .env + npm install + database provisioning (Postgres/CockroachDB)",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform/public",
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform/cockroach.out"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform/.env",
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform/next.config.ts"
+    ],
+    "runtime_dependencies": [
+      "Node.js v20.19.2",
+      "Next.js",
+      "Payload CMS",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "Tmux window agy:9 via start_all_agents.sh",
+    "ports": [
+      3000
+    ],
+    "databases": [
+      "PostgreSQL / CockroachDB"
+    ],
+    "tmux_window": "agy:9 (article)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": [
+      "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform/.env"
+    ]
+  },
+  {
+    "project_key": "frappe",
+    "project_name": "AGY \u00b7 Frappe ERP Alco",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco",
+    "symlink_aliases": [
+      "/home/azureuser/Frappe-erp-Alco"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce",
+    "git_remote_fetch": "https://github.com/IroScript/frappe-erp-alco-project",
+    "git_remote_push": "https://github.com/IroScript/frappe-erp-alco-project",
+    "branch": "main (alco_ecommerce), version-16 (frappe/erpnext)",
+    "head_sha": "0c451a1e05d04ca09088716333bf6eb5fc631378",
+    "upstream": "upstream/main",
+    "github_backed": true,
+    "migration_method": "Reinstall portable MariaDB 11.8 & Redis + install uv Python 3.14.8 + install bench 5.31.0 + clone apps + restore database dump + configure user systemd units",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-data",
+      "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/sites"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-conf/my.cnf",
+      "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-env.sh",
+      "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/sites/common_site_config.json"
+    ],
+    "runtime_dependencies": [
+      "Python 3.14.8 (uv)",
+      "Node.js v24.21.0 (NVM)",
+      "MariaDB 11.8 (portable)",
+      "Redis (portable)",
+      "bench 5.31.0"
+    ],
+    "startup_mechanism": "User systemd units: frappe-mariadb.service and frappe-bench.service; Tmux agy:4",
+    "ports": [
+      8000,
+      9000,
+      3306,
+      11000,
+      13000
+    ],
+    "databases": [
+      "MariaDB 11.8 (alco_ecommerce database on port 3306)"
+    ],
+    "tmux_window": "agy:4 (frappe)",
+    "systemd_services": [
+      "frappe-mariadb.service",
+      "frappe-bench.service"
+    ],
+    "cron_dependencies": [
+      "Frappe Bench internal background scheduler"
+    ],
+    "environment_file_locations": [
+      "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-env.sh"
+    ]
+  },
+  {
+    "project_key": "research",
+    "project_name": "AGY \u00b7 Ask & Research Agent",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Ask-And-Research",
+    "symlink_aliases": [
+      "/home/azureuser/IroScript_Projects/Ask-And-Research-Agent"
+    ],
+    "git_repository": "/home/azureuser/IroScript_Projects/Whatsapp master",
+    "git_remote_fetch": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
+    "git_remote_push": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
+    "branch": "main",
+    "head_sha": "81e845e8b65e913a52e1281881765c92c9066bf9",
+    "upstream": "origin/main",
+    "github_backed": true,
+    "migration_method": "Restored as part of Whatsapp Master repo clone + symlink creation at IroScript_Projects/Ask-And-Research-Agent + user systemd unit ask-research-api.service",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Ask-And-Research/ask_and_research.db",
+      "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Ask-And-Research/research_topics"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/.config/systemd/user/ask-research-api.service"
+    ],
+    "runtime_dependencies": [
+      "Python 3.13.5",
+      "FastAPI / HTTP server",
+      "SQLite3",
+      "Antigravity CLI 1.3.0"
+    ],
+    "startup_mechanism": "User systemd unit ask-research-api.service + Tmux window agy:11",
+    "ports": [
+      8095
+    ],
+    "databases": [
+      "ask_and_research.db"
+    ],
+    "tmux_window": "agy:11 (research)",
+    "systemd_services": [
+      "ask-research-api.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": []
+  },
+  {
+    "project_key": "codex",
+    "project_name": "AGY \u00b7 OpenAI Codex",
+    "canonical_physical_path": "/home/azureuser/IroScript_Projects/OpenAI_Codex",
+    "symlink_aliases": [],
+    "git_repository": "/home/azureuser/IroScript_Projects/OpenAI_Codex",
+    "git_remote_fetch": "NO_REMOTE",
+    "git_remote_push": "NO_REMOTE",
+    "branch": "HEAD",
+    "head_sha": "None",
+    "upstream": null,
+    "github_backed": false,
+    "migration_method": "Rsync / manual archive copy of folder to Google VM",
+    "persistent_data_locations": [
+      "/home/azureuser/IroScript_Projects/OpenAI_Codex/manual_review.py",
+      "/home/azureuser/IroScript_Projects/OpenAI_Codex/review.schema.json",
+      "/home/azureuser/IroScript_Projects/OpenAI_Codex/test_manual_review.py"
+    ],
+    "configuration_locations": [
+      "/home/azureuser/IroScript_Projects/OpenAI_Codex/review.schema.json"
+    ],
+    "runtime_dependencies": [
+      "Node.js @openai/codex CLI (v0.160.0)",
+      "Python 3.13.5"
+    ],
+    "startup_mechanism": "Tmux window agy:13 via start_all_agents.sh",
+    "ports": [
+      38299
+    ],
+    "databases": [],
+    "tmux_window": "agy:13 (codex)",
+    "systemd_services": [
+      "Supervised by agy-agents.service"
+    ],
+    "cron_dependencies": [],
+    "environment_file_locations": []
+  }
+]

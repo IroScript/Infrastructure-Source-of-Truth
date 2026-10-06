@@ -1,0 +1,260 @@
+[
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "127.0.0.54:53",
+    "process": ""
+  },
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "127.0.0.53%lo:53",
+    "process": ""
+  },
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "172.16.0.4%eth0:68",
+    "process": ""
+  },
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "127.0.0.1:323",
+    "process": ""
+  },
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "0.0.0.0:5355",
+    "process": ""
+  },
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "[::1]:323",
+    "process": ""
+  },
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "*:45990",
+    "process": "users:((\"cloudflared\",pid=771,fd=11))"
+  },
+  {
+    "protocol": "udp",
+    "state": "UNCONN",
+    "local_address": "[::]:5355",
+    "process": ""
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "0.0.0.0:8095",
+    "process": "users:((\"python3\",pid=1024,fd=3))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "0.0.0.0:8088",
+    "process": "users:((\"python3\",pid=740,fd=3))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:44117",
+    "process": "users:((\"agy\",pid=1485,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:44151",
+    "process": "users:((\"agy\",pid=1405,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "0.0.0.0:8000",
+    "process": "users:((\"python\",pid=2446,fd=9),(\"python\",pid=2446,fd=7),(\"python\",pid=2373,fd=7))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:3306",
+    "process": "users:((\"mariadbd\",pid=1025,fd=24))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:40513",
+    "process": "users:((\"agy\",pid=1648,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:40623",
+    "process": "users:((\"agy\",pid=1485,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:20241",
+    "process": "users:((\"cloudflared\",pid=771,fd=10))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:36615",
+    "process": "users:((\"agy\",pid=1328,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:44853",
+    "process": "users:((\"agy\",pid=1405,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:40861",
+    "process": "users:((\"agy\",pid=1648,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:35179",
+    "process": "users:((\"agy\",pid=1585,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:11000",
+    "process": "users:((\"redis-server\",pid=2365,fd=8))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:35777",
+    "process": "users:((\"agy\",pid=1565,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:46441",
+    "process": "users:((\"agy\",pid=1058,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:38299",
+    "process": "users:((\"codex\",pid=2035,fd=34))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:42377",
+    "process": "users:((\"agy\",pid=1565,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:46539",
+    "process": "users:((\"agy\",pid=1328,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:34479",
+    "process": "users:((\"agy\",pid=1282,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "0.0.0.0:5355",
+    "process": ""
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:32847",
+    "process": "users:((\"agy\",pid=1585,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:36979",
+    "process": "users:((\"agy\",pid=1571,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:41237",
+    "process": "users:((\"agy\",pid=1489,fd=11))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:37181",
+    "process": "users:((\"agy\",pid=1058,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:41279",
+    "process": "users:((\"agy\",pid=1571,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.53%lo:53",
+    "process": ""
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.54:53",
+    "process": ""
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:41569",
+    "process": "users:((\"agy\",pid=1282,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:13000",
+    "process": "users:((\"redis-server\",pid=2370,fd=8))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "127.0.0.1:45809",
+    "process": "users:((\"agy\",pid=1489,fd=13))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "0.0.0.0:22",
+    "process": ""
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "[::]:5355",
+    "process": ""
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "*:9000",
+    "process": "users:((\"MainThread\",pid=2380,fd=21))"
+  },
+  {
+    "protocol": "tcp",
+    "state": "LISTEN",
+    "local_address": "[::]:22",
+    "process": ""
+  }
+]

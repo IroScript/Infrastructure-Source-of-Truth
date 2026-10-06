@@ -1,0 +1,47 @@
+[
+  {
+    "source_path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/openrecall/recall.db",
+    "description": "OpenRecall primary memory SQLite database (122 MB)",
+    "backup_method": "rclone sync to Google Drive & local compressed tarball",
+    "backup_destination": "gdrive:Azure_VM_Backups/databases/recall.db",
+    "last_backup_verification": "Verified present in /home/azureuser/IroScript_Projects/All_Backup",
+    "restore_procedure": "rclone copy gdrive:Azure_VM_Backups/databases/recall.db '/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/openrecall/'",
+    "encryption_status": "GCM encrypted archive recommended"
+  },
+  {
+    "source_path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/PromptDatabase/database/youtube_pipeline.db",
+    "description": "YouTube automation prompt generation SQLite database (71 MB)",
+    "backup_method": "rclone sync to Google Drive & periodic snapshot dumps",
+    "backup_destination": "gdrive:Azure_VM_Backups/databases/youtube_pipeline.db",
+    "last_backup_verification": "Verified present in /home/azureuser/IroScript_Projects/All_Backup",
+    "restore_procedure": "rclone copy gdrive:Azure_VM_Backups/databases/youtube_pipeline.db '/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/PromptDatabase/database/'",
+    "encryption_status": "Standard archive"
+  },
+  {
+    "source_path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/chrome/chrome_history_master.db",
+    "description": "Chrome history master database (28 MB)",
+    "backup_method": "rclone sync to Google Drive",
+    "backup_destination": "gdrive:Azure_VM_Backups/databases/chrome_history_master.db",
+    "last_backup_verification": "Verified in All_Backup archive",
+    "restore_procedure": "rclone copy gdrive:Azure_VM_Backups/databases/chrome_history_master.db '/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/chrome/'",
+    "encryption_status": "Standard archive"
+  },
+  {
+    "source_path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-data",
+    "description": "MariaDB database storage for ERPNext Alco",
+    "backup_method": "mysqldump database backup -> compressed sql -> rclone sync",
+    "backup_destination": "gdrive:Azure_VM_Backups/databases/alco_mariadb_backup.sql.gz",
+    "last_backup_verification": "Documented in All_Backup/DATABASE_MANIFEST_SHA256.txt",
+    "restore_procedure": "mariadb < alco_mariadb_backup.sql",
+    "encryption_status": "Encrypted SQL dump recommended"
+  },
+  {
+    "source_path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/baileys_auth_info",
+    "description": "WhatsApp Multi-Device authentication tokens and keys",
+    "backup_method": "Encrypted tarball -> secure cloud vault",
+    "backup_destination": "Secure Vault: baileys_auth_info.tar.gz.enc",
+    "last_backup_verification": "Session active on Azure VM",
+    "restore_procedure": "tar -xzvf baileys_auth_info.tar.gz -C '/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/'",
+    "encryption_status": "MANDATORY ENCRYPTION (contains live session tokens)"
+  }
+]

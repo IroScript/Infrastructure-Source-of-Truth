@@ -1,0 +1,70 @@
+{
+  "A_MUST_MIGRATE": [
+    {
+      "path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/openrecall/recall.db",
+      "size_approx": "122 MB",
+      "description": "Primary OpenRecall SQLite database containing complete digital history memory."
+    },
+    {
+      "path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/PromptDatabase/database/youtube_pipeline.db",
+      "size_approx": "71 MB",
+      "description": "Primary YouTube automation and prompt generation database."
+    },
+    {
+      "path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/chrome/chrome_history_master.db",
+      "size_approx": "28 MB",
+      "description": "Master Chrome history database."
+    },
+    {
+      "path": "/home/azureuser/IroScript_Projects/Personal Life/openrecall_vault/vault_index.db",
+      "size_approx": "22 MB",
+      "description": "OpenRecall media index database."
+    },
+    {
+      "path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Ask-And-Research/ask_and_research.db",
+      "size_approx": "45 KB",
+      "description": "Ask & Research Agent topics and knowledge persistence."
+    },
+    {
+      "path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-data",
+      "size_approx": "Database dump recommended via mysqldump",
+      "description": "MariaDB database files for Frappe ERP Alco site."
+    },
+    {
+      "path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/baileys_auth_info",
+      "size_approx": "Session tokens",
+      "description": "WhatsApp Baileys multi-device authentication credentials and pairing session."
+    }
+  ],
+  "B_GIT_RESTORABLE": [
+    "Whatsapp master (https://github.com/IroScript/Antigravity-Global-Notifier.git)",
+    "Social Media/youtube/Youtube Automation (git@github.com:IroScript/Youtube-Pipeline.git)",
+    "Social Media/telegram-bot (https://github.com/IroScript/telegram-scraper-and-automation.git)",
+    "Personal Life/PERSONAL AI AGENT (https://github.com/IroScript/personal_ai_agent.git)",
+    "Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note (git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git)",
+    "Personal Life/kids_tube_with_folder_seection (git@github.com:IroScript/kids_tube_with_folder_seection.git)",
+    "Article_Publishing_Management/3D-Game-Design-Studio (git@github.com:IroScript/3d-web-templates.git)",
+    "Article_Publishing_Management/Article-Publishing-Platform (git@github.com:IroScript/Article-Publishing-Platform.git)",
+    "Frappe Apps (frappe, erpnext, alco_ecommerce)"
+  ],
+  "C_REGENERATABLE": [
+    "Python virtualenvs (.venv, frappe-bench/env) via requirements.txt / uv",
+    "Node modules (node_modules/) via npm install / yarn",
+    "Cargo target directories (target/) via cargo build",
+    "Next.js build caches (.next/) via npm run build",
+    "Frappe bench assets (sites/assets) via bench build"
+  ],
+  "D_SECRET_CREDENTIAL": [
+    ".env files in Article-Publishing-Platform, telegram-bot, and Rust Task backend",
+    "master_api_vault.env in telegram-bot",
+    "SSH private keys (~/.ssh/id_rsa, id_ed25519)"
+  ],
+  "E_TEMPORARY": [
+    "/tmp/*",
+    "__pycache__/*",
+    "*.pyc",
+    "runtime/logs/*.log",
+    "*.log",
+    ".agy_evidence/last_run.json"
+  ]
+}

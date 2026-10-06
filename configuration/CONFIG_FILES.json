@@ -1,0 +1,56 @@
+[
+  {
+    "path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/gitpush_folder_mapping.json",
+    "type": "JSON",
+    "description": "Authoritative Git push and project directory mapping registry",
+    "must_migrate": true
+  },
+  {
+    "path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-conf/my.cnf",
+    "type": "INI / CNF",
+    "description": "User-space MariaDB 11.8 configuration file (port 3306, socket, buffer sizes)",
+    "must_migrate": true
+  },
+  {
+    "path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-env.sh",
+    "type": "Bash Shell Script",
+    "description": "Environment exports for Frappe Bench, user-space paths, and Python virtual environment",
+    "must_migrate": true
+  },
+  {
+    "path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/sites/common_site_config.json",
+    "type": "JSON",
+    "description": "Frappe common site configuration (db port, redis cache/queue endpoints, socketio)",
+    "must_migrate": true
+  },
+  {
+    "path": "/etc/systemd/system/agy-agents.service",
+    "type": "Systemd System Unit",
+    "description": "System service definition for WhatsApp multi-agent tmux supervisor",
+    "must_migrate": true
+  },
+  {
+    "path": "/etc/systemd/system/azure-file-explorer-tunnel.service",
+    "type": "Systemd System Unit",
+    "description": "System service definition for Cloudflare tunnel on port 8088",
+    "must_migrate": true
+  },
+  {
+    "path": "/home/azureuser/.config/systemd/user/frappe-mariadb.service",
+    "type": "Systemd User Unit",
+    "description": "User systemd unit for MariaDB daemon",
+    "must_migrate": true
+  },
+  {
+    "path": "/home/azureuser/.config/systemd/user/frappe-bench.service",
+    "type": "Systemd User Unit",
+    "description": "User systemd unit for Bench start",
+    "must_migrate": true
+  },
+  {
+    "path": "/home/azureuser/.config/systemd/user/ask-research-api.service",
+    "type": "Systemd User Unit",
+    "description": "User systemd unit for Ask & Research SQLite REST API",
+    "must_migrate": true
+  }
+]

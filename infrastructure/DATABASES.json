@@ -1,0 +1,69 @@
+[
+  {
+    "type": "MariaDB",
+    "version": "11.8.9-MariaDB",
+    "mode": "User-space portable service",
+    "port": 3306,
+    "binary": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb/bin/mariadbd",
+    "config": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-conf/my.cnf",
+    "data_directory": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/mariadb-data",
+    "systemd_service": "frappe-mariadb.service",
+    "associated_project": "Frappe ERP Alco"
+  },
+  {
+    "type": "Redis Cache",
+    "port": 11000,
+    "mode": "User-space portable service",
+    "binary": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/redis/bin/redis-server",
+    "associated_project": "Frappe ERP Alco",
+    "data_directory": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/config/redis_cache.conf"
+  },
+  {
+    "type": "Redis Queue",
+    "port": 13000,
+    "mode": "User-space portable service",
+    "binary": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/runtime/redis/bin/redis-server",
+    "associated_project": "Frappe ERP Alco",
+    "data_directory": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/config/redis_queue.conf"
+  },
+  {
+    "type": "SQLite",
+    "name": "recall.db",
+    "path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/openrecall/recall.db",
+    "size_bytes": 122953728,
+    "associated_project": "Personal AI Agent",
+    "importance": "MUST MIGRATE (Primary memory database)"
+  },
+  {
+    "type": "SQLite",
+    "name": "youtube_pipeline.db",
+    "path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/PromptDatabase/database/youtube_pipeline.db",
+    "size_bytes": 71852032,
+    "associated_project": "YouTube Pipeline",
+    "importance": "MUST MIGRATE (Primary pipeline state and prompts)"
+  },
+  {
+    "type": "SQLite",
+    "name": "chrome_history_master.db",
+    "path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/data/chrome/chrome_history_master.db",
+    "size_bytes": 28344320,
+    "associated_project": "Personal AI Agent",
+    "importance": "MUST MIGRATE"
+  },
+  {
+    "type": "SQLite",
+    "name": "vault_index.db",
+    "path": "/home/azureuser/IroScript_Projects/Personal Life/openrecall_vault/vault_index.db",
+    "size_bytes": 22097920,
+    "associated_project": "Personal AI Agent / OpenRecall",
+    "importance": "MUST MIGRATE"
+  },
+  {
+    "type": "SQLite",
+    "name": "ask_and_research.db",
+    "path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Ask-And-Research/ask_and_research.db",
+    "size_bytes": 45056,
+    "associated_project": "Ask & Research Agent",
+    "importance": "MUST MIGRATE (Active research queries and taxonomy)"
+  }
+]
