@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "last_updated": "2026-10-06T16:59:25Z",
+  "derived_from": "PROJECT_REGISTRY.json",
+  "connections": [
+    {
+      "project_id": "whatsapp_master",
+      "display_name": "Antigravity Global Notifier & WhatsApp Master",
+      "enabled": true,
+      "group_id": "AGY Master",
+      "agent_name": "agy:0",
+      "working_directory_source": "PROJECT_REGISTRY"
+    },
+    {
+      "project_id": "youtube_pipeline",
+      "display_name": "YouTube Pipeline",
+      "enabled": true,
+      "group_id": "AGY YouTube",
+      "agent_name": "agy:yt",
+      "working_directory_source": "PROJECT_REGISTRY"
+    },
+    {
+      "project_id": "telegram_bot",
+      "display_name": "Telegram Bot & Scraper",
+      "enabled": true,
+      "group_id": "AGY Telegram",
+      "agent_name": "agy:tg",
+      "working_directory_source": "PROJECT_REGISTRY"
+    },
+    {
+      "project_id": "personal_ai_agent",
+      "display_name": "Digital History & Personal AI",
+      "enabled": true,
+      "group_id": "Personal AI",
+      "agent_name": "agy:personal",
+      "working_directory_source": "PROJECT_REGISTRY"
+    },
+    {
+      "project_id": "frappe_erp_alco",
+      "display_name": "Frappe ERP Alco",
+      "enabled": true,
+      "group_id": "AGY Frappe",
+      "agent_name": "agy:frappe",
+      "working_directory_source": "PROJECT_REGISTRY"
+    },
+    {
+      "project_id": "ask_and_research",
+      "display_name": "Ask & Research Agent",
+      "enabled": true,
+      "group_id": "AGY Ask & Research",
+      "agent_name": "agy:ask",
+      "working_directory_source": "PROJECT_REGISTRY"
+    }
+  ]
+}

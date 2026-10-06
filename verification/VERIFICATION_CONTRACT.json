@@ -1,0 +1,83 @@
+{
+  "version": "1.0.0",
+  "description": "Universal Tool- and Model-Agnostic Verification Evidence Contract. All verifiers (deterministic scripts, Codex, Claude, local models) must adhere to this schema.",
+  "status_vocabulary": [
+    "VERIFIED",
+    "FAILED",
+    "NOT VERIFIED",
+    "INCONCLUSIVE"
+  ],
+  "contract_schema": {
+    "type": "object",
+    "required": [
+      "task_id",
+      "claim",
+      "evidence_command",
+      "command_output",
+      "exit_code",
+      "files_inspected",
+      "negative_test",
+      "verdict"
+    ],
+    "properties": {
+      "task_id": {
+        "type": "string",
+        "description": "Unique task or session identifier"
+      },
+      "claim": {
+        "type": "string",
+        "description": "Specific technical claim being evaluated"
+      },
+      "evidence_command": {
+        "type": "string",
+        "description": "Literal machine command executed to collect empirical proof"
+      },
+      "command_output": {
+        "type": "string",
+        "description": "Verbatim stdout and stderr resulting from the evidence command"
+      },
+      "exit_code": {
+        "type": "integer",
+        "description": "Process exit return code (0 for success, non-zero for failure)"
+      },
+      "files_inspected": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["path", "exists", "sha256", "bytes"],
+          "properties": {
+            "path": {"type": "string"},
+            "exists": {"type": "boolean"},
+            "sha256": {"type": "string"},
+            "bytes": {"type": "integer"}
+          }
+        }
+      },
+      "negative_test": {
+        "type": "object",
+        "required": ["command", "exit_code", "expected_rejection"],
+        "properties": {
+          "command": {"type": "string"},
+          "exit_code": {"type": "integer"},
+          "expected_rejection": {"type": "boolean"}
+        }
+      },
+      "independent_verification": {
+        "type": "object",
+        "properties": {
+          "verifier_name": {"type": "string"},
+          "reasoning": {"type": "string"}
+        }
+      },
+      "verdict": {
+        "type": "string",
+        "enum": ["VERIFIED", "FAILED", "NOT VERIFIED", "INCONCLUSIVE"]
+      }
+    }
+  },
+  "rules": {
+    "no_prose_pass": "AI verifiers are strictly prohibited from declaring VERIFIED using conversational prose without populated evidence fields and exit_code=0.",
+    "deterministic_precedence": "Layer 1 deterministic tests cannot be superseded or waived by any AI model verdict.",
+    "all_or_nothing": "Any failed vector immediately forces overall verdict to FAILED."
+  }
+}

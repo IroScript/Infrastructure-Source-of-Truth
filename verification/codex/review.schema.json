@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "task_id": {"type": "string"},
+    "verdict": {"type": "string", "enum": ["approved", "correction_needed", "inconclusive"]},
+    "report": {"type": "string"},
+    "agy_guideline": {"type": "string"}
+  },
+  "required": ["task_id", "verdict", "report", "agy_guideline"],
+  "additionalProperties": false
+}

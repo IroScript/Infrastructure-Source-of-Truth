@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "description": "Configured Verifier Profiles for Multi-Tiered Verification. Deterministic tests are mandatory; AI verifiers act as secondary reasoning layers.",
+  "fallback_order": [
+    "deterministic",
+    "codex",
+    "claude_agy",
+    "manual_evidence_package"
+  ],
+  "profiles": {
+    "deterministic": {
+      "name": "Deterministic Shell & Python Verifier",
+      "type": "non_ai_verifier",
+      "priority": 1,
+      "mandatory": true,
+      "script": "trust/verification/verify_10_fold.py",
+      "description": "Cryptographically signed 10-vector mechanical evaluation (hashes, exits, permissions, ports, tests).",
+      "supported_targets": ["all"]
+    },
+    "codex": {
+      "name": "OpenAI Codex Evidence Reviewer",
+      "type": "ai_verifier",
+      "priority": 2,
+      "mandatory": false,
+      "script": "verification/codex/manual_review.py",
+      "schema": "verification/codex/review.schema.json",
+      "description": "Independent evidence review against AGY truth guidelines using OpenAI Codex CLI.",
+      "supported_targets": ["code_reviews", "transcript_audits"]
+    },
+    "claude_agy": {
+      "name": "AGY Native Reasoning Assistant",
+      "type": "ai_verifier",
+      "priority": 3,
+      "mandatory": false,
+      "description": "Antigravity native reasoning agent operating under 74 Truth directives and verification gates.",
+      "supported_targets": ["all"]
+    },
+    "manual_evidence_package": {
+      "name": "Self-Contained Audit Evidence Package",
+      "type": "non_ai_verifier",
+      "priority": 4,
+      "mandatory": false,
+      "description": "Deterministic evidence bundle containing command transcripts, hashes, and outputs when AI verifiers are unavailable.",
+      "supported_targets": ["disaster_recovery", "offline_audits"]
+    }
+  }
+}

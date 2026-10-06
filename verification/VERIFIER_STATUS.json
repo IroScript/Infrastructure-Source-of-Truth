@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-10-06T17:15:00Z",
+  "verifiers": {
+    "deterministic": {
+      "status": "AVAILABLE",
+      "checked_at": "2026-10-06T17:15:00Z",
+      "command": "python3 /home/azureuser/.agents/verify_10_fold.py",
+      "details": "Hardened 10-level verification runner active on VM."
+    },
+    "codex": {
+      "status": "AVAILABLE",
+      "checked_at": "2026-10-06T17:15:00Z",
+      "command": "python3 /home/azureuser/IroScript_Projects/OpenAI_Codex/manual_review.py",
+      "details": "Sanitized review schema and test harness present."
+    },
+    "claude_agy": {
+      "status": "AVAILABLE",
+      "checked_at": "2026-10-06T17:15:00Z",
+      "command": "agy",
+      "details": "Active interactive AGY CLI instance."
+    },
+    "manual_evidence_package": {
+      "status": "AVAILABLE",
+      "checked_at": "2026-10-06T17:15:00Z",
+      "details": "Deterministic SHA-256 and transcript log generation ready."
+    }
+  }
+}

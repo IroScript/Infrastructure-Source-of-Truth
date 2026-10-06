@@ -1,0 +1,79 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-10-06T17:25:00Z",
+  "description": "Authoritative External Backup Catalog. Answers deterministically: Where is the latest valid backup of any database or data asset?",
+  "backups": [
+    {
+      "backup_id": "bak_recall_20260926",
+      "asset_id": "recall_sqlite_db",
+      "project_id": "personal_ai_agent",
+      "source_checksum": "00f9e8041e4fe049b1a134ee6900fecfe231db69cf4f828a2a7a589998b31a86",
+      "remote_destination": "gdrive:Azure_VM_Live_Backup_Fateh_Ali/DATABASE_BACKUPS_VAULT",
+      "remote_object": "recall.db",
+      "timestamp": "2026-09-26T08:56:31Z",
+      "size": 122953728,
+      "encryption": "none",
+      "restore_verification": "LOCAL RESTORE VERIFIED"
+    },
+    {
+      "backup_id": "bak_youtube_db_20260926",
+      "asset_id": "youtube_pipeline_db",
+      "project_id": "youtube_pipeline",
+      "source_checksum": "68bf5fa2ea1db51b2a757ca50449a0225d3923d8cba9a6d859a850125daaa076",
+      "remote_destination": "gdrive:Azure_VM_Live_Backup_Fateh_Ali/DATABASE_BACKUPS_VAULT",
+      "remote_object": "azure_youtube_pipeline_consistent.db",
+      "timestamp": "2026-09-26T08:56:31Z",
+      "size": 71852032,
+      "encryption": "none",
+      "restore_verification": "LOCAL RESTORE VERIFIED"
+    },
+    {
+      "backup_id": "bak_chrome_hist_20260926",
+      "asset_id": "chrome_history_master_db",
+      "project_id": "personal_ai_agent",
+      "source_checksum": "32e6d32184c1c80e15b6d5f04aef72da9bfbb5d5ebaa2fa68ba24302fe805c6d",
+      "remote_destination": "gdrive:Azure_VM_Live_Backup_Fateh_Ali/DATABASE_BACKUPS_VAULT",
+      "remote_object": "chrome_history_master.db",
+      "timestamp": "2026-09-26T08:56:31Z",
+      "size": 28344320,
+      "encryption": "none",
+      "restore_verification": "LOCAL RESTORE VERIFIED"
+    },
+    {
+      "backup_id": "bak_vault_idx_20260926",
+      "asset_id": "vault_index_db",
+      "project_id": "personal_ai_agent",
+      "source_checksum": "17dbaffbe76c90b20ef4bb864c391aa89eb814d6435cf57c6b44dd896695bceb",
+      "remote_destination": "gdrive:Azure_VM_Live_Backup_Fateh_Ali/DATABASE_BACKUPS_VAULT",
+      "remote_object": "vault_index.db",
+      "timestamp": "2026-09-26T08:56:31Z",
+      "size": 22097920,
+      "encryption": "none",
+      "restore_verification": "LOCAL RESTORE VERIFIED"
+    },
+    {
+      "backup_id": "bak_ask_research_20260926",
+      "asset_id": "ask_and_research_db",
+      "project_id": "ask_and_research",
+      "source_checksum": "da775283ae8583654f590ff91fa30a0e98031d279cfdf4740e53dbd981881515",
+      "remote_destination": "gdrive:Azure_VM_Live_Backup_Fateh_Ali/DATABASE_BACKUPS_VAULT",
+      "remote_object": "ask_and_research.db",
+      "timestamp": "2026-09-26T08:56:31Z",
+      "size": 217088,
+      "encryption": "none",
+      "restore_verification": "LOCAL RESTORE VERIFIED"
+    },
+    {
+      "backup_id": "bak_frappe_mariadb_20261006",
+      "asset_id": "frappe_alco_mariadb",
+      "project_id": "frappe_erp_alco",
+      "source_checksum": "ca89573ae8bb72cf496d5a8aa1796c9f0ef7cb73f1ff2e9b049fa029aa8705b0",
+      "remote_destination": "gdrive:Azure_VM_Live_Backup_Fateh_Ali/Frappe-erp-Alco/backups",
+      "remote_object": "20260925_113002-alco_local-database.sql.gz",
+      "timestamp": "2026-10-06T22:37:05Z",
+      "size": 997129,
+      "encryption": "none",
+      "restore_verification": "LOCAL RESTORE VERIFIED"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-10-06T16:55:00Z",
+  "description": "Known managed root directories scanned for projects. Projects may also exist in arbitrary paths outside these roots, which will be registered via canonical_path.",
+  "managed_roots": [
+    {
+      "root_id": "iroscript_projects",
+      "path": "/home/azureuser/IroScript_Projects",
+      "description": "Primary workspace for AGY and IroScript development projects",
+      "scan_depth": 3,
+      "enabled": true
+    },
+    {
+      "root_id": "frappe_erp_alco",
+      "path": "/home/azureuser/Frappe-erp-Alco",
+      "description": "Frappe and ERPNext v16 production installation and custom apps",
+      "scan_depth": 4,
+      "enabled": true
+    }
+  ],
+  "excluded_patterns": [
+    ".venv",
+    "*backup*",
+    "env",
+    "archived_deletions",
+    "__pycache__",
+    "*_backup_*",
+    "venv",
+    "All_Backup",
+    "telegram_backup_*",
+    "node_modules",
+    ".git",
+    ".cache"
+  ]
+}

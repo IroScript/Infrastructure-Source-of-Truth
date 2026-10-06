@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "description": "Universal Data & Asset Storage Policy for AGY. Enforces clear separation between Git source code, persistent databases, media files, secrets, and transient caches.",
+  "classes": {
+    "CLASS_G": {
+      "name": "Git Source Code",
+      "description": "Source code, scripts, configuration templates, documentation, and infrastructure manifests.",
+      "default_destination": "GitHub Remote Repository",
+      "backup_mechanism": "git push origin main",
+      "prohibited_items": [
+        "Live databases (.db, .sqlite, .rdb)",
+        "Large binary media (>50MB videos, audio)",
+        "Plaintext credentials and secrets (.env, id_rsa, tokens)"
+      ]
+    },
+    "CLASS_D": {
+      "name": "Persistent Database",
+      "description": "SQLite databases, MariaDB dumps, PostgreSQL dumps, Redis snapshots.",
+      "default_destination": "Google Drive (gdrive:Azure_VM_Live_Backup_Fateh_Ali/DATABASE_BACKUPS_VAULT)",
+      "canonical_hierarchy": "gdrive:IroScript_Backups/projects/{project_id}/databases/",
+      "backup_mechanism": "Consistent snapshot -> SHA256 -> rclone copy -> remote size probe",
+      "restore_testing_mandatory": true
+    },
+    "CLASS_M": {
+      "name": "Media Assets",
+      "description": "Rendered YouTube video files, exported audio, large graphical assets, packaged APKs.",
+      "default_destination": "Google Drive (gdrive:Azure_VM_Live_Backup_Fateh_Ali/Youtube_Exports)",
+      "canonical_hierarchy": "gdrive:IroScript_Backups/projects/{project_id}/media/",
+      "backup_mechanism": "rclone copy with SHA256 catalog tracking",
+      "prohibited_in_git": true
+    },
+    "CLASS_S": {
+      "name": "Secret & Credential",
+      "description": "Private SSH keys, API tokens, database passwords, session cookies, OAuth tokens.",
+      "default_destination": "Local secure directory (0600) + Offline Key Vault",
+      "prohibited_in_git": true,
+      "backup_mechanism": "Documented in BOOTSTRAP_CREDENTIALS.md with zero plaintext values"
+    },
+    "CLASS_T": {
+      "name": "Temporary & Cache",
+      "description": "node_modules, build directories, target/, logs, temporary scratch scripts.",
+      "default_destination": "NO_BACKUP (Ephemeral)",
+      "backup_mechanism": "Excluded from backups"
+    }
+  }
+}

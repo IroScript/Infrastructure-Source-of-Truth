@@ -1,100 +1,34 @@
-[
-  {
-    "window_index": "0",
-    "window_name": "AI-Agent",
-    "panes": "1",
-    "current_path": "/home/azureuser",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "1",
-    "window_name": "Bash-Terminal",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal",
-    "current_command": "node"
-  },
-  {
-    "window_index": "2",
-    "window_name": "Linux-Shell",
-    "panes": "1",
-    "current_path": "/home/azureuser",
-    "current_command": "bash"
-  },
-  {
-    "window_index": "3",
-    "window_name": "yt",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Social Media/youtube",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "4",
-    "window_name": "frappe",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "5",
-    "window_name": "tg",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "6",
-    "window_name": "history",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "7",
-    "window_name": "kids",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "8",
-    "window_name": "rust",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "9",
-    "window_name": "article",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "10",
-    "window_name": "game",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "11",
-    "window_name": "research",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Ask-And-Research",
-    "current_command": "agy"
-  },
-  {
-    "window_index": "12",
-    "window_name": "report",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Reporting-Agent",
-    "current_command": "python3"
-  },
-  {
-    "window_index": "13",
-    "window_name": "codex",
-    "panes": "1",
-    "current_path": "/home/azureuser/IroScript_Projects/OpenAI_Codex",
-    "current_command": "node"
-  }
-]
+{
+  "tmux_windows": [
+    {
+      "window": "agy:0,agy:1,agy:12",
+      "project_id": "whatsapp_master",
+      "working_directory": "/home/azureuser/IroScript_Projects/Whatsapp master"
+    },
+    {
+      "window": "agy:3",
+      "project_id": "youtube_pipeline",
+      "working_directory": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation"
+    },
+    {
+      "window": "agy:4",
+      "project_id": "telegram_bot",
+      "working_directory": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot"
+    },
+    {
+      "window": "agy:5",
+      "project_id": "personal_ai_agent",
+      "working_directory": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT"
+    },
+    {
+      "window": "agy:6",
+      "project_id": "frappe_erp_alco",
+      "working_directory": "/home/azureuser/Frappe-erp-Alco"
+    },
+    {
+      "window": "agy:2",
+      "project_id": "ask_and_research",
+      "working_directory": "/home/azureuser/IroScript_Projects/Ask-And-Research-Agent"
+    }
+  ]
+}
