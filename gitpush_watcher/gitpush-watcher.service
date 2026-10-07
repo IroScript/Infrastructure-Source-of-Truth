@@ -4,11 +4,13 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/azureuser/IroScript_Projects/Infrastructure-Source-of-Truth
-ExecStart=/usr/bin/python3 /home/azureuser/IroScript_Projects/Infrastructure-Source-of-Truth/sot watcher run-daemon
+WorkingDirectory=%h/IroScript_Projects/Infrastructure-Source-of-Truth
+ExecStart=/usr/bin/python3 %h/IroScript_Projects/Infrastructure-Source-of-Truth/sot watcher run-daemon
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+Environment=GIT_TERMINAL_PROMPT=0
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
+

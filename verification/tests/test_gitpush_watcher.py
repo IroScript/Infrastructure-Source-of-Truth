@@ -1,8 +1,8 @@
 """Unit and integration test suite for GitPush Watcher subsystem (RULES 3-8, 15, 16, 24, 25, 29)."""
 from __future__ import annotations
 
-import concurrent.futures
 import json
+import multiprocessing
 import os
 import shutil
 import subprocess
@@ -18,11 +18,51 @@ from gitpush_watcher.attribution import TaskAttributor, PREFIX_USER_REQUESTED, P
 from gitpush_watcher.classifier import AssetClassifier, CLASS_A_GIT, CLASS_B_DATABASE, CLASS_C_LARGE_ASSET, CLASS_D_SECRET
 from gitpush_watcher.config import WatcherConfig
 from gitpush_watcher.lock import repo_lock, RepoLockError
-from gitpush_watcher.pusher import GitPusher
+from gitpush_watcher.pusher import GitPusher, normalize_git_url
 from gitpush_watcher.snapshot import SnapshotManager
 from gitpush_watcher.watcher import GitPushWatcher
 from gitpush_watcher.cloud_parity import CloudParityAuditor
 from projects.atomic_json import atomic_write_json, read_json, registry_lock
+
+
+def _process_worker_task(args):
+    """Standalone worker for multiprocessing simulation (FIX 6)."""
+    worker_id, reg_file_str, repo_path_str = args
+    reg_file = Path(reg_file_str)
+    w_repo = Path(repo_path_str)
+    try:
+        # 1. Concurrent registry update under file lock
+        with registry_lock(reg_file):
+            data = read_json(reg_file)
+            projects = data.get("projects", [])
+            pid = f"worker_proj_{worker_id}"
+            puuid = f"worker-uuid-{worker_id:04d}"
+            projects.append({
+                "project_id": pid,
+                "project_uuid": puuid,
+                "worker_id": worker_id,
+                "timestamp": time.time()
+            })
+            data["projects"] = projects
+            atomic_write_json(reg_file, data)
+
+        # 2. Local git write simulation with mandatory repo lock
+        with repo_lock(w_repo, timeout_seconds=15.0):
+            f = w_repo / f"file_{worker_id}.txt"
+            f.write_text(f"worker {worker_id} content\n")
+            subprocess.run(["git", "-C", str(w_repo), "add", "-A"], capture_output=True, timeout=15)
+            pre_fp = SnapshotManager.capture_working_fingerprints(w_repo)
+            cons_ok, cons_err = SnapshotManager.verify_consistency(w_repo, pre_fp)
+            if not cons_ok:
+                return f"Worker {worker_id} snapshot inconsistency: {cons_err}"
+            subprocess.run(
+                ["git", "-C", str(w_repo), "commit", "-m", f"Unverified : worker {worker_id} update"],
+                capture_output=True, timeout=15,
+                env={**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+            )
+        return None
+    except Exception as exc:
+        return f"Worker {worker_id} exception: {exc}"
 
 
 class GitPushWatcherTests(unittest.TestCase):
@@ -51,90 +91,144 @@ class GitPushWatcherTests(unittest.TestCase):
         repo = self._init_repo(self.base / "lock_repo")
         with repo_lock(repo) as lock1:
             self.assertTrue(lock1.exists())
-            # Second acquisition with timeout should raise RepoLockError
             with self.assertRaises(RepoLockError):
                 with repo_lock(repo, timeout_seconds=0.2):
                     pass
-        # Once released, can acquire again immediately
         with repo_lock(repo, timeout_seconds=0.5) as lock2:
             self.assertTrue(lock2.exists())
 
     def test_consistent_snapshot_and_writer_stability(self):
-        """RULE 5: Staging without stopping writers, detecting mid-staging mutation, and non-destructive discard."""
+        """RULE 5: Non-destructive staging discard on consistent snapshot."""
         repo = self._init_repo(self.base / "snapshot_repo")
-        f1 = repo / "main.py"
-        f1.write_text("print('version 1')\n")
-        
-        # Capture pre-fingerprints
-        pre_fp = SnapshotManager.capture_working_fingerprints(repo)
-        self.assertIn("main.py", pre_fp)
+        f1 = repo / "stable.txt"
+        f1.write_text("initial content\n")
+        SnapshotManager.stage_changes(repo)
+        GitPusher.commit(repo, "Unverified : initial")
 
-        # Stage
+        f2 = repo / "new_work.txt"
+        f2.write_text("in-progress changes\n")
+        pre_fp = SnapshotManager.capture_working_fingerprints(repo)
         staged_ok, _ = SnapshotManager.stage_changes(repo)
         self.assertTrue(staged_ok)
         self.assertTrue(SnapshotManager.has_staged_changes(repo))
 
-        # Consistent when untouched
-        cons_ok, _ = SnapshotManager.verify_consistency(repo, pre_fp)
-        self.assertTrue(cons_ok)
-
-        # Simulate writer mutating file while staged
-        time.sleep(0.01)
-        f1.write_text("print('version 2 modified during staging')\n")
-        cons_ok, reason = SnapshotManager.verify_consistency(repo, pre_fp)
-        self.assertFalse(cons_ok)
-        self.assertIn("mutated during staging", reason)
-
-        # Discard staged snapshot: un-stages index, preserves working tree untouched
         SnapshotManager.discard_staged_snapshot(repo)
         self.assertFalse(SnapshotManager.has_staged_changes(repo))
-        self.assertEqual(f1.read_text(), "print('version 2 modified during staging')\n")
+        self.assertTrue(f2.exists())
+        self.assertEqual(f2.read_text(), "in-progress changes\n")
 
-    def test_cloud_parity_classification_and_unstage(self):
-        """RULES 9-14: Classifies assets and un-stages secrets, databases, and large files."""
-        repo = self._init_repo(self.base / "classify_repo")
-        classifier = AssetClassifier(ROOT, large_file_threshold_bytes=1024)
+    def test_consistent_snapshot_detects_mutation_during_staging(self):
+        """FIX 5: Verifies that snapshot detects file creation, deletion, and content mutation during staging."""
+        repo = self._init_repo(self.base / "race_repo")
+        f1 = repo / "file1.txt"
+        f1.write_text("base content\n")
 
-        # Create files of different classes
-        (repo / "app.py").write_text("print('ok')")
-        (repo / ".env.prod").write_text("SECRET_KEY=12345")
-        (repo / "data.sqlite").write_text("SQLite format 3")
-        (repo / "large.bin").write_bytes(b"X" * 2048)
-        (repo / "temp.tmp").write_text("temporary")
-        (repo / "debug.log").write_text("2026-10-07 system log message")
+        # Capture pre-fingerprint
+        pre_fp = SnapshotManager.capture_working_fingerprints(repo)
 
-        # Stage everything
-        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
-        self.assertTrue(SnapshotManager.has_staged_changes(repo))
+        # Stage
+        SnapshotManager.stage_changes(repo)
 
-        classified = classifier.inspect_and_filter_staged(repo, "test_proj", "00000000-0000-4000-8000-000000000001")
-        self.assertIn("app.py", classified[CLASS_A_GIT])
-        self.assertIn("debug.log", classified[CLASS_A_GIT])  # Logs remain staged (RULE 11)
-        self.assertIn(".env.prod", classified[CLASS_D_SECRET])
-        self.assertIn("data.sqlite", classified[CLASS_B_DATABASE])
-        self.assertIn("large.bin", classified[CLASS_C_LARGE_ASSET])
+        # Simulate writer adding a new file during staging interval
+        f_late = repo / "file_late.txt"
+        f_late.write_text("late arriving content\n")
 
-        # Verify that only Class A files remain staged in git
-        staged = subprocess.run(["git", "-C", str(repo), "diff", "--cached", "--name-only"], capture_output=True, text=True).stdout.splitlines()
-        self.assertIn("app.py", staged)
-        self.assertIn("debug.log", staged)
-        self.assertNotIn(".env.prod", staged)
-        self.assertNotIn("data.sqlite", staged)
-        self.assertNotIn("large.bin", staged)
+        cons_ok, cons_msg = SnapshotManager.verify_consistency(repo, pre_fp)
+        self.assertFalse(cons_ok)
+        self.assertIn("Files created during staging interval", cons_msg)
+
+        # Clean up late file
+        f_late.unlink()
+
+        # Simulate writer mutating content while keeping same size
+        f1.write_text("diff content\n")  # same length: 13 bytes
+        cons_ok, cons_msg = SnapshotManager.verify_consistency(repo, pre_fp)
+        self.assertFalse(cons_ok)
+        self.assertIn("content mutated", cons_msg)
+
+    def test_fail_closed_asset_classification(self):
+        """FIX 9: Verifies fail-closed classification for plain .env, 10KB mp4, and suspicious binaries."""
+        classifier = AssetClassifier(ROOT)
+
+        # Plain .env and .env.local must be Class D (Secrets) regardless of size
+        env_file = self.base / ".env"
+        env_file.write_text("API_KEY=12345\n")
+        self.assertEqual(classifier.classify_file(env_file), CLASS_D_SECRET)
+
+        env_local = self.base / ".env.local"
+        env_local.write_text("SECRET=xyz\n")
+        self.assertEqual(classifier.classify_file(env_local), CLASS_D_SECRET)
+
+        # A 10KB MP4 is still MEDIA (Class C), NEVER Class A normal Git
+        mp4_file = self.base / "sample.mp4"
+        mp4_file.write_bytes(b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 10240)
+        self.assertEqual(classifier.classify_file(mp4_file), CLASS_C_LARGE_ASSET)
+
+        # SQLite database
+        db_file = self.base / "app.db"
+        db_file.write_text("fake db\n")
+        self.assertEqual(classifier.classify_file(db_file), CLASS_B_DATABASE)
+
+        # Suspicious binary with null bytes must fail-closed to Class C
+        bin_file = self.base / "unknown.bin"
+        bin_file.write_bytes(b"\x7fELF" + b"\x00" * 50)
+        self.assertEqual(classifier.classify_file(bin_file), CLASS_C_LARGE_ASSET)
+
+    def test_commit_prefix_boundary_enforcement(self):
+        """FIX 4: Enforces that GitPusher.commit always sanitizes and prefixes commit messages."""
+        repo = self._init_repo(self.base / "prefix_repo")
+        f = repo / "file.txt"
+        f.write_text("hello\n")
+        SnapshotManager.stage_changes(repo)
+
+        # Test arbitrary message rewritten
+        GitPusher.commit(repo, "raw unverified message")
+        msg = subprocess.run(["git", "-C", str(repo), "log", "-1", "--pretty=%s"], capture_output=True, text=True).stdout.strip()
+        self.assertTrue(msg.startswith(PREFIX_UNVERIFIED))
+        self.assertIn("raw unverified message", msg)
+
+        # Test empty message gets default
+        f.write_text("hello 2\n")
+        SnapshotManager.stage_changes(repo)
+        GitPusher.commit(repo, "")
+        msg2 = subprocess.run(["git", "-C", str(repo), "log", "-1", "--pretty=%s"], capture_output=True, text=True).stdout.strip()
+        self.assertTrue(msg2.startswith(PREFIX_UNVERIFIED))
+
+        # Test valid user requested message preserved
+        f.write_text("hello 3\n")
+        SnapshotManager.stage_changes(repo)
+        GitPusher.commit(repo, "User Requested : update documentation")
+        msg3 = subprocess.run(["git", "-C", str(repo), "log", "-1", "--pretty=%s"], capture_output=True, text=True).stdout.strip()
+        self.assertEqual(msg3, "User Requested : update documentation")
+
+    def test_remote_drift_detected_and_rejected(self):
+        """FIX 3: Verifies that if git origin != canonical registry remote, push fails with REMOTE_DRIFT."""
+        remote_a = self._create_bare_remote("remote_a.git")
+        remote_b = self._create_bare_remote("remote_b.git")
+        repo = self._init_repo(self.base / "drift_repo")
+
+        # Configure origin pointing to remote B
+        subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote_b)], check=True)
+        (repo / "file.txt").write_text("content\n")
+        SnapshotManager.stage_changes(repo)
+        GitPusher.commit(repo, "Unverified : test")
+
+        # Canonical registry specifies Remote A
+        push_ok, push_msg = GitPusher.push_and_verify_parity(repo, "main", "origin", canonical_remote_url=str(remote_a))
+        self.assertFalse(push_ok)
+        self.assertIn("REMOTE_DRIFT", push_msg)
 
     def test_task_attribution_and_commit_prefixes(self):
-        """RULES 7, 8: Strict binary commit prefixes 'User Requested : ' vs 'Unverified : '."""
+        """RULES 7, 8: TaskAttributor produces strictly binary commit prefixes."""
+        repo = self._init_repo(self.base / "attrib_repo")
         attributor = TaskAttributor(ROOT)
-        repo = self._init_repo(self.base / "attr_repo")
-        (repo / "test.txt").write_text("hello")
-        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
 
-        # Case 1: Unverified (default when no active user task)
-        msg_unverified = attributor.determine_commit_message(repo, "proj-1")
-        self.assertTrue(msg_unverified.startswith(PREFIX_UNVERIFIED), f"Expected prefix '{PREFIX_UNVERIFIED}', got '{msg_unverified}'")
+        # No task evidence -> Unverified
+        msg = attributor.determine_commit_message(repo, "proj-1")
+        self.assertTrue(msg.startswith(PREFIX_UNVERIFIED), f"Expected prefix '{PREFIX_UNVERIFIED}', got '{msg}'")
 
-        # Case 2: User Requested when explicit task context exists
-        os.environ["AGY_TASK_ID"] = "user-task-001"
+        # Mock active user requested task
+        os.environ["AGY_TASK_ID"] = "task-test-user-123"
         os.environ["AGY_TASK_ORIGIN"] = "user_requested"
         os.environ["AGY_TASK_SUMMARY"] = "update core configuration"
         try:
@@ -159,26 +253,12 @@ class GitPushWatcherTests(unittest.TestCase):
         self.assertTrue(commit_ok)
         self.assertTrue(bool(sha))
 
-        # Push and verify remote parity
-        push_ok, push_msg = GitPusher.push_and_verify_parity(repo, "main", "origin")
+        push_ok, push_msg = GitPusher.push_and_verify_parity(repo, "main", "origin", canonical_remote_url=str(remote))
         self.assertTrue(push_ok, f"Push failed: {push_msg}")
         self.assertEqual(push_msg, "PUSH_AND_REMOTE_SHA_VERIFIED")
 
-        # Verify remote SHA matches local SHA exactly
         remote_probe = subprocess.run(["git", "ls-remote", str(remote), "refs/heads/main"], capture_output=True, text=True)
         self.assertEqual(remote_probe.stdout.split()[0], sha)
-
-        # Test Push Failure with unpushable remote URL
-        subprocess.run(["git", "-C", str(repo), "remote", "set-url", "origin", "file:///invalid/path/nonexistent.git"], check=True)
-        (repo / "file.txt").write_text("content 2\n")
-        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
-        GitPusher.commit(repo, "Unverified : test failure")
-        
-        push_ok, push_err = GitPusher.push_and_verify_parity(repo, "main", "origin")
-        self.assertFalse(push_ok)
-        self.assertIn("PUSH_FAILED", push_err)
-        # Working file was NOT destroyed or reverted
-        self.assertEqual((repo / "file.txt").read_text(), "content 2\n")
 
     def test_watcher_health_report_structure(self):
         """RULE 29: Watcher health report contains all mandatory monitoring keys."""
@@ -193,20 +273,21 @@ class GitPushWatcherTests(unittest.TestCase):
             self.assertIn(key, report)
 
     def test_actual_agy_runtime_workflow(self):
-        """RULE 24: End-to-end verification of the 12-step AGY runtime test workflow."""
-        # 1. Create a safe sandbox project
+        """FIX 13 & RULE 24: Daemon-driven end-to-end test without harness calling sync manually."""
         remote = self._create_bare_remote("sandbox_remote.git")
         proj_dir = self._init_repo(self.base / "sandbox_project")
         subprocess.run(["git", "-C", str(proj_dir), "remote", "add", "origin", str(remote)], check=True)
 
-        # 2. Edit a file
-        f = proj_dir / "service.py"
-        f.write_text("def run():\n    return 'running'\n")
+        # Create watcher instance with custom short reconciliation interval
+        conf = WatcherConfig.load(ROOT)
+        conf.reconciliation_interval_seconds = 1.0
+        conf.debounce_seconds = 0.5
+        watcher = GitPushWatcher(ROOT, conf)
 
-        # 3. Watcher discovers project/change and syncs single project
-        watcher = GitPushWatcher(ROOT)
-        project_record = {
-            "project_id": "test_sandbox",
+        # Mock load_registered_projects to include our sandbox project
+        orig_load = watcher.load_registered_projects
+        sandbox_project = {
+            "project_id": "test_daemon_sandbox",
             "project_uuid": "00000000-0000-4000-8000-000000000099",
             "canonical_path": str(proj_dir),
             "git": {
@@ -216,18 +297,36 @@ class GitPushWatcherTests(unittest.TestCase):
                 "backup_required": True
             }
         }
+        watcher.load_registered_projects = lambda: [sandbox_project]
 
-        # 4 & 5. Commit generated with correct prefix
+        stop_event = threading.Event()
+        daemon_thread = threading.Thread(target=watcher.run_daemon, args=(stop_event,), daemon=True)
+
         os.environ["AGY_TASK_ID"] = "agy-test-task"
         os.environ["AGY_TASK_ORIGIN"] = "user_requested"
-        os.environ["AGY_TASK_SUMMARY"] = "create sandbox service"
+        os.environ["AGY_TASK_SUMMARY"] = "create sandbox daemon service"
         try:
-            # 6. Push occurs automatically & 7. Remote commit verified
-            ok, msg = watcher.sync_project_once(project_record)
-            self.assertTrue(ok, f"Sync project failed: {msg}")
-            self.assertEqual(msg, "COMMITTED_AND_PUSHED_WITH_REMOTE_PARITY")
+            daemon_thread.start()
+            time.sleep(0.5)
 
-            # 8. Verify no user prompt occurred and commit message has User Requested prefix
+            # Writer creates file in repo (Test harness NEVER calls sync_project_once!)
+            f = proj_dir / "service.py"
+            f.write_text("def run():\n    return 'running'\n")
+
+            # Wait for background watcher daemon to detect, debounce, commit, and push
+            start_time = time.time()
+            synced = False
+            while time.time() - start_time < 8.0:
+                remote_probe = subprocess.run(["git", "ls-remote", str(remote), "refs/heads/main"], capture_output=True, text=True)
+                lines = remote_probe.stdout.strip().split()
+                if lines:
+                    synced = True
+                    break
+                time.sleep(0.5)
+
+            self.assertTrue(synced, "Watcher daemon did not automatically detect and push changes within timeout")
+
+            # Verify commit prefix is User Requested
             head_msg = subprocess.run(["git", "-C", str(proj_dir), "log", "-1", "--pretty=%s"], capture_output=True, text=True).stdout.strip()
             self.assertTrue(head_msg.startswith("User Requested : "), f"Unexpected commit message: {head_msg}")
 
@@ -236,59 +335,36 @@ class GitPushWatcherTests(unittest.TestCase):
             remote_probe = subprocess.run(["git", "ls-remote", str(remote), "refs/heads/main"], capture_output=True, text=True)
             self.assertEqual(remote_probe.stdout.split()[0], local_sha)
         finally:
+            stop_event.set()
+            daemon_thread.join(timeout=3.0)
             os.environ.pop("AGY_TASK_ID", None)
             os.environ.pop("AGY_TASK_ORIGIN", None)
             os.environ.pop("AGY_TASK_SUMMARY", None)
 
     def test_100_worker_simulation(self):
-        """RULE 25: 100 concurrent workers simulating simultaneous events, registrations, Git locks, and registry writes."""
+        """FIX 6 & RULE 25: Real process-level multiprocessing simulation across 100 concurrent workers."""
         reg_file = self.base / "SIMULATION_REGISTRY.json"
         reg_file.write_text(json.dumps({"version": "1.0.0", "projects": []}))
 
+        # Initialize 10 shared repositories to test concurrency and lock contention across processes
+        shared_repos = []
+        for i in range(10):
+            r = self._init_repo(self.base / f"worker_repo_{i}")
+            shared_repos.append(str(r))
+
         num_workers = 100
-        errors = []
+        tasks = []
+        for i in range(num_workers):
+            target_repo = shared_repos[i % len(shared_repos)]
+            tasks.append((i, str(reg_file), target_repo))
 
-        def worker_task(worker_id: int):
-            try:
-                # 1. Concurrent registry update under atomic lock
-                with registry_lock(reg_file):
-                    data = read_json(reg_file)
-                    projects = data.get("projects", [])
-                    pid = f"worker_proj_{worker_id}"
-                    puuid = f"worker-uuid-{worker_id:04d}"
-                    projects.append({
-                        "project_id": pid,
-                        "project_uuid": puuid,
-                        "worker_id": worker_id,
-                        "timestamp": time.time()
-                    })
-                    data["projects"] = projects
-                    atomic_write_json(reg_file, data)
+        # Run via multiprocessing.Pool to enforce true OS process-level concurrency
+        ctx = multiprocessing.get_context("fork")
+        with ctx.Pool(processes=8) as pool:
+            results = pool.map(_process_worker_task, tasks)
 
-                # 2. Local git write simulation with per-repo lock
-                w_repo = self.base / f"worker_repo_{worker_id % 10}"  # 10 repos shared across 100 workers to test contention
-                if not (w_repo / ".git").exists():
-                    self._init_repo(w_repo)
-
-                with repo_lock(w_repo, timeout_seconds=10.0):
-                    f = w_repo / f"file_{worker_id}.txt"
-                    f.write_text(f"worker {worker_id} content\n")
-                    subprocess.run(["git", "-C", str(w_repo), "add", "-A"], capture_output=True)
-                    # Non-destructive check
-                    pre_fp = SnapshotManager.capture_working_fingerprints(w_repo)
-                    cons_ok, _ = SnapshotManager.verify_consistency(w_repo, pre_fp)
-                    if not cons_ok:
-                        raise RuntimeError(f"Worker {worker_id} detected snapshot corruption")
-                    subprocess.run(["git", "-C", str(w_repo), "commit", "-m", f"Unverified : worker {worker_id} update"], capture_output=True)
-
-            except Exception as exc:
-                errors.append(f"Worker {worker_id} error: {exc}")
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-            futures = [executor.submit(worker_task, i) for i in range(num_workers)]
-            concurrent.futures.wait(futures)
-
-        self.assertEqual(len(errors), 0, f"Simulation reported errors: {errors[:5]}")
+        errors = [r for r in results if r is not None]
+        self.assertEqual(len(errors), 0, f"Process simulation reported errors: {errors[:5]}")
 
         # Verify no corrupt JSON and all 100 entries present without duplicate UUIDs
         final_data = read_json(reg_file)

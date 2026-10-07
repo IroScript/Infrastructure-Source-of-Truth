@@ -1,8 +1,4 @@
-"""Consistent snapshot engine without stopping writers (RULE 5).
-Safeguards working files by never destructively altering the working tree.
-"""
-from __future__ import annotations
-
+import hashlib
 import os
 import subprocess
 from pathlib import Path
@@ -10,19 +6,26 @@ from typing import Dict, List, Tuple
 
 
 class SnapshotManager:
-    """Manages consistent Git staging without interrupting concurrent writers."""
+    """Manages consistent Git staging without interrupting concurrent writers (RULE 5)."""
 
     @staticmethod
-    def get_file_fingerprint(path: Path) -> Tuple[int, int]:
-        """Returns (mtime_ns, size_bytes) for a physical file."""
+    def get_file_fingerprint(path: Path) -> Tuple[int, int, str]:
+        """Returns (mtime_ns, size_bytes, sha256_hash) for a physical file."""
         st = path.stat()
-        return st.st_mtime_ns, st.st_size
+        # Compute sha256 content hash (read up to 10MB to detect content modifications even if size matches)
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            while chunk := f.read(65536):
+                h.update(chunk)
+                if h.digest_size > 10 * 1024 * 1024:
+                    break
+        return st.st_mtime_ns, st.st_size, h.hexdigest()
 
     @classmethod
-    def capture_working_fingerprints(cls, repo_path: Path, ignored_subpaths: List[str] | None = None) -> Dict[str, Tuple[int, int]]:
-        """Captures fingerprints of all non-ignored files in repo before staging."""
+    def capture_working_fingerprints(cls, repo_path: Path, ignored_subpaths: List[str] | None = None) -> Dict[str, Tuple[int, int, str]]:
+        """Captures complete fingerprint state of all trackable files in repo before/after staging."""
         repo = Path(repo_path).resolve()
-        fingerprints: Dict[str, Tuple[int, int]] = {}
+        fingerprints: Dict[str, Tuple[int, int, str]] = {}
         ignored = set(ignored_subpaths or [])
 
         for root, dirs, files in os.walk(repo):
@@ -55,26 +58,40 @@ class SnapshotManager:
         proc = subprocess.run(
             ["git", "-C", str(repo_path), "add", "-A"],
             capture_output=True,
-            text=True
+            text=True,
+            timeout=30
         )
         if proc.returncode != 0:
             return False, f"Staging failed: {proc.stderr.strip()}"
         return True, "STAGED"
 
     @classmethod
-    def verify_consistency(cls, repo_path: Path, pre_fingerprints: Dict[str, Tuple[int, int]]) -> Tuple[bool, str]:
-        """Verifies that no file was modified by an active writer during the staging interval."""
+    def verify_consistency(cls, repo_path: Path, pre_fingerprints: Dict[str, Tuple[int, int, str]], ignored_subpaths: List[str] | None = None) -> Tuple[bool, str]:
+        """Verifies that no file was added, removed, or mutated during the staging interval (FIX 5)."""
         repo = Path(repo_path).resolve()
-        for rel_path, pre_fp in pre_fingerprints.items():
-            full_path = repo / rel_path
-            if not full_path.exists():
-                return False, f"File {rel_path} was removed during staging interval"
-            try:
-                post_fp = cls.get_file_fingerprint(full_path)
-                if post_fp != pre_fp:
-                    return False, f"File {rel_path} mutated during staging interval (writer active)"
-            except OSError as exc:
-                return False, f"Could not inspect {rel_path}: {exc}"
+        # Recapture full working-tree state post-staging
+        post_fingerprints = cls.capture_working_fingerprints(repo, ignored_subpaths)
+
+        pre_paths = set(pre_fingerprints.keys())
+        post_paths = set(post_fingerprints.keys())
+
+        # 1. Detect newly created files during staging
+        added_paths = post_paths - pre_paths
+        if added_paths:
+            return False, f"Files created during staging interval: {list(added_paths)[:5]}"
+
+        # 2. Detect files removed during staging
+        deleted_paths = pre_paths - post_paths
+        if deleted_paths:
+            return False, f"Files removed during staging interval: {list(deleted_paths)[:5]}"
+
+        # 3. Detect mutated files (mtime, size, or content hash mismatch)
+        for rel_path in pre_paths:
+            pre_mtime, pre_size, pre_hash = pre_fingerprints[rel_path]
+            post_mtime, post_size, post_hash = post_fingerprints[rel_path]
+            if pre_size != post_size or pre_hash != post_hash:
+                return False, f"File {rel_path} content mutated during staging (writer active)"
+
         return True, "CONSISTENT"
 
     @classmethod
@@ -82,18 +99,21 @@ class SnapshotManager:
         """Discards staged changes in index ONLY. NEVER touches working tree files (RULE 5)."""
         head_check = subprocess.run(
             ["git", "-C", str(repo_path), "rev-parse", "--verify", "HEAD"],
-            capture_output=True
+            capture_output=True,
+            timeout=10
         )
         if head_check.returncode == 0:
-            subprocess.run(["git", "-C", str(repo_path), "restore", "--staged", "."], capture_output=True)
+            subprocess.run(["git", "-C", str(repo_path), "restore", "--staged", "."], capture_output=True, timeout=20)
         else:
-            subprocess.run(["git", "-C", str(repo_path), "rm", "--cached", "-f", "-r", "."], capture_output=True)
+            subprocess.run(["git", "-C", str(repo_path), "rm", "--cached", "-f", "-r", "."], capture_output=True, timeout=20)
 
     @classmethod
     def has_staged_changes(cls, repo_path: Path) -> bool:
         """Returns True if there are any staged changes in git index."""
         proc = subprocess.run(
             ["git", "-C", str(repo_path), "diff", "--cached", "--quiet"],
-            capture_output=True
+            capture_output=True,
+            timeout=15
         )
         return proc.returncode == 1
+

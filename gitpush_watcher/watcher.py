@@ -151,30 +151,30 @@ class GitPushWatcher:
                 if not staged_ok:
                     return False, stage_msg
 
-                # 4. Verify post-staging consistency without interrupting writers (RULE 5)
-                cons_ok, cons_msg = SnapshotManager.verify_consistency(repo_path, pre_fp)
+                # 4. Verify post-staging consistency without interrupting writers (RULE 5, FIX 5)
+                cons_ok, cons_msg = SnapshotManager.verify_consistency(repo_path, pre_fp, self.config.ignored_patterns)
                 if not cons_ok:
                     SnapshotManager.discard_staged_snapshot(repo_path)
                     return False, f"SNAPSHOT_MUTATED_RETRY: {cons_msg}"
 
-                # 5. Asset classification & Cloud Parity filtering (RULES 9, 10, 11, 12, 13, 14)
+                # 5. Asset classification & Cloud Parity filtering (RULES 9, 10, 11, 12, 13, 14, FIX 9)
                 classified = self.classifier.inspect_and_filter_staged(repo_path, pid, puuid)
 
                 # 6. Check if any staged changes remain for Git commit
                 if not SnapshotManager.has_staged_changes(repo_path):
                     return True, "NO_GIT_CHANGES_AFTER_CLASSIFICATION"
 
-                # 7. Task attribution & Commit message (RULES 7, 8)
+                # 7. Task attribution & Commit message (RULES 7, 8, FIX 4)
                 msg = explicit_message or self.attributor.determine_commit_message(repo_path, puuid)
 
-                # 8. Commit
+                # 8. Commit with enforced prefix boundary
                 commit_ok, commit_sha, commit_err = GitPusher.commit(repo_path, msg)
                 if not commit_ok:
                     return False, commit_err
 
-                # 9. Push & Remote Parity Verification (RULES 15, 16)
+                # 9. Push & Canonical Remote Parity Verification (RULES 15, 16, FIX 3)
                 if backup_required and remote:
-                    push_ok, push_msg = GitPusher.push_and_verify_parity(repo_path, branch, "origin")
+                    push_ok, push_msg = GitPusher.push_and_verify_parity(repo_path, branch, "origin", canonical_remote_url=remote)
                     if push_ok:
                         with self._lock:
                             self.last_successful_pushes[pid] = {
@@ -241,36 +241,79 @@ class GitPushWatcher:
         self.save_state()
 
     def run_daemon(self, stop_event: Optional[threading.Event] = None) -> None:
-        """Main daemon loop supporting libc inotify and periodic reconciliation fallback."""
+        """Main daemon loop supporting real libc inotify watches and periodic reconciliation fallback (FIX 2)."""
         self.running = True
         self.save_state()
 
-        # Initialize libc inotify if available
         inotify_fd = -1
+        inotify_add_watch = None
+        wd_to_project: Dict[int, str] = {}
+        watched_paths: Set[str] = set()
+
+        # Initialize libc inotify
         try:
             libc = ctypes.CDLL(None)
             inotify_init1 = libc.inotify_init1
             inotify_init1.restype = ctypes.c_int
             inotify_init1.argtypes = [ctypes.c_int]
-            inotify_fd = inotify_init1(0x00000800)  # IN_NONBLOCK
-            if inotify_fd >= 0:
-                self.event_source = "inotify"
-        except Exception:
-            self.event_source = "polling"
 
+            inotify_add_watch = libc.inotify_add_watch
+            inotify_add_watch.restype = ctypes.c_int
+            inotify_add_watch.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+
+            inotify_fd = inotify_init1(0x00000800)  # IN_NONBLOCK
+        except Exception:
+            inotify_fd = -1
+
+        def _update_watches():
+            nonlocal inotify_fd, inotify_add_watch
+            if inotify_fd < 0 or not inotify_add_watch:
+                return
+            mask = 0x00000002 | 0x00000008 | 0x00000100 | 0x00000200 | 0x00000080  # MODIFY, CLOSE_WRITE, CREATE, DELETE, MOVED_TO
+            for p in self.load_registered_projects():
+                cpath = str(Path(p.get("canonical_path", "")).resolve())
+                if cpath and cpath not in watched_paths and os.path.isdir(cpath):
+                    wd = inotify_add_watch(inotify_fd, cpath.encode("utf-8"), mask)
+                    if wd >= 0:
+                        wd_to_project[wd] = p.get("project_id", "")
+                        watched_paths.add(cpath)
+
+        _update_watches()
+        self.event_source = "inotify" if wd_to_project else "polling"
         last_reconcile = time.time()
 
         try:
             while self.running and (not stop_event or not stop_event.is_set()):
                 now = time.time()
+
+                # Process inotify events if active
+                if inotify_fd >= 0 and self.event_source == "inotify":
+                    r, _, _ = select.select([inotify_fd], [], [], 0.5)
+                    if r:
+                        try:
+                            event_data = os.read(inotify_fd, 4096)
+                            offset = 0
+                            while offset + 16 <= len(event_data):
+                                wd, mask, cookie, length = struct.unpack_from("iIII", event_data, offset)
+                                offset += 16 + length
+                                pid = wd_to_project.get(wd)
+                                if pid:
+                                    with self._lock:
+                                        self.project_queues[pid] = now
+                        except OSError:
+                            pass
+
+                # Periodic scan and dynamic project watch update
                 if (now - last_reconcile) >= self.config.reconciliation_interval_seconds:
-                    # Periodic scan for modified projects
+                    _update_watches()
                     for p in self.load_registered_projects():
                         cpath = Path(p.get("canonical_path", ""))
                         if cpath.is_dir() and (cpath / ".git").exists():
                             st = subprocess.run(
                                 ["git", "-C", str(cpath), "status", "--porcelain"],
-                                capture_output=True, text=True
+                                capture_output=True, text=True,
+                                env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+                                timeout=15
                             )
                             if st.stdout.strip():
                                 with self._lock:
@@ -278,7 +321,7 @@ class GitPushWatcher:
                     last_reconcile = now
 
                 self.run_reconciliation_cycle()
-                time.sleep(1.0)
+                time.sleep(0.5)
         finally:
             if inotify_fd >= 0:
                 try:
@@ -287,3 +330,4 @@ class GitPushWatcher:
                     pass
             self.running = False
             self.save_state()
+

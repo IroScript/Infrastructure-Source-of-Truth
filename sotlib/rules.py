@@ -182,21 +182,63 @@ def validate_package(repo_root: Path, manifest_path: Path) -> dict:
     return package
 
 
-def discover_packages(repo_root: Path) -> list[tuple[Path, dict]]:
-    packages = []
-    seen = set()
+def audit_rule_baseline(repo_root: Path) -> dict:
+    """Audits active rules against canonical expected inventory (RULE 23, FIX 7)."""
+    registry_path = repo_root / "governance" / "RULE_REGISTRY.json"
+    expected_packages = []
+    if registry_path.is_file():
+        try:
+            reg_data = json.loads(registry_path.read_text(encoding="utf-8"))
+            expected_packages = reg_data.get("packages", [])
+        except Exception:
+            expected_packages = []
+
+    expected_by_id = {p["rule_id"]: p for p in expected_packages}
+    discovered = []
+    tampered = []
+    missing_required = []
+
+    # Check for missing required packages
+    for exp_id, exp_info in expected_by_id.items():
+        man_path = repo_root / exp_info.get("manifest", "")
+        if not man_path.is_file():
+            missing_required.append(exp_id)
+
+    # Validate existing packages
+    seen_ids = set()
     for manifest in sorted((repo_root / "governance/rules").glob("*/*/rule.json")):
-        package = validate_package(repo_root, manifest)
-        if not package["enabled"]:
-            continue
-        identity = (package["rule_id"], package["version"])
-        if identity in seen:
-            raise RuleError(f"duplicate rule package {identity}")
-        if manifest.parent.parent.name != package["rule_id"] or manifest.parent.name != package["version"]:
-            raise RuleError(f"package path does not match identity: {manifest}")
-        seen.add(identity)
-        packages.append((manifest, package))
-    return packages
+        try:
+            pkg = validate_package(repo_root, manifest)
+            rid = pkg["rule_id"]
+            seen_ids.add(rid)
+            discovered.append((manifest, pkg))
+        except Exception as exc:
+            tampered.append({"manifest": str(manifest.relative_to(repo_root)), "error": str(exc)})
+
+    required_current = [p["rule_id"] for _, p in discovered if p["rule_id"] in expected_by_id]
+    new_optional = [p["rule_id"] for _, p in discovered if p["rule_id"] not in expected_by_id]
+
+    status = "RULE_BASELINE_INCOMPLETE" if (missing_required or tampered) else "PASS"
+
+    return {
+        "status": status,
+        "required_current_packages": required_current,
+        "new_optional_valid_packages": new_optional,
+        "missing_required_packages": missing_required,
+        "tampered_packages": tampered,
+        "discovered_packages": discovered
+    }
+
+
+def discover_packages(repo_root: Path, enforce_baseline: bool = True) -> list[tuple[Path, dict]]:
+    """Discovers rules with canonical baseline inventory enforcement (FIX 7)."""
+    audit = audit_rule_baseline(repo_root)
+    if enforce_baseline and audit["missing_required_packages"]:
+        raise RuleError(f"RULE_BASELINE_INCOMPLETE: missing required rule packages: {audit['missing_required_packages']}")
+    if enforce_baseline and audit["tampered_packages"]:
+        raise RuleError(f"RULE_BASELINE_INCOMPLETE: tampered rule packages: {audit['tampered_packages']}")
+    return audit["discovered_packages"]
+
 
 
 def _atomic_copy(source: Path, target: Path, mode: int):

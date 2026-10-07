@@ -1305,6 +1305,182 @@
       "remote_provider": "gdrive",
       "remote_path": "gdrive:IroScript_Backups/projects/rust_task/assets/output_apk/app-release.apk",
       "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-qe0zobqp/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-qe0zobqp/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-0wm_9d3h/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-0wm_9d3h/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-4il5higl/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-4il5higl/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-rqu2qb9d/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-rqu2qb9d/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-3vtcazos/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-3vtcazos/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-vi82rerp/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-vi82rerp/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-_o6l40m6/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-_o6l40m6/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-db-data.sqlite",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "database_snapshot",
+      "source_path": "/tmp/sot-watcher-test-jaekhvsk/classify_repo/data.sqlite",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/databases/data.sqlite",
+      "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "test_proj-large-large.bin",
+      "project_id": "test_proj",
+      "project_uuid": "00000000-0000-4000-8000-000000000001",
+      "storage_class": "large_asset",
+      "source_path": "/tmp/sot-watcher-test-jaekhvsk/classify_repo/large.bin",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/test_proj/assets/large.bin",
+      "status": "BACKUP_PENDING"
     }
   ]
 }

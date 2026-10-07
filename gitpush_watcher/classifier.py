@@ -18,23 +18,50 @@ CLASS_E_EPHEMERAL = "CLASS_E_EPHEMERAL"
 
 
 class AssetClassifier:
-    """Classifies files into Cloud Parity classes and routes them appropriately."""
+    """Classifies files into Cloud Parity classes and routes them appropriately (FIX 9)."""
 
     def __init__(self, root: Path, large_file_threshold_bytes: int = 52428800):
         self.root = Path(root).resolve()
         self.large_threshold = large_file_threshold_bytes
-        self.secret_patterns = [
-            ".env.prod",
-            ".env.production",
+        self.secret_name_patterns = [
+            ".env",
+            ".env.*",
+            "*.env",
+            "*credential*",
+            "*secret*",
+            "*token*",
             "id_rsa*",
             "id_ecdsa*",
             "id_ed25519*",
             "*.pem",
             "*.key",
             "*.p12",
-            "*.pkcs12"
+            "*.pkcs12",
+            "cookies*",
+            "*session*",
+            "*auth_token*"
         ]
-        self.db_extensions = {".db", ".sqlite", ".sqlite3", ".db-wal", ".db-shm"}
+        self.secret_content_signatures = [
+            b"PRIVATE KEY",
+            b"BEGIN RSA PRIVATE",
+            b"BEGIN OPENSSH PRIVATE",
+            b"AIzaSy",
+            b"api_key",
+            b"secret_key",
+            b"aws_secret_access_key",
+            b"password=",
+            b"passwd="
+        ]
+        self.media_extensions = {
+            ".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv",
+            ".mp3", ".wav", ".aac", ".ogg", ".flac", ".m4a"
+        }
+        self.archive_extensions = {
+            ".zip", ".tar", ".gz", ".tgz", ".bz2", ".7z", ".iso"
+        }
+        self.db_extensions = {
+            ".db", ".sqlite", ".sqlite3", ".db-wal", ".db-shm", ".dump"
+        }
         self.ephemeral_patterns = [
             "*.tmp",
             "*.swp",
@@ -44,33 +71,70 @@ class AssetClassifier:
             ".DS_Store"
         ]
 
+    def _has_secret_content(self, path: Path) -> bool:
+        """Inspects first 64KB of file for common secret and credential signatures."""
+        try:
+            with open(path, "rb") as f:
+                header = f.read(65536)
+            for sig in self.secret_content_signatures:
+                if sig.lower() in header.lower():
+                    return True
+        except OSError:
+            pass
+        return False
+
+    def _is_suspicious_binary(self, path: Path) -> bool:
+        """Detects unknown non-text binaries that should not be blindly added to Git."""
+        try:
+            with open(path, "rb") as f:
+                chunk = f.read(4096)
+            return b"\x00" in chunk
+        except OSError:
+            pass
+        return False
+
     def classify_file(self, full_path: Path) -> str:
-        """Determines the Cloud Parity class for a single file path."""
-        name = full_path.name
-        
-        # Class D: Secrets
-        for pat in self.secret_patterns:
+        """Determines Cloud Parity class with fail-closed priority (FIX 9)."""
+        name = full_path.name.lower()
+        suffix = full_path.suffix.lower()
+
+        # 1. Class D: Secrets (filename match OR content scan)
+        for pat in self.secret_name_patterns:
             if fnmatch.fnmatch(name, pat):
                 return CLASS_D_SECRET
-        
-        # Class B: Live Database files
-        if full_path.suffix.lower() in self.db_extensions:
+
+        if full_path.is_file() and full_path.stat().st_size <= 2 * 1024 * 1024:
+            if self._has_secret_content(full_path):
+                return CLASS_D_SECRET
+
+        # 2. Class B: Database files
+        if suffix in self.db_extensions:
             return CLASS_B_DATABASE
 
-        # Ephemeral
+        # 3. Media: ALL recognized media are CLASS_C_LARGE_ASSET regardless of size (even 10KB mp4)
+        if suffix in self.media_extensions:
+            return CLASS_C_LARGE_ASSET
+
+        # 4. Ephemeral files
         for pat in self.ephemeral_patterns:
             if fnmatch.fnmatch(name, pat):
                 return CLASS_E_EPHEMERAL
 
-        # Class C: Large files
+        # 5. Large files or archives
         try:
-            if full_path.is_file() and full_path.stat().st_size > self.large_threshold:
-                return CLASS_C_LARGE_ASSET
+            if full_path.is_file():
+                if full_path.stat().st_size > self.large_threshold or suffix in self.archive_extensions:
+                    return CLASS_C_LARGE_ASSET
+                # Suspicious unknown binary: fail-closed to external handling
+                if suffix not in {".pyc", ".so", ".o", ".a"} and self._is_suspicious_binary(full_path):
+                    if suffix not in {".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp"}:
+                        return CLASS_C_LARGE_ASSET
         except OSError:
             pass
 
-        # Class A: Normal source, docs, configs, logs, archives
+        # 6. Class A: Normal source, docs, configs, text
         return CLASS_A_GIT
+
 
     def inspect_and_filter_staged(self, repo_path: Path, project_id: str, project_uuid: str) -> Dict[str, List[str]]:
         """Inspects all currently staged files in repo.
