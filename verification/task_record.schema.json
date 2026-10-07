@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "project_id", "project_uuid", "request_summary", "builder", "tool", "started_at", "ended_at", "changed_files", "tests", "deterministic_result", "verifier_status", "verifier_identity", "final_verdict", "unresolved_items"],
+  "properties": {
+    "task_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": "string", "minLength": 1},
+    "project_uuid": {"type": "string", "format": "uuid"},
+    "request_summary": {"type": "string", "minLength": 1},
+    "builder": {"type": "string", "minLength": 1},
+    "tool": {"type": "string", "minLength": 1},
+    "started_at": {"type": "string", "format": "date-time"},
+    "ended_at": {"type": "string", "format": "date-time"},
+    "changed_files": {"type": "array", "items": {"type": "object", "required": ["path", "before_sha256", "after_sha256"], "properties": {"path": {"type": "string"}, "before_sha256": {"type": ["string", "null"]}, "after_sha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"}}}},
+    "commit_sha": {"type": ["string", "null"], "pattern": "^([a-fA-F0-9]{40}|[a-fA-F0-9]{64})$"},
+    "tests": {"type": "array", "items": {"type": "object", "required": ["command", "exit_code", "result"], "properties": {"command": {"type": "string"}, "exit_code": {"type": "integer"}, "result": {"enum": ["pass", "fail", "inconclusive"]}, "stdout_ref": {"type": "string"}, "stderr_ref": {"type": "string"}}}},
+    "deterministic_result": {"enum": ["pass", "fail", "inconclusive"]},
+    "verifier_status": {"enum": ["pending", "approved", "correction_needed", "inconclusive"]},
+    "verifier_identity": {"type": ["string", "null"]},
+    "final_verdict": {"enum": ["complete", "incomplete", "inconclusive"]},
+    "unresolved_items": {"type": "array", "items": {"type": "string"}}
+  }
+}

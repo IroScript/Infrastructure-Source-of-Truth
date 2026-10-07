@@ -1,0 +1,19 @@
+{
+  "profile_id": "docker",
+  "version": "1.0.0",
+  "platform": "linux-docker",
+  "runtime": "docker-compose",
+  "roots": {
+    "HOME": "${HOME}",
+    "PROJECTS_ROOT": "${HOME}/projects",
+    "STATE_ROOT": "${HOME}/.local/state/sot",
+    "RUNTIME_ROOT": "${HOME}/.local/share/sot/runtime",
+    "BACKUP_ROOT": "${HOME}/backups"
+  },
+  "agent_classes": ["generic_cli", "codex", "agy", "claude", "qwen"],
+  "docker_recovery": {
+    "compose_manifest": "deployment/docker/compose.yaml",
+    "required": false,
+    "status": "NOT_VERIFIED_UNTIL_COMPOSE_AND_RESTORE_TESTS_EXIST"
+  }
+}

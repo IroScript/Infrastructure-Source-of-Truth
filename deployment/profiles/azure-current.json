@@ -1,0 +1,23 @@
+{
+  "profile_id": "azure-current",
+  "version": "1.0.0",
+  "platform": "debian-linux",
+  "roots": {
+    "HOME": "/home/azureuser",
+    "PROJECTS_ROOT": "/home/azureuser/IroScript_Projects",
+    "STATE_ROOT": "/home/azureuser/.local/state/sot",
+    "RUNTIME_ROOT": "/home/azureuser/.local/share/sot/runtime",
+    "BACKUP_ROOT": "/home/azureuser/IroScript_Backups",
+    "FRAPPE_ROOT": "/home/azureuser/Frappe-erp-Alco"
+  },
+  "agent_classes": ["generic_cli", "codex", "agy"],
+  "managed_artifact_roots": [
+    {"template": "${HOME}/.agents", "include_globs": ["AGENTS.md", "settings.json", "rules/*.md", "hooks/*.py", "sot_root", "run_regression_suite.py"]},
+    {"template": "${HOME}/.gemini/config", "include_globs": ["hooks.json"]},
+    {"template": "${HOME}/.codex/rules", "include_globs": ["sot-governance.rules"]}
+  ],
+  "path_bindings": {
+    "IroScript_Projects": "${PROJECTS_ROOT}",
+    "Frappe-erp-Alco": "${FRAPPE_ROOT}"
+  }
+}

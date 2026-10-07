@@ -1,0 +1,3 @@
+# Generated from the universal governance package; Codex-specific adapter policy.
+prefix_rule(pattern=["git", "push", "--force"], decision="forbidden")
+prefix_rule(pattern=["git", "push", "--force-with-lease"], decision="forbidden")

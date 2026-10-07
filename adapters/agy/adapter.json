@@ -1,0 +1,58 @@
+{
+  "adapter_id": "agy",
+  "agent_type": "agy",
+  "supported_versions": [
+    "detected-at-runtime"
+  ],
+  "config_discovery": [
+    "${HOME}/.gemini/AGENTS.md",
+    "${HOME}/.gemini/config/hooks.json",
+    "${HOME}/.agents/settings.json",
+    "${HOME}/.agents/rules/*.md"
+  ],
+  "config_destinations": [
+    "${HOME}/.gemini/AGENTS.md",
+    "${HOME}/.gemini/config/hooks.json",
+    "${HOME}/.agents/AGENTS.md",
+    "${HOME}/.agents/rules/"
+  ],
+  "precedence_sources": [
+    "runtime help/version probe required",
+    "global instructions",
+    "workspace instructions",
+    "project instructions",
+    "CLI overrides where supported"
+  ],
+  "activation": {
+    "method": "native_hooks_and_instructions",
+    "probe": "safe isolated AGY invocation"
+  },
+  "effective_state_probe": {
+    "method": "inspect actual isolated invocation result and hook audit output",
+    "evidence_required": [
+      "command_argv",
+      "exit_code",
+      "stdout_sha256",
+      "stderr_sha256",
+      "runtime_version",
+      "timestamp"
+    ]
+  },
+  "reload": "restart",
+  "unsupported_capability": "inconclusive",
+  "version_probe": {
+    "command": [
+      "agy",
+      "--version"
+    ],
+    "requires_runtime_measurement": true
+  },
+  "config_precedence_verified": false,
+  "capabilities": {
+    "builder_light": false,
+    "builder_standard": false,
+    "builder_strong": false,
+    "verifier_standard": false,
+    "verifier_strong": false
+  }
+}

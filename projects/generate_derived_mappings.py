@@ -16,6 +16,7 @@ import os
 import sys
 import json
 import time
+from atomic_json import atomic_write_json, read_json, registry_lock, validate_project_registry
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SOT_ROOT = os.path.dirname(SCRIPT_DIR)
@@ -25,6 +26,7 @@ OPERATIONAL_GITPUSH_MAPPING = "/home/azureuser/IroScript_Projects/Whatsapp maste
 CANONICAL_GITPUSH_MAPPING = os.path.join(SCRIPT_DIR, "gitpush_folder_mapping.json")
 GIT_REPOSITORIES_FILE = os.path.join(SCRIPT_DIR, "GIT_REPOSITORIES.json")
 PROJECTS_FILE = os.path.join(SCRIPT_DIR, "PROJECTS.json")
+SETTINGS_FILE = os.path.join(SOT_ROOT, "configuration", "settings.json")
 
 WHATSAPP_CONN_FILE = os.path.join(SOT_ROOT, "connections", "WHATSAPP_CONNECTIONS.json")
 TMUX_CONN_FILE = os.path.join(SOT_ROOT, "connections", "TMUX_CONNECTIONS.json")
@@ -38,14 +40,34 @@ INFRA_TMUX_FILE = os.path.join(SOT_ROOT, "infrastructure", "TMUX_WINDOWS.json")
 def load_canonical_registry():
     if not os.path.exists(REGISTRY_FILE):
         raise FileNotFoundError(f"Canonical registry not found at {REGISTRY_FILE}")
-    with open(REGISTRY_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    data = read_json(REGISTRY_FILE)
+    validate_project_registry(data)
+    return data
+
+
+def build_gitpush_entry(project):
+    git_info = project.get("git", {})
+    return {"key": project["project_id"], "project_uuid": project.get("project_uuid", ""),
+            "folder_path": project.get("canonical_path", ""),
+            "git_remote_url": git_info.get("remote", ""),
+            "enabled": project.get("runtime", {}).get("enabled", True)}
 
 
 def generate_all(sync_operational=True):
+    with registry_lock(os.path.join(SOT_ROOT, ".mapping-generator")):
+        return _generate_all_locked(sync_operational)
+
+
+def _generate_all_locked(sync_operational=True):
     reg = load_canonical_registry()
     projects = reg.get("projects", [])
     now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    settings_out = read_json(SETTINGS_FILE)
+    settings_out["trustedWorkspaces"] = sorted({
+        path for project in projects
+        for path in ([project.get("canonical_path", "")] + project.get("aliases", []))
+        if isinstance(path, str) and path
+    })
 
     # 1. Generate gitpush_folder_mapping.json
     gitpush_projects = []
@@ -60,6 +82,7 @@ def generate_all(sync_operational=True):
 
     for p in projects:
         pid = p["project_id"]
+        puid = p.get("project_uuid", "")
         dname = p.get("display_name", pid)
         cpath = p.get("canonical_path", "")
         git_info = p.get("git", {})
@@ -67,18 +90,14 @@ def generate_all(sync_operational=True):
         conn_info = p.get("connections", {})
 
         # Mapping entry
-        gp_entry = {
-            "key": pid,
-            "folder_path": cpath,
-            "git_remote_url": git_info.get("remote", ""),
-            "enabled": p.get("status") == "ACTIVE"
-        }
+        gp_entry = build_gitpush_entry(p)
         gitpush_projects.append(gp_entry)
 
         # Git repositories entry
         if git_info.get("enabled"):
             git_repos.append({
                 "project_id": pid,
+                "project_uuid": puid,
                 "display_name": dname,
                 "repository_path": cpath,
                 "remote_url": git_info.get("remote", ""),
@@ -91,6 +110,7 @@ def generate_all(sync_operational=True):
         # Legacy PROJECTS.json entry
         legacy_projects.append({
             "project_key": pid,
+            "project_uuid": puid,
             "project_name": dname,
             "canonical_physical_path": cpath,
             "symlink_aliases": p.get("aliases", []),
@@ -98,7 +118,7 @@ def generate_all(sync_operational=True):
             "git_remote_fetch": git_info.get("remote", ""),
             "git_remote_push": git_info.get("remote", ""),
             "branch": git_info.get("branch", "main"),
-            "github_backed": bool(git_info.get("remote")),
+            "github_backed": "REMOTE_SHA_VERIFIED" in p.get("lifecycle_stages", []),
             "tmux_window": runtime_info.get("tmux_window", ""),
             "systemd_services": runtime_info.get("services", []),
             "ports": runtime_info.get("ports", []),
@@ -111,6 +131,7 @@ def generate_all(sync_operational=True):
         if wa.get("enabled"):
             whatsapp_conns.append({
                 "project_id": pid,
+                "project_uuid": puid,
                 "display_name": dname,
                 "enabled": True,
                 "group_id": wa.get("group_id", ""),
@@ -123,6 +144,7 @@ def generate_all(sync_operational=True):
         if tmux_win:
             tmux_conns.append({
                 "project_id": pid,
+                "project_uuid": puid,
                 "session": "agy",
                 "windows": [w.strip() for w in tmux_win.split(",") if w.strip()],
                 "working_directory_source": "PROJECT_REGISTRY",
@@ -131,6 +153,7 @@ def generate_all(sync_operational=True):
             infra_tmux.append({
                 "window": tmux_win,
                 "project_id": pid,
+                "project_uuid": puid,
                 "working_directory": cpath
             })
 
@@ -141,6 +164,7 @@ def generate_all(sync_operational=True):
             for s in services:
                 service_conns.append({
                     "project_id": pid,
+                    "project_uuid": puid,
                     "service_name": s,
                     "ports": ports,
                     "startup_type": "systemd",
@@ -149,12 +173,14 @@ def generate_all(sync_operational=True):
                 infra_services.append({
                     "service": s,
                     "project_id": pid,
+                    "project_uuid": puid,
                     "status": "managed"
                 })
             for pt in ports:
                 infra_ports.append({
                     "port": pt,
                     "project_id": pid,
+                    "project_uuid": puid,
                     "service": services[0] if services else "custom"
                 })
 
@@ -196,38 +222,29 @@ def generate_all(sync_operational=True):
 
     # Write files
     os.makedirs(os.path.dirname(CANONICAL_GITPUSH_MAPPING), exist_ok=True)
-    with open(CANONICAL_GITPUSH_MAPPING, "w", encoding="utf-8") as f:
-        json.dump(gitpush_out, f, indent=2)
+    atomic_write_json(CANONICAL_GITPUSH_MAPPING, gitpush_out)
 
     if sync_operational and os.path.exists(os.path.dirname(OPERATIONAL_GITPUSH_MAPPING)):
-        with open(OPERATIONAL_GITPUSH_MAPPING, "w", encoding="utf-8") as f:
-            json.dump(gitpush_out, f, indent=2)
+        atomic_write_json(OPERATIONAL_GITPUSH_MAPPING, gitpush_out)
 
-    with open(GIT_REPOSITORIES_FILE, "w", encoding="utf-8") as f:
-        json.dump(git_repos_out, f, indent=2)
+    atomic_write_json(GIT_REPOSITORIES_FILE, git_repos_out)
 
-    with open(PROJECTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(legacy_projects, f, indent=2)
+    atomic_write_json(PROJECTS_FILE, legacy_projects)
 
     os.makedirs(os.path.dirname(WHATSAPP_CONN_FILE), exist_ok=True)
-    with open(WHATSAPP_CONN_FILE, "w", encoding="utf-8") as f:
-        json.dump(whatsapp_out, f, indent=2)
+    atomic_write_json(WHATSAPP_CONN_FILE, whatsapp_out)
 
-    with open(TMUX_CONN_FILE, "w", encoding="utf-8") as f:
-        json.dump(tmux_out, f, indent=2)
+    atomic_write_json(TMUX_CONN_FILE, tmux_out)
 
-    with open(SERVICE_CONN_FILE, "w", encoding="utf-8") as f:
-        json.dump(service_out, f, indent=2)
+    atomic_write_json(SERVICE_CONN_FILE, service_out)
 
     os.makedirs(os.path.dirname(INFRA_SERVICES_FILE), exist_ok=True)
-    with open(INFRA_SERVICES_FILE, "w", encoding="utf-8") as f:
-        json.dump({"services": infra_services}, f, indent=2)
+    atomic_write_json(INFRA_SERVICES_FILE, {"services": infra_services})
 
-    with open(INFRA_PORTS_FILE, "w", encoding="utf-8") as f:
-        json.dump({"ports": infra_ports}, f, indent=2)
+    atomic_write_json(INFRA_PORTS_FILE, {"ports": infra_ports})
 
-    with open(INFRA_TMUX_FILE, "w", encoding="utf-8") as f:
-        json.dump({"tmux_windows": infra_tmux}, f, indent=2)
+    atomic_write_json(INFRA_TMUX_FILE, {"tmux_windows": infra_tmux})
+    atomic_write_json(SETTINGS_FILE, settings_out)
 
     print(f"[+] Successfully generated all derived mappings from {REGISTRY_FILE}")
     print(f"    - Projects tracked: {len(projects)}")

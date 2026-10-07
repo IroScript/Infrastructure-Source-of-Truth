@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["profile_id", "version", "platform", "roots", "agent_classes"],
+  "properties": {
+    "profile_id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]+$"},
+    "version": {"type": "string"},
+    "platform": {"type": "string"},
+    "roots": {
+      "type": "object",
+      "required": ["HOME", "PROJECTS_ROOT", "STATE_ROOT", "RUNTIME_ROOT", "BACKUP_ROOT"],
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "agent_classes": {"type": "array", "items": {"type": "string"}},
+    "managed_artifact_roots": {"type": "array", "items": {"type": "object", "required": ["template", "include_globs"]}},
+    "path_bindings": {"type": "object"}
+  },
+  "additionalProperties": true
+}

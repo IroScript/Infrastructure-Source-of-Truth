@@ -1,76 +1,88 @@
 {
   "version": "2.0.0",
-  "last_updated": "2026-10-06T16:59:25Z",
+  "last_updated": "2026-10-07T10:34:39Z",
   "derived_from": "Infrastructure-Source-of-Truth/projects/PROJECT_REGISTRY.json",
   "projects": [
     {
       "key": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
       "folder_path": "/home/azureuser/IroScript_Projects/Whatsapp master",
       "git_remote_url": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
       "enabled": true
     },
     {
       "key": "youtube_pipeline",
+      "project_uuid": "72501ab1-551a-5de3-a97c-6eeca0407fde",
       "folder_path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation",
       "git_remote_url": "git@github.com:IroScript/Youtube-Pipeline.git",
       "enabled": true
     },
     {
       "key": "telegram_bot",
+      "project_uuid": "5010b796-6d94-59fd-b530-496b51bd9d60",
       "folder_path": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot",
       "git_remote_url": "https://github.com/IroScript/telegram-scraper-and-automation.git",
       "enabled": true
     },
     {
       "key": "personal_ai_agent",
+      "project_uuid": "98acf9e6-e1a2-51c2-8f03-d7216c2a102e",
       "folder_path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
       "git_remote_url": "https://github.com/IroScript/personal_ai_agent.git",
       "enabled": true
     },
     {
       "key": "kids_tube",
+      "project_uuid": "c95f0287-e796-5c52-92cb-2e215617df0f",
       "folder_path": "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection",
       "git_remote_url": "git@github.com:IroScript/kids_tube_with_folder_seection.git",
       "enabled": true
     },
     {
       "key": "rust_task",
+      "project_uuid": "21559166-0fae-5de8-aa80-feded01c2de7",
       "folder_path": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note",
       "git_remote_url": "git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git",
       "enabled": true
     },
     {
       "key": "three_d_game_studio",
+      "project_uuid": "c276193b-d6ef-5638-b08c-d7f532637aac",
       "folder_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio",
       "git_remote_url": "git@github.com:IroScript/3d-web-templates.git",
       "enabled": true
     },
     {
       "key": "article_publishing_platform",
+      "project_uuid": "fb2ac384-10dd-52c7-9f01-361726c34a3e",
       "folder_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform",
       "git_remote_url": "git@github.com:IroScript/Article-Publishing-Platform.git",
       "enabled": true
     },
     {
       "key": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "folder_path": "/home/azureuser/Frappe-erp-Alco",
       "git_remote_url": "https://github.com/IroScript/frappe-erp-alco-project",
       "enabled": true
     },
     {
       "key": "ask_and_research",
+      "project_uuid": "73617410-dff6-5fc8-a44a-3c3acca4db1e",
       "folder_path": "/home/azureuser/IroScript_Projects/Ask-And-Research-Agent",
       "git_remote_url": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
       "enabled": true
     },
     {
       "key": "openai_codex",
+      "project_uuid": "aaf3f2fe-3155-538c-b49a-fab7be58f813",
       "folder_path": "/home/azureuser/IroScript_Projects/OpenAI_Codex",
       "git_remote_url": "",
       "enabled": true
     },
     {
       "key": "infrastructure_source_of_truth",
+      "project_uuid": "ed2c5b92-5b89-528b-a3de-3c870eeab6c0",
       "folder_path": "/home/azureuser/IroScript_Projects/Infrastructure-Source-of-Truth",
       "git_remote_url": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git",
       "enabled": true

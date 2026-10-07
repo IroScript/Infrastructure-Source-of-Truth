@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "adapter_id",
+    "agent_type",
+    "supported_versions",
+    "version_probe",
+    "config_discovery",
+    "config_destinations",
+    "precedence_sources",
+    "activation",
+    "effective_state_probe",
+    "reload",
+    "unsupported_capability"
+  ],
+  "properties": {
+    "adapter_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supported_versions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "version_probe": {
+      "type": "object",
+      "required": [
+        "command",
+        "requires_runtime_measurement"
+      ],
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requires_runtime_measurement": {
+          "type": "boolean"
+        }
+      }
+    },
+    "config_discovery": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "config_destinations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "precedence_sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "config_precedence_verified": {
+      "type": "boolean"
+    },
+    "activation": {
+      "type": "object"
+    },
+    "effective_state_probe": {
+      "type": "object"
+    },
+    "capabilities": {
+      "type": "object"
+    },
+    "reload": {
+      "enum": [
+        "none",
+        "reload",
+        "restart",
+        "adapter_specific"
+      ]
+    },
+    "unsupported_capability": {
+      "enum": [
+        "fail_closed",
+        "not_installed",
+        "inconclusive"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

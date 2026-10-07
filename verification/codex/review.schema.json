@@ -1,11 +1,19 @@
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
+  "required": ["task_id", "verifier_id", "verifier_type", "timestamp", "claim", "evidence", "deterministic_result", "independent_verdict", "unresolved_items", "confidence_category", "report", "agy_guideline"],
   "properties": {
-    "task_id": {"type": "string"},
-    "verdict": {"type": "string", "enum": ["approved", "correction_needed", "inconclusive"]},
-    "report": {"type": "string"},
-    "agy_guideline": {"type": "string"}
-  },
-  "required": ["task_id", "verdict", "report", "agy_guideline"],
-  "additionalProperties": false
+    "task_id": {"type": "string", "minLength": 1},
+    "verifier_id": {"type": "string", "minLength": 1},
+    "verifier_type": {"enum": ["codex", "claude", "agy_strong_model", "generic_cli", "manual_external", "deterministic"]},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "claim": {"type": "string", "minLength": 1},
+    "evidence": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["command", "stdout_ref", "stderr_ref", "exit_code", "files_inspected", "negative_tests"]}},
+    "deterministic_result": {"enum": ["pass", "fail", "inconclusive"]},
+    "independent_verdict": {"enum": ["approved", "correction_needed", "inconclusive"]},
+    "unresolved_items": {"type": "array", "items": {"type": "string"}},
+    "confidence_category": {"enum": ["high", "medium", "low", "insufficient"]},
+    "report": {"type": "string", "minLength": 1},
+    "agy_guideline": {"type": "string", "minLength": 1}
+  }
 }

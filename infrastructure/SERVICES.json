@@ -3,16 +3,19 @@
     {
       "service": "agy-agents.service",
       "project_id": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
       "status": "managed"
     },
     {
       "service": "azure-file-explorer-tunnel.service",
       "project_id": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
       "status": "managed"
     },
     {
       "service": "frappe-bench",
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "status": "managed"
     }
   ]

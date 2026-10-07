@@ -9,6 +9,8 @@ import subprocess
 import sys
 from urllib.parse import unquote, urlparse
 import uuid
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from validate_verifier_result import validate as validate_verifier_result
 
 BASE = Path(__file__).resolve().parent
 DB = Path.home() / '.gemini/antigravity-cli/conversation_summaries.db'
@@ -113,10 +115,12 @@ Current files are snapshots; do not attribute them to this agent without task ev
 Identify the framework version from evidence. For official-standard claims, search and open
 the matching primary official documentation, cite exact URLs and distinguish requirements
 from optional recommendations. If browsing or version evidence is missing, say inconclusive.
-Report in Bengali: task identity, reviewed scope, findings with file/line or transcript step
-evidence, official sources, what was checked, what was not checked, and actionable AGY
-guidelines scoped to this task. Return correction_needed only for supported material errors;
-use inconclusive for missing evidence. No finding does not prove the project is error-free.
+Return task_id, verifier_id, verifier_type=codex, timestamp, claim, structured evidence
+(commands, stdout/stderr references, exit codes, inspected file SHA256 values, and negative
+tests), deterministic_result, independent_verdict, unresolved_items, confidence_category,
+report, and agy_guideline. Report in Bengali with task identity, reviewed scope, findings,
+what was and was not checked. Evidence absent means inconclusive. No finding does not prove
+the project is error-free.
 '''
     (out / 'prompt.txt').write_text(prompt)
     print(out)
@@ -146,7 +150,10 @@ def run(args):
         (out / 'run-status.json').write_text(json.dumps({'status': 'timeout'}))
         raise ValueError('Review timed out; no clearance')
     result = json.loads((out / 'result.json').read_text())
-    if result.get('verdict') not in {'approved', 'correction_needed', 'inconclusive'} or not all(isinstance(result.get(k), str) for k in ['report', 'agy_guideline', 'task_id']):
+    valid, reason = validate_verifier_result(result)
+    if not valid:
+        raise ValueError(f'Invalid structured evidence; no clearance: {reason}')
+    if result.get('independent_verdict') not in {'approved', 'correction_needed', 'inconclusive'} or not all(isinstance(result.get(k), str) for k in ['report', 'agy_guideline', 'task_id']):
         raise ValueError('Invalid review result; no clearance')
     if result['task_id'] != evidence['task_id']:
         raise ValueError('Review returned a different task identity; no clearance')

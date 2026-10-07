@@ -1,0 +1,64 @@
+{
+  "manifest_version": "1.0.0",
+  "rule_id": "RULE-ADDITIVE-GOVERNANCE",
+  "version": "1.0.0",
+  "name": "06 additive governance",
+  "scope": "managed agent workspace",
+  "severity": "medium",
+  "enabled": true,
+  "supported_agent_classes": [
+    "agy",
+    "codex",
+    "claude",
+    "qwen",
+    "generic_cli"
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "policy",
+      "source": "trust/verification/rules/06-additive-governance.md",
+      "destination_template": "${HOME}/.agents/rules/06-additive-governance.md",
+      "mode": "0644",
+      "sha256": "ccd63250753990b4dd34d750e4c8f2c4e2fbc096656052a4953f5bcfc2ff6b4c",
+      "kind": "documentation",
+      "permissions": []
+    }
+  ],
+  "load_order": 10,
+  "precedence": "project may add constraints but cannot weaken global baseline",
+  "activation": {
+    "method": "agent_instructions_file",
+    "argv": [
+      "python3",
+      "-c",
+      "raise SystemExit(0)"
+    ],
+    "expected_exit_code": 0
+  },
+  "reload_requirement": "adapter_specific",
+  "required_proof_level": 3,
+  "expected_effect": "Policy text is versioned, installed at its declared destination, and its hash is verified; L4-L7 require a compatible live agent adapter.",
+  "positive_probe": {
+    "argv": [
+      "python3",
+      "-c",
+      "raise SystemExit(0)"
+    ],
+    "expected_exit_code": 0
+  },
+  "negative_probe": {
+    "argv": [
+      "python3",
+      "-c",
+      "raise SystemExit(1)"
+    ],
+    "expected_exit_code": 1,
+    "expected_effect": "A deliberately failing sentinel exits nonzero."
+  },
+  "supersedes": [],
+  "rollback": {
+    "strategy": "restore_previous_or_remove_new",
+    "preserve_previous": true
+  },
+  "schema_version": "1.0.0"
+}

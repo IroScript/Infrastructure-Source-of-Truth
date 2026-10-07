@@ -1,58 +1,39 @@
 #!/usr/bin/env bash
-# verify_trust_baseline.sh — Validates AGY trust baseline against disk files.
 set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASELINE_FILE="${SCRIPT_DIR}/TRUST_BASELINE.json"
-
-echo "=== AGY TRUST BASELINE AUDIT ==="
-if [ ! -f "$BASELINE_FILE" ]; then
-    echo "[-] ERROR: Baseline file $BASELINE_FILE does not exist!"
-    echo "AGY TRUST BASELINE: FAIL"
-    exit 1
-fi
-
-python3 -c "
-import json, sys, os, hashlib
-
-with open('$BASELINE_FILE') as f:
-    items = json.load(f)
-
-failures = 0
-total = len(items)
-
-for item in items:
-    f_name = item['file']
-    dest = item['destination']
-    exp_sha = item['sha256']
-    req = item['required']
-
-    if not os.path.exists(dest):
-        if req:
-            print(f'[-] CRITICAL MISSING: {dest}')
-            failures += 1
-        else:
-            print(f'[*] OPTIONAL MISSING: {dest}')
+SOT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+HOME_DIR="${HOME:?HOME must be set}"
+python3 - "$SOT_ROOT" "$HOME_DIR" <<'PY'
+import hashlib, json, stat, sys
+from pathlib import Path
+sot, home = Path(sys.argv[1]), Path(sys.argv[2])
+manifest = json.loads((sot/'trust/TRUST_BASELINE.json').read_text())
+errors=[]; count=0
+for item in manifest.get('artifacts', []):
+    source=sot/item['source']; target=home/item['destination']
+    count += 1
+    if not source.is_file() or not target.is_file() or target.is_symlink():
+        if item.get('required', True): errors.append(f"{item['destination']}: missing or symlink")
         continue
-
-    actual_sha = hashlib.sha256(open(dest, 'rb').read()).hexdigest()
-    if actual_sha != exp_sha:
-        print(f'[-] HASH MISMATCH on {dest}:')
-        print(f'    Expected: {exp_sha}')
-        print(f'    Actual:   {actual_sha}')
-        failures += 1
-    else:
-        print(f'[+] VERIFIED: {f_name} (SHA256 OK)')
-
-print('----------------------------------------')
-print(f'Total Files Evaluated: {total}')
-print(f'Total Policy Failures: {failures}')
-print('----------------------------------------')
-
-if failures > 0:
-    print('AGY TRUST BASELINE: FAIL')
-    sys.exit(1)
-else:
-    print('AGY TRUST BASELINE: VERIFIED')
-    sys.exit(0)
-"
+    source_sha=hashlib.sha256(source.read_bytes()).hexdigest()
+    target_sha=hashlib.sha256(target.read_bytes()).hexdigest()
+    if source_sha != item['sha256'] or target_sha != item['sha256']:
+        errors.append(f"{item['destination']}: SHA256 mismatch")
+    if stat.S_IMODE(target.stat().st_mode) != int(item['mode'], 8):
+        errors.append(f"{item['destination']}: permission mismatch")
+cfg=home/'.gemini/config/hooks.json'
+try:
+    hooks=json.loads(cfg.read_text())
+except Exception:
+    hooks={}
+if 'completion_gate_stop_hook.py' not in json.dumps(hooks):
+    errors.append('completion gate is not activated in hook config')
+root_file=home/'.agents/sot_root'
+if not root_file.is_file() or root_file.read_text().strip() != str(sot):
+    errors.append('SOT root binding missing or incorrect')
+print(f'FILES CHECKED: {count}')
+if errors:
+    print('\n'.join('FAIL '+error for error in errors)); raise SystemExit(1)
+print('TRUST BASELINE: PASS')
+PY
+SOT_PROFILE="${SOT_PROFILE:-portable-linux}"
+"$SOT_ROOT/sot" artifacts verify --profile "$SOT_PROFILE" --home "$HOME_DIR"

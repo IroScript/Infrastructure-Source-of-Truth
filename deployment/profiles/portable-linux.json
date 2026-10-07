@@ -1,0 +1,18 @@
+{
+  "profile_id": "portable-linux",
+  "version": "1.0.0",
+  "platform": "linux",
+  "roots": {
+    "HOME": "${HOME}",
+    "PROJECTS_ROOT": "${HOME}/projects",
+    "STATE_ROOT": "${HOME}/.local/state/sot",
+    "RUNTIME_ROOT": "${HOME}/.local/share/sot/runtime",
+    "BACKUP_ROOT": "${HOME}/backups"
+  },
+  "agent_classes": ["generic_cli", "codex", "agy", "claude", "qwen"],
+  "managed_artifact_roots": [
+    {"template": "${HOME}/.agents", "include_globs": ["AGENTS.md", "settings.json", "rules/*.md", "hooks/*.py", "sot_root", "run_regression_suite.py"]},
+    {"template": "${HOME}/.gemini/config", "include_globs": ["hooks.json"]},
+    {"template": "${HOME}/.codex/rules", "include_globs": ["sot-governance.rules"]}
+  ]
+}

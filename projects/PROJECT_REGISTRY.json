@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "last_updated": "2026-10-06T16:59:25Z",
+  "last_updated": "2026-10-07T10:29:35Z",
   "description": "Canonical authoritative project registry for all AGY-managed projects. Project IDs are immutable primary keys.",
   "projects": [
     {
@@ -44,7 +44,17 @@
         "required": true,
         "profile": "whatsapp_master"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "youtube_pipeline",
@@ -81,7 +91,17 @@
         "required": true,
         "profile": "youtube_pipeline"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "72501ab1-551a-5de3-a97c-6eeca0407fde",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "telegram_bot",
@@ -118,7 +138,17 @@
         "required": true,
         "profile": "standard_project"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "5010b796-6d94-59fd-b530-496b51bd9d60",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "personal_ai_agent",
@@ -155,7 +185,17 @@
         "required": true,
         "profile": "standard_project"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "98acf9e6-e1a2-51c2-8f03-d7216c2a102e",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "kids_tube",
@@ -187,7 +227,17 @@
         "required": true,
         "profile": "flutter_project"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "c95f0287-e796-5c52-92cb-2e215617df0f",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "rust_task",
@@ -221,7 +271,17 @@
         "required": true,
         "profile": "rust_task"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "21559166-0fae-5de8-aa80-feded01c2de7",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "three_d_game_studio",
@@ -253,7 +313,17 @@
         "required": true,
         "profile": "web_project"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "c276193b-d6ef-5638-b08c-d7f532637aac",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "article_publishing_platform",
@@ -289,7 +359,17 @@
         "required": true,
         "profile": "standard_project"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "fb2ac384-10dd-52c7-9f01-361726c34a3e",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "frappe_erp_alco",
@@ -336,7 +416,17 @@
         "required": true,
         "profile": "frappe_project"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "ask_and_research",
@@ -374,7 +464,17 @@
         "required": true,
         "profile": "ask_and_research"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "73617410-dff6-5fc8-a44a-3c3acca4db1e",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "openai_codex",
@@ -406,7 +506,17 @@
         "required": true,
         "profile": "standard_project"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "aaf3f2fe-3155-538c-b49a-fab7be58f813",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     },
     {
       "project_id": "infrastructure_source_of_truth",
@@ -438,7 +548,17 @@
         "required": true,
         "profile": "infrastructure_baseline"
       },
-      "status": "ACTIVE"
+      "status": "ONBOARDING_INCOMPLETE",
+      "project_uuid": "ed2c5b92-5b89-528b-a3de-3c870eeab6c0",
+      "data_classification": "unknown",
+      "lifecycle_state": {
+        "current_stage": "LEGACY_UNVERIFIED",
+        "last_successful_stage": "REGISTERED",
+        "failed_stage": "LEGACY_REVALIDATION",
+        "error": "Legacy ACTIVE claim lacks lifecycle evidence; revalidation required",
+        "retryable": true,
+        "last_verified_at": null
+      }
     }
   ]
 }

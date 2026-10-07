@@ -26,7 +26,7 @@ Therefore, GitHub authentication must be injected into the blank VM at **Tier 3 
 2. During VM provisioning (cloud-init or startup-script), fetch the deploy key:
    ```bash
    # Example GCP Secret Manager retrieval
-   gcloud secrets versions access latest --secret="INFRA_DEPLOY_SSH_KEY" > /home/azureuser/.ssh/id_ed25519
+   gcloud secrets versions access latest --secret=YOUR_SECRET_NAME > /home/azureuser/.ssh/id_ed25519
    ```
 
 ### Method B: Manual Secure SCP / Interactive Injection

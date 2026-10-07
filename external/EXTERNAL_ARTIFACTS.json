@@ -1,0 +1,337 @@
+{
+  "manifest_version": "1.0.0",
+  "artifacts": [
+    {
+      "artifact_id": "trust-AGENTS-md",
+      "source": "governance/AGENTS.md",
+      "destination_template": "${HOME}/AGENTS.md",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "trust--gemini-AGENTS-md",
+      "source": "governance/AGENTS.md",
+      "destination_template": "${HOME}/.gemini/AGENTS.md",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-AGENTS-md",
+      "source": "governance/AGENTS.md",
+      "destination_template": "${HOME}/.agents/AGENTS.md",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-settings-json",
+      "source": "configuration/settings.json",
+      "destination_template": "${HOME}/.agents/settings.json",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "0128282da8273dbf6ff7d565512d0973f2ae4bcc11c1453487ebadd489033d3e",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "trust--gemini-config-hooks-json",
+      "source": "configuration/hooks.json",
+      "destination_template": "${HOME}/.gemini/config/hooks.json",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "2007e7bc163e104a07582e4a0a40c6c31da2287f48df5f9008f5bf4fa1e86c1f",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-hooks-delete_guard-py",
+      "source": "trust/verification/delete_guard.py",
+      "destination_template": "${HOME}/.agents/hooks/delete_guard.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "6dc9cc7cee80820ab79bf7cc837705780b1c528258583c41c25a692a5b79d2b3",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-hooks-completion_gate_stop_hook-py",
+      "source": "trust/verification/completion_gate_stop_hook.py",
+      "destination_template": "${HOME}/.agents/hooks/completion_gate_stop_hook.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "4e5fe86cde094d351fe38d4f6954b657279974f73994ff0035000537d08cb3a6",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-hooks-tool_audit_hook-py",
+      "source": "trust/verification/tool_audit_hook.py",
+      "destination_template": "${HOME}/.agents/hooks/tool_audit_hook.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "b03cc98315f2336e59421da14a5e3bac7504e15d05923acdc17ad446ebf07126",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-hooks-truth_pre_invocation-py",
+      "source": "trust/verification/truth_pre_invocation.py",
+      "destination_template": "${HOME}/.agents/hooks/truth_pre_invocation.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "962f72c13c6adda7915280becb5cada23e64725af328840d969e5adf7ac73faf",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-hooks-verify_10_fold-py",
+      "source": "trust/verification/verify_10_fold.py",
+      "destination_template": "${HOME}/.agents/hooks/verify_10_fold.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-verify_10_fold-py",
+      "source": "trust/verification/verify_10_fold.py",
+      "destination_template": "${HOME}/.agents/verify_10_fold.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-run_regression_suite-py",
+      "source": "trust/verification/run_regression_suite.py",
+      "destination_template": "${HOME}/.agents/run_regression_suite.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "2b7a84624b34ecca071a2afedf712317b16269ae2fc87de3f3a495fbad50a783",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-discover_unregistered_projects-py",
+      "source": "projects/discover_unregistered_projects.py",
+      "destination_template": "${HOME}/.agents/discover_unregistered_projects.py",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0755",
+      "sha256": "5c0724daa9499ecc6130c2a3a02cc728ea391ee0bde7d233ee3705021a08d538",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-MANAGED_ROOTS-json",
+      "source": "projects/MANAGED_ROOTS.json",
+      "destination_template": "${HOME}/.agents/MANAGED_ROOTS.json",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "d44a4ab81ccccb48458ea698b8cb5be648c24b0ba366f3c55828f26f32a22922",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "trust--agents-PROJECT_REGISTRY-json",
+      "source": "projects/PROJECT_REGISTRY.json",
+      "destination_template": "${HOME}/.agents/PROJECT_REGISTRY.json",
+      "agent_runtime": "agy/generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "ec9a267cbca3de87677a49efefa12523039a3300afa80120275932f4054f77d5",
+      "activation": "agent instruction or declared hook configuration",
+      "reload": "adapter_specific",
+      "verification_probe": "sot trust verify",
+      "required": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "agent-sot-root-binding",
+      "source": "external/templates/sot_root.template",
+      "destination_template": "${HOME}/.agents/sot_root",
+      "agent_runtime": "generic_cli",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "0e03eb706e7ab97683c8f4f83c5cc48bb72fd5959363156ec4d49dea051ccb03",
+      "activation": "SOT_ROOT file binding",
+      "reload": "none",
+      "verification_probe": "content equals resolved SOT_ROOT",
+      "required": true,
+      "render_template": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "agent-projects-root-binding",
+      "source": "external/templates/projects_root.template",
+      "destination_template": "${HOME}/.agents/projects_root",
+      "agent_runtime": "generic_cli/agy",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "ed0a931d47bef02dce845337f109646f6b3a00dfd9c3cb5d9d50a9d66065d420",
+      "activation": "completion scanner project root binding",
+      "reload": "none",
+      "verification_probe": "content equals resolved PROJECTS_ROOT",
+      "required": true,
+      "render_template": true,
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "codex-current-default-rules",
+      "source": "adapters/codex/default.rules",
+      "destination_template": "${HOME}/.codex/rules/default.rules",
+      "agent_runtime": "codex",
+      "owner": "current_user",
+      "mode": "0644",
+      "sha256": "64c653d55f02fca2b7c7541ffdc561843c0a1d58fb387284e183d901695daf99",
+      "activation": "Codex native rule discovery",
+      "reload": "adapter_specific",
+      "verification_probe": "Codex CLI loads rules in isolated probe",
+      "required": false,
+      "permissions": [
+        "read"
+      ]
+    }
+  ],
+  "managed_roots": [
+    {
+      "root_template": "${HOME}/.agents",
+      "include_globs": [
+        "AGENTS.md",
+        "settings.json",
+        "rules/*.md",
+        "hooks/*.py",
+        "sot_root",
+        "run_regression_suite.py",
+        "verify_10_fold.py",
+        "discover_unregistered_projects.py",
+        "projects_root"
+      ],
+      "required": false
+    },
+    {
+      "root_template": "${HOME}/.gemini",
+      "include_globs": [
+        "AGENTS.md",
+        "config/hooks.json"
+      ],
+      "required": false
+    },
+    {
+      "root_template": "${HOME}/.codex",
+      "include_globs": [
+        "config.toml",
+        "AGENTS.md",
+        "rules/*.rules"
+      ],
+      "required": false
+    }
+  ]
+}

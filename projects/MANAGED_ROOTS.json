@@ -30,6 +30,23 @@
     "telegram_backup_*",
     "node_modules",
     ".git",
-    ".cache"
+    ".cache",
+    ".next",
+    ".turbo",
+    ".dart_tool",
+    ".pytest_cache",
+    ".mypy_cache",
+    "runtime",
+    "archive",
+    "archives",
+    "deps",
+    "third_party",
+    "third-party",
+    "site-packages",
+    "coverage",
+    "vendor",
+    "target",
+    "build",
+    "dist"
   ]
 }

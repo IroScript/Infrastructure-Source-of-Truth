@@ -1,102 +1,160 @@
-[
-  {
-    "file": "verify_10_fold.py",
-    "source": "trust/verification/verify_10_fold.py",
-    "destination": "/home/azureuser/.agents/verify_10_fold.py",
-    "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
-    "permissions": "0755",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "10-fold verification protocol runner"
-  },
-  {
-    "file": "delete_guard.py",
-    "source": "trust/verification/delete_guard.py",
-    "destination": "/home/azureuser/.agents/hooks/delete_guard.py",
-    "sha256": "6dc9cc7cee80820ab79bf7cc837705780b1c528258583c41c25a692a5b79d2b3",
-    "permissions": "0755",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "PreToolUse hook preventing unauthorized file deletion and catastrophic system commands"
-  },
-  {
-    "file": "completion_gate_stop_hook.py",
-    "source": "trust/verification/completion_gate_stop_hook.py",
-    "destination": "/home/azureuser/.agents/hooks/completion_gate_stop_hook.py",
-    "sha256": "3417b39e4bdfaaa725fc2e319769daae1e9eac9d6609dc488970a48e14f2c6ac",
-    "permissions": "0755",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "Stop hook preventing agent exit until verified by verify_10_fold"
-  },
-  {
-    "file": "tool_audit_hook.py",
-    "source": "trust/verification/tool_audit_hook.py",
-    "destination": "/home/azureuser/.agents/hooks/tool_audit_hook.py",
-    "sha256": "b03cc98315f2336e59421da14a5e3bac7504e15d05923acdc17ad446ebf07126",
-    "permissions": "0755",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "PostToolUse execution auditor and JSONL ledger logger"
-  },
-  {
-    "file": "truth_pre_invocation.py",
-    "source": "trust/verification/truth_pre_invocation.py",
-    "destination": "/home/azureuser/.agents/hooks/truth_pre_invocation.py",
-    "sha256": "962f72c13c6adda7915280becb5cada23e64725af328840d969e5adf7ac73faf",
-    "permissions": "0755",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "PreInvocation context truth validator and rule injector"
-  },
-  {
-    "file": "hooks.json",
-    "source": "configuration/hooks.json",
-    "destination": "/home/azureuser/.gemini/config/hooks.json",
-    "sha256": "2007e7bc163e104a07582e4a0a40c6c31da2287f48df5f9008f5bf4fa1e86c1f",
-    "permissions": "0644",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "Antigravity core hook manifest"
-  },
-  {
-    "file": "settings.json",
-    "source": "configuration/settings.json",
-    "destination": "/home/azureuser/.agents/settings.json",
-    "sha256": "99836dfd30305f66adf9e7cbf38f58967828c41fbc821aff965f6f5c9a1c95a8",
-    "permissions": "0644",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "Core truth and honesty governance settings"
-  },
-  {
-    "file": "01-safety-levels.md",
-    "source": "trust/verification/rules/01-safety-levels.md",
-    "destination": "/home/azureuser/.agents/rules/01-safety-levels.md",
-    "sha256": "236dba3d4abacf2cb8bf885861f816083e28a2c268fe26cdbff1f83f2b8b0f79",
-    "permissions": "0644",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "Action safety level approval matrix (Levels 0 through 3)"
-  },
-  {
-    "file": "04-honesty-and-truth-verification.md",
-    "source": "trust/verification/rules/04-honesty-and-truth-verification.md",
-    "destination": "/home/azureuser/.agents/rules/04-honesty-and-truth-verification.md",
-    "sha256": "92cd5248d75cca031ceb375cd8552a94e187db1fa4e6e648eab9833bf7ac6443",
-    "permissions": "0644",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "Mandatory truth directives and anti-hallucination settings"
-  },
-  {
-    "file": "05-ten-fold-verification-protocol.md",
-    "source": "trust/verification/rules/05-ten-fold-verification-protocol.md",
-    "destination": "/home/azureuser/.agents/rules/05-ten-fold-verification-protocol.md",
-    "sha256": "0a675f783ad1f96d1519afe7a5c133b305048b10301a6281406aaa65d0bd7f60",
-    "permissions": "0644",
-    "owner": "azureuser:azureuser",
-    "required": true,
-    "purpose": "10-Fold Verification Protocol and all-or-nothing gating rules"
-  }
-]
+{
+  "version": "2.0.0",
+  "description": "SOT-owned trust baseline manifest; expected hashes bind deployed files to canonical tracked sources.",
+  "artifacts": [
+    {
+      "source": "governance/AGENTS.md",
+      "destination": "AGENTS.md",
+      "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "governance/AGENTS.md",
+      "destination": ".gemini/AGENTS.md",
+      "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "governance/AGENTS.md",
+      "destination": ".agents/AGENTS.md",
+      "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "configuration/settings.json",
+      "destination": ".agents/settings.json",
+      "sha256": "0128282da8273dbf6ff7d565512d0973f2ae4bcc11c1453487ebadd489033d3e",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "configuration/hooks.json",
+      "destination": ".gemini/config/hooks.json",
+      "sha256": "2007e7bc163e104a07582e4a0a40c6c31da2287f48df5f9008f5bf4fa1e86c1f",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/rules/01-safety-levels.md",
+      "destination": ".agents/rules/01-safety-levels.md",
+      "sha256": "4cb91911203fcd51f0aa40d01caecb9041e6526a396d822a91a458298e3c7e9b",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/rules/02-architecture-roles.md",
+      "destination": ".agents/rules/02-architecture-roles.md",
+      "sha256": "1392bb17ab0b72a3c2bf3659ed21ae543082f8d671a16a22d275628e6fd5884e",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/rules/04-honesty-and-truth-verification.md",
+      "destination": ".agents/rules/04-honesty-and-truth-verification.md",
+      "sha256": "92cd5248d75cca031ceb375cd8552a94e187db1fa4e6e648eab9833bf7ac6443",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/rules/05-ten-fold-verification-protocol.md",
+      "destination": ".agents/rules/05-ten-fold-verification-protocol.md",
+      "sha256": "0a675f783ad1f96d1519afe7a5c133b305048b10301a6281406aaa65d0bd7f60",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/rules/06-additive-governance.md",
+      "destination": ".agents/rules/06-additive-governance.md",
+      "sha256": "ccd63250753990b4dd34d750e4c8f2c4e2fbc096656052a4953f5bcfc2ff6b4c",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/rules/07-git-push-and-sync-governance.md",
+      "destination": ".agents/rules/07-git-push-and-sync-governance.md",
+      "sha256": "1eb9febef2a51c515467be1e5ee4372f3499a62b4d1da2e3859ec46f0403aef6",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/rules/08-single-master-and-hook-governance.md",
+      "destination": ".agents/rules/08-single-master-and-hook-governance.md",
+      "sha256": "ef9c58e689e888544533b571b2e50c58d881f6d1712fc6eee10c436295a638bc",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "trust/verification/delete_guard.py",
+      "destination": ".agents/hooks/delete_guard.py",
+      "sha256": "6dc9cc7cee80820ab79bf7cc837705780b1c528258583c41c25a692a5b79d2b3",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "trust/verification/completion_gate_stop_hook.py",
+      "destination": ".agents/hooks/completion_gate_stop_hook.py",
+      "sha256": "4e5fe86cde094d351fe38d4f6954b657279974f73994ff0035000537d08cb3a6",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "trust/verification/tool_audit_hook.py",
+      "destination": ".agents/hooks/tool_audit_hook.py",
+      "sha256": "b03cc98315f2336e59421da14a5e3bac7504e15d05923acdc17ad446ebf07126",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "trust/verification/truth_pre_invocation.py",
+      "destination": ".agents/hooks/truth_pre_invocation.py",
+      "sha256": "962f72c13c6adda7915280becb5cada23e64725af328840d969e5adf7ac73faf",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "trust/verification/verify_10_fold.py",
+      "destination": ".agents/hooks/verify_10_fold.py",
+      "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "trust/verification/verify_10_fold.py",
+      "destination": ".agents/verify_10_fold.py",
+      "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "trust/verification/run_regression_suite.py",
+      "destination": ".agents/run_regression_suite.py",
+      "sha256": "2b7a84624b34ecca071a2afedf712317b16269ae2fc87de3f3a495fbad50a783",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "projects/discover_unregistered_projects.py",
+      "destination": ".agents/discover_unregistered_projects.py",
+      "sha256": "5c0724daa9499ecc6130c2a3a02cc728ea391ee0bde7d233ee3705021a08d538",
+      "mode": "0755",
+      "required": true
+    },
+    {
+      "source": "projects/MANAGED_ROOTS.json",
+      "destination": ".agents/MANAGED_ROOTS.json",
+      "sha256": "d44a4ab81ccccb48458ea698b8cb5be648c24b0ba366f3c55828f26f32a22922",
+      "mode": "0644",
+      "required": true
+    },
+    {
+      "source": "projects/PROJECT_REGISTRY.json",
+      "destination": ".agents/PROJECT_REGISTRY.json",
+      "sha256": "ec9a267cbca3de87677a49efefa12523039a3300afa80120275932f4054f77d5",
+      "mode": "0644",
+      "required": true
+    }
+  ]
+}

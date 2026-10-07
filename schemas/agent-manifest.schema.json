@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["manifest_version", "entrypoint", "operating_standard", "cli", "roles", "canonical_sources", "commands", "deployment_profiles", "schemas"],
+  "properties": {
+    "manifest_version": {"type": "string"},
+    "entrypoint": {"type": "string"},
+    "operating_standard": {"type": "string"},
+    "cli": {"type": "string"},
+    "roles": {"type": "array", "items": {"type": "string"}},
+    "canonical_sources": {"type": "object"},
+    "commands": {"type": "object"},
+    "deployment_profiles": {"type": "string"},
+    "schemas": {"type": "string"}
+  },
+  "additionalProperties": true
+}

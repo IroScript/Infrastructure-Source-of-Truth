@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Universal Data & Asset Storage Policy for AGY. Enforces clear separation between Git source code, persistent databases, media files, secrets, and transient caches.",
   "classes": {
     "CLASS_G": {
@@ -16,7 +16,7 @@
     "CLASS_D": {
       "name": "Persistent Database",
       "description": "SQLite databases, MariaDB dumps, PostgreSQL dumps, Redis snapshots.",
-      "default_destination": "Google Drive (gdrive:Azure_VM_Live_Backup_Fateh_Ali/DATABASE_BACKUPS_VAULT)",
+      "default_destination": "gdrive:IroScript_Backups/projects/{project_id}/databases/",
       "canonical_hierarchy": "gdrive:IroScript_Backups/projects/{project_id}/databases/",
       "backup_mechanism": "Consistent snapshot -> SHA256 -> rclone copy -> remote size probe",
       "restore_testing_mandatory": true
@@ -24,7 +24,7 @@
     "CLASS_M": {
       "name": "Media Assets",
       "description": "Rendered YouTube video files, exported audio, large graphical assets, packaged APKs.",
-      "default_destination": "Google Drive (gdrive:Azure_VM_Live_Backup_Fateh_Ali/Youtube_Exports)",
+      "default_destination": "gdrive:IroScript_Backups/projects/{project_id}/media/",
       "canonical_hierarchy": "gdrive:IroScript_Backups/projects/{project_id}/media/",
       "backup_mechanism": "rclone copy with SHA256 catalog tracking",
       "prohibited_in_git": true
@@ -42,5 +42,11 @@
       "default_destination": "NO_BACKUP (Ephemeral)",
       "backup_mechanism": "Excluded from backups"
     }
+  },
+  "canonical_layout": {
+    "databases": "gdrive:IroScript_Backups/projects/{project_id}/databases/{filename}",
+    "media": "gdrive:IroScript_Backups/projects/{project_id}/media/{relative_path}",
+    "state": "gdrive:IroScript_Backups/projects/{project_id}/state/{relative_path}",
+    "secrets": "encrypted external vault only; never plaintext in GitHub or Drive"
   }
 }

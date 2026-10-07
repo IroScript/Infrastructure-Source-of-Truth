@@ -1,0 +1,452 @@
+#!/usr/bin/env python3
+"""Portable Infrastructure Source of Truth front door."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+from sotlib.rules import (RuleError, discover_packages, install_package, load_profile,
+                         rollback_package, verify_package, write_index)
+from sotlib import artifacts
+from storage.providers.rclone import RcloneProvider
+
+
+def emit(value, as_json=False):
+    if as_json:
+        print(json.dumps(value, indent=2, sort_keys=True))
+    else:
+        print(json.dumps(value, indent=2, ensure_ascii=False))
+
+
+def profile_for(name, home=None):
+    path = Path(name)
+    if not path.is_file():
+        path = ROOT / "deployment" / "profiles" / (name + ".json")
+    env = dict(os.environ)
+    if home:
+        env["HOME"] = home
+    profile = load_profile(path, env)
+    profile["resolved_roots"]["SOT_ROOT"] = str(ROOT)
+    return profile
+
+
+def cmd_rules(args):
+    packages = discover_packages(ROOT)
+    if args.rules_command == "list":
+        emit([{"rule_id": p["rule_id"], "version": p["version"], "severity": p["severity"],
+               "required_proof_level": p["required_proof_level"], "manifest": str(m.relative_to(ROOT))}
+              for m, p in packages], args.format == "json")
+        return 0
+    if args.rules_command == "validate":
+        emit({"valid": True, "discovered": len(packages), "manifests": [str(m.relative_to(ROOT)) for m, _ in packages]}, args.format == "json")
+        return 0
+    if args.rules_command == "index":
+        p = write_index(ROOT, packages)
+        emit({"generated_index": str(p.relative_to(ROOT)), "packages": len(packages)}, args.format == "json")
+        return 0
+    profile = profile_for(args.profile, args.home)
+    roots = profile["resolved_roots"]
+    state = Path(roots["STATE_ROOT"])
+    rule_id = getattr(args, "rule_id", None)
+    chosen = [(m, p) for m, p in packages if rule_id is None or p["rule_id"] == rule_id]
+    if rule_id and not chosen:
+        raise RuleError(f"unknown rule id: {rule_id}")
+    if args.rules_command == "install":
+        installed = []
+        for manifest, package in chosen:
+            if args.agent_class not in package["supported_agent_classes"]:
+                continue
+            installed.append({"rule_id": package["rule_id"], "artifacts": install_package(ROOT, package, roots, state, args.dry_run)})
+        emit(installed, args.format == "json")
+        return 0
+    if args.rules_command == "verify":
+        results = [verify_package(ROOT, p, roots, state, Path(args.evidence_dir)) for _, p in chosen]
+        emit(results, args.format == "json")
+        return 0 if all(x["verdict"] == "VERIFIED" for x in results) else 2
+    if args.rules_command == "sync":
+        installed = []
+        for manifest, package in chosen:
+            if args.agent_class not in package["supported_agent_classes"]:
+                continue
+            installed.append({"rule_id": package["rule_id"], "artifacts": install_package(ROOT, package, roots, state, args.dry_run)})
+        external = artifacts.install(ROOT, profile, state, args.dry_run)
+        emit({"status": "RULES_AND_SETTINGS_SYNCED", "rules_installed": len(installed), "external_artifacts_installed": len(external)}, args.format == "json")
+        return 0
+    if args.rules_command == "rollback":
+        results = [{"rule_id": p["rule_id"], "restored": rollback_package(p, state)} for _, p in chosen]
+        emit(results, args.format == "json")
+        return 0
+    raise RuleError("unsupported rules command")
+
+
+def git_status():
+    def run(*argv):
+        p = subprocess.run(["git", "-C", str(ROOT), *argv], capture_output=True, text=True)
+        return p.returncode, p.stdout.strip(), p.stderr.strip()
+    rc, branch, _ = run("branch", "--show-current")
+    _, head, _ = run("rev-parse", "HEAD")
+    _, origin, _ = run("rev-parse", "origin/" + (branch or "main"))
+    _, counts, _ = run("rev-list", "--left-right", "--count", "HEAD...origin/" + (branch or "main"))
+    _, dirty, _ = run("status", "--porcelain")
+    ahead, behind = map(int, counts.split()) if counts else (-1, -1)
+    return {"branch": branch, "head": head, "remote_ref": origin, "ahead": ahead, "behind": behind,
+            "dirty": bool(dirty), "status": "PASS" if rc == 0 and head == origin and ahead == behind == 0 and not dirty else "FAIL"}
+
+
+def inspect_adapters(profile):
+    import tomllib
+    results = {}
+    roots = dict(profile["resolved_roots"]); roots["SOT_ROOT"] = str(ROOT)
+    for adapter_id in ("agy", "codex", "generic-verifier"):
+        manifest = json.loads((ROOT / "adapters" / adapter_id / "adapter.json").read_text())
+        command = manifest.get("version_probe", {}).get("command", [])
+        exe = __import__("shutil").which(command[0]) if command else None
+        version = subprocess.run([exe, *command[1:]],capture_output=True,text=True,timeout=15) if exe else None
+        parsed=[]
+        for template in manifest.get("config_discovery", []):
+            if template.startswith("workspace/"):
+                continue
+            try:
+                path=Path(__import__("sotlib.rules",fromlist=["resolve_template"]).resolve_template(template,roots))
+            except Exception:
+                continue
+            if path.is_file():
+                try:
+                    if path.suffix==".toml": tomllib.loads(path.read_text())
+                    elif path.suffix==".json": json.loads(path.read_text())
+                    parsed.append({"path":str(path),"parse":"PASS"})
+                except Exception as exc: parsed.append({"path":str(path),"parse":"FAIL","error":str(exc)})
+        results[adapter_id]={"available":bool(version and version.returncode==0),
+                             "runtime_version_observed":(version.stdout.strip().splitlines()[0] if version and version.stdout.strip() else None),
+                             "config_files_parsed":parsed,"effective_enforcement":"NOT VERIFIED",
+                             "capabilities":"provider/profile declaration only"}
+    return results
+
+
+def cmd_doctor(args):
+    report = {"schema_version": "1.0.0", "profile": args.profile}
+    errors = []
+    try:
+        profile = profile_for(args.profile, args.home)
+        report["roots"] = profile["resolved_roots"]
+        packages = discover_packages(ROOT)
+        report["rules"] = {"discovered": len(packages), "status": "PASS"}
+        external = artifacts.verify(ROOT, profile)
+        report["external_artifacts"] = external
+        if not external["ok"]:
+            errors.append("external artifacts or managed roots are not reconciled")
+        report["git"] = git_status()
+        if report["git"]["status"] != "PASS":
+            errors.append("SOT is dirty or not in remote parity")
+        try:
+            env = dict(os.environ)
+            env.update(profile["resolved_roots"])
+            env["AGY_SOT_ROOT"] = str(ROOT)
+            p = subprocess.run([sys.executable, str(ROOT / "projects/discover_unregistered_projects.py")],
+                               capture_output=True, text=True, timeout=60, env=env)
+            report["orphan_scan"] = {"exit_code": p.returncode, "stdout": p.stdout, "stderr": p.stderr}
+            if p.returncode:
+                errors.append("orphan scan failed or found unregistered projects")
+        except Exception as exc:
+            report["orphan_scan"] = {"error": str(exc), "status": "NOT VERIFIED"}
+            errors.append("orphan scan unavailable")
+        registry = json.loads((ROOT / "projects/PROJECT_REGISTRY.json").read_text())
+        statuses = {}
+        for project in registry.get("projects", []):
+            status = project.get("status", "MISSING")
+            statuses[status] = statuses.get(status, 0) + 1
+        report["projects"] = {"registered": len(registry.get("projects", [])), "lifecycle_statuses": statuses,
+                              "status": "PASS" if all(x.get("status") == "ACTIVE" for x in registry.get("projects", [])) else "FAIL"}
+        if report["projects"]["status"] != "PASS":
+            errors.append("one or more registered projects are not ACTIVE")
+        backup = check_backup_assets()
+        report["backup"] = backup
+        if backup["status"] != "PASS": errors.append("one or more registered external backup objects are not checksum verified")
+        report["adapters"] = inspect_adapters(profile)
+        report["verifiers"] = {name: bool(__import__("shutil").which(name)) for name in ("codex", "agy", "claude", "qwen")}
+        report["runtime_mappings"] = {"status": "NOT VERIFIED", "reason": "runtime consumers are not yet resolved through deployment profile"}
+        errors.append("runtime mapping reconciliation is not implemented for every consumer")
+        report["trust"] = {"status": "NOT VERIFIED"}
+        try:
+            trust = subprocess.run(["bash", str(ROOT / "trust/verify_trust_baseline.sh")], capture_output=True, text=True,
+                                   env={**os.environ, **profile["resolved_roots"], "HOME": profile["resolved_roots"]["HOME"], "SOT_PROFILE": args.profile}, timeout=60)
+            report["trust"] = {"status": "PASS" if trust.returncode == 0 else "FAIL", "exit_code": trust.returncode,
+                               "stdout": trust.stdout, "stderr": trust.stderr}
+            if trust.returncode:
+                errors.append("trust baseline verification failed")
+        except Exception as exc:
+            report["trust"] = {"status": "NOT VERIFIED", "error": str(exc)}
+            errors.append("trust baseline verification unavailable")
+        report["docker"] = {"available": bool(__import__("shutil").which("docker")), "status": "NOT VERIFIED"}
+        if not report["docker"]["available"]:
+            errors.append("Docker recovery is unavailable on this host")
+        try:
+            from gitpush_watcher.watcher import GitPushWatcher
+            report["watcher"] = GitPushWatcher(ROOT).get_health_report()
+        except Exception as exc:
+            report["watcher"] = {"status": "NOT VERIFIED", "error": str(exc)}
+        try:
+            from gitpush_watcher.cloud_parity import CloudParityAuditor
+            report["cloud_parity"] = CloudParityAuditor(ROOT).audit()
+        except Exception as exc:
+            report["cloud_parity"] = {"overall_verdict": "FAIL", "error": str(exc)}
+    except Exception as exc:
+        errors.append(str(exc))
+        report["error"] = str(exc)
+    report["errors"] = errors
+    report["verdict"] = "PASS" if not errors else "FAIL"
+    emit(report, args.format == "json")
+    return 0 if not errors else 2
+
+
+def cmd_watcher(args):
+    from gitpush_watcher.cli import handle_watcher_cli
+    return handle_watcher_cli(args, ROOT)
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="sot", description="Infrastructure Source of Truth CLI")
+    sub = parser.add_subparsers(dest="command", required=True)
+    doctor = sub.add_parser("doctor"); doctor.add_argument("--format", choices=["json", "text"], default="text"); doctor.add_argument("--profile", default="portable-linux"); doctor.add_argument("--home"); doctor.set_defaults(func=cmd_doctor)
+    boot = sub.add_parser("bootstrap"); boot.add_argument("target", nargs="?", choices=["environment", "docker"], default="environment"); boot.add_argument("--profile", default="portable-linux"); boot.add_argument("--home"); boot.add_argument("--agent-class", default="generic_cli"); boot.add_argument("--dry-run", action="store_true"); boot.add_argument("--auto", action="store_true"); boot.set_defaults(func=cmd_bootstrap)
+    rules = sub.add_parser("rules"); rs = rules.add_subparsers(dest="rules_command", required=True)
+    for name in ("list", "validate", "index"):
+        x = rs.add_parser(name); x.add_argument("--format", choices=["json", "text"], default="text"); x.set_defaults(func=cmd_rules)
+    for name in ("install", "verify", "rollback"):
+        x = rs.add_parser(name); x.add_argument("--profile", default="portable-linux"); x.add_argument("--home"); x.add_argument("--rule-id"); x.add_argument("--agent-class", default="generic_cli"); x.add_argument("--format", choices=["json", "text"], default="text"); x.add_argument("--dry-run", action="store_true"); x.add_argument("--evidence-dir", default=str(ROOT / "verification" / "rule-evidence")); x.set_defaults(func=cmd_rules)
+    sync_p = rs.add_parser("sync"); sync_p.add_argument("--profile", default="portable-linux"); sync_p.add_argument("--home"); sync_p.add_argument("--agent-class", default="generic_cli"); sync_p.add_argument("--format", choices=["json", "text"], default="text"); sync_p.add_argument("--dry-run", action="store_true"); sync_p.add_argument("--auto", action="store_true"); sync_p.set_defaults(func=cmd_rules)
+    watcher = sub.add_parser("watcher")
+    ws = watcher.add_subparsers(dest="watcher_action", required=True)
+    ws.add_parser("status").set_defaults(func=cmd_watcher)
+    w_sync = ws.add_parser("sync-once"); w_sync.add_argument("--message", default=""); w_sync.set_defaults(func=cmd_watcher)
+    ws.add_parser("run-daemon").set_defaults(func=cmd_watcher)
+    ws.add_parser("cloud-parity").set_defaults(func=cmd_watcher)
+    arts = sub.add_parser("artifacts"); arts.add_argument("action", choices=["verify","install","rollback"]); arts.add_argument("--profile",default="portable-linux"); arts.add_argument("--home"); arts.add_argument("--dry-run",action="store_true"); arts.set_defaults(func=cmd_artifacts)
+    verify = sub.add_parser("verify"); verify.add_argument("--help-suite", action="store_true"); verify.set_defaults(func=cmd_verify)
+    project = sub.add_parser("project"); project.add_argument("action", choices=["discover", "audit", "register", "finalize"]); project.add_argument("--path"); project.add_argument("--name", default=""); project.add_argument("--project-id", default=""); project.add_argument("--remote",default=""); project.add_argument("--branch",default="main"); project.add_argument("--local-only",action="store_true"); project.add_argument("--type",default="application"); project.add_argument("--data-files",default=""); project.add_argument("--data-classification",choices=["unknown","source_only","persistent_data","mixed"],default="unknown"); project.add_argument("--verification-profile",default="deterministic"); project.add_argument("--tmux",default=""); project.add_argument("--whatsapp-group",default=""); project.add_argument("--whatsapp-route",default=""); project.add_argument("--push",action="store_true"); project.set_defaults(func=cmd_project)
+    backup = sub.add_parser("backup"); backup.add_argument("action", choices=["inventory", "verify", "restore-test"], default="inventory"); backup.add_argument("--asset"); backup.set_defaults(func=cmd_backup)
+    evidence = sub.add_parser("evidence"); evidence.add_argument("action", choices=["validate", "init", "handoff"]); evidence.add_argument("path", nargs="?"); evidence.add_argument("--task-id"); evidence.add_argument("--project-uuid"); evidence.add_argument("--request-summary", default=""); evidence.set_defaults(func=cmd_evidence)
+    args = parser.parse_args()
+    try:
+        return args.func(args)
+    except (RuleError, OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 2
+
+
+def run_project(action):
+    script = ROOT / "projects" / ("discover_unregistered_projects.py" if action == "discover" else "audit_all_projects.py")
+    p = subprocess.run([sys.executable, str(script)], cwd=ROOT)
+    return p.returncode
+
+
+def cmd_verify(args):
+    if args.help_suite:
+        print("Run: ./sot verify\nRuns the provider-neutral deterministic unit and adversarial test suite.")
+        return 0
+    result=subprocess.run([sys.executable,"-m","unittest","discover","-s",str(ROOT/"verification/tests"),"-v"],cwd=ROOT)
+    return result.returncode
+
+
+def cmd_project(args):
+    if args.action == "register":
+        if not args.path:
+            raise RuleError("project register requires --path")
+        command = [sys.executable, str(ROOT / "projects/register_project.py"), "--path", args.path]
+        if args.name: command += ["--name", args.name]
+        if args.project_id: command += ["--id", args.project_id]
+        for flag,value in (("--remote",args.remote),("--branch",args.branch),("--type",args.type),("--data-files",args.data_files),
+                           ("--data-classification",args.data_classification),("--verification-profile",args.verification_profile),
+                           ("--tmux",args.tmux),("--whatsapp-group",args.whatsapp_group),("--whatsapp-route",args.whatsapp_route)):
+            if value: command += [flag,value]
+        if args.local_only: command.append("--local-only")
+        return subprocess.run(command, cwd=ROOT).returncode
+    if args.action == "finalize":
+        if not args.project_id:
+            raise RuleError("project finalize requires --project-id and explicit approved push workflow")
+        command=[sys.executable, str(ROOT / "projects/finalize_project_onboarding.py"), args.project_id]
+        if args.push: command.append("--push")
+        return subprocess.run(command, cwd=ROOT).returncode
+    return run_project(args.action)
+
+
+def cmd_artifacts(args):
+    profile=profile_for(args.profile,args.home)
+    state=Path(profile["resolved_roots"]["STATE_ROOT"])
+    if args.action=="rollback":
+        restored=artifacts.rollback(state);emit({"restored":restored,"status":"ROLLED_BACK"});return 0
+    if args.action=="install":
+        rows=artifacts.install(ROOT,profile,state,args.dry_run)
+        emit({"installed":rows,"status":"DRY_RUN" if args.dry_run else "INSTALLED"})
+        return 0
+    result=artifacts.verify(ROOT,profile);emit(result)
+    return 0 if result["ok"] else 2
+
+
+def validate_evidence(path):
+    p = subprocess.run([sys.executable, str(ROOT / "verification/validate_verifier_result.py"), path], cwd=ROOT)
+    return p.returncode
+
+
+def cmd_evidence(args):
+    if args.action == "validate":
+        if not args.path: raise RuleError("evidence validate requires a verifier result path")
+        return validate_evidence(args.path)
+    if not args.task_id or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", args.task_id):
+        raise RuleError("evidence init/handoff requires a safe --task-id")
+    if args.action == "init" and not args.request_summary.strip():
+        raise RuleError("evidence init requires a concise --request-summary")
+    bundle = ROOT / "verification/TASK_EVIDENCE" / args.task_id
+    record_path = bundle / "record.json"
+    if args.action == "init":
+        if record_path.exists(): raise RuleError(f"task evidence already exists: {args.task_id}")
+        bundle.mkdir(parents=True, exist_ok=False)
+        now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+        record = {"task_id":args.task_id, "project_id":"unresolved", "project_uuid":args.project_uuid or "00000000-0000-4000-8000-000000000000",
+                  "request_summary":args.request_summary, "builder":"unassigned", "tool":"unassigned", "started_at":now,
+                  "ended_at":now, "changed_files":[], "commit_sha":None, "tests":[], "deterministic_result":"inconclusive",
+                  "verifier_status":"pending", "verifier_identity":None, "final_verdict":"incomplete", "unresolved_items":["task data not yet recorded"]}
+        record_path.write_text(json.dumps(record,indent=2)+"\n")
+        emit({"task_id":args.task_id,"record":str(record_path.relative_to(ROOT)),"status":"INITIALIZED"})
+        return 0
+    if not record_path.is_file(): raise RuleError(f"task record missing: {args.task_id}")
+    record=json.loads(record_path.read_text())
+    handoff={"task_id":record.get("task_id"),"project_uuid":record.get("project_uuid"),"request_summary":record.get("request_summary"),
+             "changed_files":record.get("changed_files",[]),"tests":record.get("tests",[]),"deterministic_result":record.get("deterministic_result"),
+             "verifier_status":record.get("verifier_status"),"unresolved_items":record.get("unresolved_items",[]),
+             "rules_index":"governance/rules", "record_sha256":__import__("hashlib").sha256(record_path.read_bytes()).hexdigest()}
+    target=bundle/"handoff.json"; target.write_text(json.dumps(handoff,indent=2)+"\n")
+    emit({"task_id":args.task_id,"handoff":str(target.relative_to(ROOT)),"status":"GENERATED"})
+    return 0
+
+
+def check_backup_assets(asset_id=None):
+    data = json.loads((ROOT / "storage/DATA_ASSET_REGISTRY.json").read_text())
+    assets = [a for a in data.get("assets", []) if a.get("backup_required") or a.get("remote_path")]
+    if asset_id:
+        assets = [a for a in assets if a.get("asset_id") == asset_id]
+    provider = RcloneProvider()
+    directories = {}
+    for asset in assets:
+        base = asset.get("primary_backup_target") or ""
+        if base and base not in directories:
+            try:
+                directories[base] = provider.list(base)
+            except Exception as exc:
+                directories[base] = {"_error": str(exc)}
+    results = []
+    for asset in assets:
+        source = Path(asset.get("source_path", ""))
+        remote = asset.get("remote_path") or ""
+        if not source.is_file() or not remote:
+            results.append({"asset_id": asset.get("asset_id"), "status": "NOT VERIFIED", "reason": "missing local source or remote path"})
+            continue
+        try:
+            base = asset.get("primary_backup_target") or remote.rsplit("/", 1)[0]
+            listing = directories.get(base)
+            if listing is None:
+                listing = provider.list(base); directories[base] = listing
+            if isinstance(listing, dict) and listing.get("_error"):
+                raise RuntimeError(listing["_error"])
+            relative = remote[len(base.rstrip("/") + "/"):]
+            rows = [x for x in listing if not x.get("IsDir") and x.get("Path") == relative]
+            if len(rows) != 1:
+                results.append({"asset_id":asset.get("asset_id"),"status":"BACKUP_REQUIRED","reason":"exact remote object missing or ambiguous","matches":len(rows)})
+                continue
+            row = rows[0]
+            digest = __import__("hashlib").md5()
+            with source.open("rb") as stream:
+                for block in iter(lambda:stream.read(1024*1024),b""): digest.update(block)
+            local_md5 = digest.hexdigest(); remote_md5 = row.get("Hashes",{}).get("md5")
+            size_ok = row.get("Size") == source.stat().st_size
+            observed = {"exists":True,"size_match":size_ok,"remote_md5":remote_md5,"local_md5":local_md5,
+                        "status":"REMOTE_CHECKSUM_VERIFIED" if size_ok and remote_md5 == local_md5 else ("REMOTE_OBJECT_VERIFIED" if size_ok else "REMOTE_UPLOAD_COMPLETE"),
+                        "object_id":row.get("ID")}
+            results.append({"asset_id": asset.get("asset_id"), "source_size": source.stat().st_size, **observed})
+        except Exception as exc:
+            results.append({"asset_id": asset.get("asset_id"), "status": "NOT VERIFIED", "reason": str(exc)})
+    return {"assets_checked": len(results), "results": results,
+            "status": "PASS" if results and all(x.get("status") == "REMOTE_CHECKSUM_VERIFIED" for x in results) else "FAIL"}
+
+
+def cmd_backup(args):
+    if args.action in {"inventory", "verify"}:
+        report = check_backup_assets(args.asset)
+        emit(report)
+        return 0 if report["status"] == "PASS" else 2
+    import tempfile, hashlib, sqlite3, gzip
+    report = check_backup_assets(args.asset)
+    verified = []
+    failures = []
+    assets = json.loads((ROOT / "storage/DATA_ASSET_REGISTRY.json").read_text()).get("assets", [])
+    assets = [a for a in assets if (not args.asset or a.get("asset_id") == args.asset) and a.get("remote_path")]
+    with tempfile.TemporaryDirectory(prefix="sot-restore-test-") as td:
+        provider = RcloneProvider()
+        for i, asset in enumerate(assets):
+            path = Path(td) / f"asset-{i}"
+            try:
+                provider.download(asset["remote_path"], path)
+                if path.suffix == ".db":
+                    with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as db:
+                        integrity = db.execute("PRAGMA integrity_check").fetchone()[0]
+                    ok = integrity == "ok"
+                elif path.name.endswith(".sql.gz"):
+                    with gzip.open(path, "rb") as stream:
+                        while stream.read(1024 * 1024): pass
+                    integrity = "gzip_crc_ok"; ok = True
+                else:
+                    integrity = "downloaded"; ok = path.is_file()
+                record = {"asset_id": asset["asset_id"], "status": "REMOTE_RESTORE_VERIFIED" if ok else "FAILED", "domain_integrity": integrity}
+                verified.append(record)
+                if not ok: failures.append(record)
+            except Exception as exc:
+                failures.append({"asset_id": asset["asset_id"], "status": "FAILED", "reason": str(exc)})
+    emit({"remote_checksum_inventory": report, "restore_tests": verified, "failures": failures,
+          "status": "PASS" if not failures and verified else "FAIL"})
+    return 0 if not failures and verified else 2
+
+
+def cmd_bootstrap(args):
+    if args.target == "docker":
+        docker = __import__("shutil").which("docker")
+        if not docker:
+            emit({"docker_recovery": "NOT VERIFIED", "reason": "Docker CLI is not installed", "profile": args.profile})
+            return 2
+        compose = subprocess.run([docker, "compose", "version"], capture_output=True, text=True)
+        if compose.returncode:
+            emit({"docker_recovery": "NOT VERIFIED", "reason": "Docker Compose plugin unavailable", "stderr": compose.stderr})
+            return 2
+        emit({"docker_recovery": "NOT VERIFIED", "reason": "No validated compose recovery manifest is currently declared", "compose_version": compose.stdout.strip()})
+        return 2
+    profile = profile_for(args.profile, args.home)
+    packages = discover_packages(ROOT)
+    installed = []
+    for _, package in packages:
+        if args.agent_class in package["supported_agent_classes"]:
+            installed.append(install_package(ROOT, package, profile["resolved_roots"], Path(profile["resolved_roots"]["STATE_ROOT"]), args.dry_run))
+    external = artifacts.install(ROOT, profile, Path(profile["resolved_roots"]["STATE_ROOT"]), args.dry_run)
+    if args.dry_run:
+        emit({"status": "DRY_RUN", "rules": len(installed), "external_artifacts": len(external)})
+        return 0
+    result = artifacts.verify(ROOT, profile)
+    if result["ok"]:
+        legacy = subprocess.run(["bash", str(ROOT / "trust/verify_trust_baseline.sh")],
+                                capture_output=True, text=True, env={**os.environ, **profile["resolved_roots"],
+                                "HOME": profile["resolved_roots"]["HOME"], "SOT_PROFILE": args.profile})
+        result["legacy_trust_verification"] = {"exit_code": legacy.returncode,
+                                                "stdout": legacy.stdout, "stderr": legacy.stderr}
+        if legacy.returncode:
+            result["ok"] = False
+    emit({"status": "BOOTSTRAP_INCOMPLETE" if not result["ok"] else "BOOTSTRAP_INSTALLED", "rules": len(installed), "external_artifacts": len(external), "verification": result})
+    return 2 if not result["ok"] else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

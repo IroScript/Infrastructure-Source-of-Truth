@@ -28,9 +28,17 @@ REGISTRY_FILE = os.path.join(SCRIPT_DIR, "PROJECT_REGISTRY.json")
 sys.path.insert(0, SCRIPT_DIR)
 import register_project
 import generate_derived_mappings
+from precommit_safety import safe_stage
+from atomic_json import project_lock
 
 
 def create_project(args):
+    identity = os.path.realpath(os.path.expanduser(args.path))
+    with project_lock(identity):
+        return _create_project_locked(args)
+
+
+def _create_project_locked(args):
     raw_path = os.path.expanduser(args.path)
     real_path = os.path.realpath(raw_path)
 
@@ -53,12 +61,12 @@ def create_project(args):
         if not os.path.exists(readme_path):
             with open(readme_path, "w", encoding="utf-8") as f:
                 f.write(f"# {args.name or os.path.basename(real_path)}\n\nManaged AGY Project.\n")
-        # Create standard .gitignore
+        # Install conservative defaults before any stage operation.
         gitignore_path = os.path.join(real_path, ".gitignore")
-        if not os.path.exists(gitignore_path):
-            with open(gitignore_path, "w", encoding="utf-8") as f:
-                f.write("__pycache__/\n*.pyc\nnode_modules/\n.env\n*.log\n")
-        subprocess.run(["git", "-C", real_path, "add", "."], check=True)
+        existing = open(gitignore_path, encoding="utf-8").read() if os.path.exists(gitignore_path) else ""
+        with open(gitignore_path, "w", encoding="utf-8") as f:
+            f.write(existing + "\n# AGY fail-closed defaults\n.env*\n!.env.example\n!.env.template\n*.pem\n*.key\n*.p12\n*.pfx\n*.db\n*.sqlite\n*.sqlite3\n*.rdb\n*.log\nnode_modules/\n.venv/\nvenv/\ntarget/\nbuild/\ndist/\nwa_auth/\n")
+        safe_stage(real_path)
         subprocess.run(["git", "-C", real_path, "commit", "-m", f"initial commit for {args.name or os.path.basename(real_path)}"], check=True)
 
     # Stage 3: Remote Repository Resolution
@@ -83,6 +91,7 @@ def create_project(args):
             if not remote:
                 print("[!] Notice: No remote provided and auto-creation not available. Marking as local-only or unpushed.")
 
+    push_verified = False
     if remote:
         # Verify remote URL in git config
         curr_rem = subprocess.run(["git", "-C", real_path, "config", "--get", "remote.origin.url"], capture_output=True, text=True).stdout.strip()
@@ -90,6 +99,21 @@ def create_project(args):
             subprocess.run(["git", "-C", real_path, "remote", "add", "origin", remote], check=True)
         elif curr_rem != remote:
             subprocess.run(["git", "-C", real_path, "remote", "set-url", "origin", remote], check=True)
+        branch = subprocess.run(["git", "-C", real_path, "branch", "--show-current"], capture_output=True, text=True, check=True).stdout.strip()
+        if not branch:
+            branch = args.branch or "main"
+            subprocess.run(["git", "-C", real_path, "checkout", "-B", branch], check=True)
+        # Push must succeed and remote SHA must match before registration can be ACTIVE.
+        try:
+            subprocess.run(["git", "-C", real_path, "push", "--set-upstream", "origin", branch], check=True)
+            subprocess.run(["git", "-C", real_path, "fetch", "origin", branch], check=True)
+            local_sha = subprocess.run(["git", "-C", real_path, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+            remote_sha = subprocess.run(["git", "-C", real_path, "rev-parse", f"origin/{branch}"], capture_output=True, text=True, check=True).stdout.strip()
+            if local_sha != remote_sha:
+                raise RuntimeError("Remote SHA mismatch after push")
+            push_verified = True
+        except (subprocess.CalledProcessError, RuntimeError) as exc:
+            print(f"[-] REMOTE PUSH/VERIFY FAILED: {exc}; recording incomplete onboarding")
 
     # Stage 4: Register in Canonical Registry
     reg_args = argparse.Namespace(
@@ -105,13 +129,15 @@ def create_project(args):
         whatsapp_group=args.whatsapp_group,
         whatsapp_route=args.whatsapp_route,
         data_files=args.data_files,
+        data_classification=args.data_classification,
+        push_verified=push_verified,
         verification_profile=args.verification_profile,
         dry_run=False
     )
     entry = register_project.register_project(reg_args)
 
     print("\n==========================================")
-    print(f"  PROJECT ONBOARDING COMPLETE: {entry['project_id']}")
+    print(f"  PROJECT {'ONBOARDING COMPLETE' if entry['status'] == 'ACTIVE' else 'ONBOARDING INCOMPLETE'}: {entry['project_id']}")
     print(f"  Canonical Path: {entry['canonical_path']}")
     print(f"  Status: {entry['status']}")
     print("==========================================")
@@ -131,7 +157,8 @@ if __name__ == "__main__":
     parser.add_argument("--whatsapp-group", default="", help="WhatsApp group")
     parser.add_argument("--whatsapp-route", default="", help="WhatsApp agent route")
     parser.add_argument("--data-files", default="", help="Data files")
-    parser.add_argument("--verification-profile", default="standard_project", help="Verification profile")
+    parser.add_argument("--data-classification", choices=["unknown", "source_only", "persistent_data", "mixed"], default="unknown")
+    parser.add_argument("--verification-profile", default="deterministic", help="Verification profile")
     args = parser.parse_args()
 
     create_project(args)

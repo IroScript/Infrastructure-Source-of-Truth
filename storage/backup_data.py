@@ -16,8 +16,13 @@ import hashlib
 import argparse
 import subprocess
 import time
+import sqlite3
+import tempfile
+from contextlib import contextmanager
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(SCRIPT_DIR), "projects"))
+from atomic_json import atomic_write_json, read_json, registry_lock, project_lock
 REGISTRY_FILE = os.path.join(SCRIPT_DIR, "DATA_ASSET_REGISTRY.json")
 CATALOG_FILE = os.path.join(SCRIPT_DIR, "BACKUP_CATALOG.json")
 
@@ -30,6 +35,14 @@ def sha256_file(filepath):
     return h.hexdigest()
 
 
+def md5_file(filepath):
+    h = hashlib.md5()
+    with open(filepath, "rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def load_assets():
     if not os.path.exists(REGISTRY_FILE):
         raise FileNotFoundError(f"Asset registry missing: {REGISTRY_FILE}")
@@ -37,7 +50,56 @@ def load_assets():
         return json.load(f).get("assets", [])
 
 
+def classify_remote_listing(items, filename, size, checksum, md5_checksum=None):
+    match = next((item for item in items if item.get("Name") == filename and item.get("Size") == size), None)
+    if not match:
+        return "REMOTE_UPLOAD_COMPLETE", None
+    hashes = match.get("Hashes", {})
+    if checksum in hashes.values() or (md5_checksum and hashes.get("md5") == md5_checksum):
+        return "REMOTE_CHECKSUM_VERIFIED", match
+    return "REMOTE_OBJECT_VERIFIED", match
+
+
+@contextmanager
+def consistent_snapshot(source_path):
+    """Use SQLite's online backup API so committed WAL data enters one consistent snapshot."""
+    path = os.path.abspath(source_path)
+    if os.path.isdir(path):
+        raise ValueError("Directory assets require a per-file manifest and cannot use single-file backup")
+    if os.path.splitext(path)[1].lower() not in {".db", ".sqlite", ".sqlite3"}:
+        yield path
+        return
+    with tempfile.TemporaryDirectory(prefix="agy-sqlite-snapshot-") as temp_dir:
+        snapshot = os.path.join(temp_dir, os.path.basename(path))
+        source = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=30)
+        destination = sqlite3.connect(snapshot)
+        try:
+            source.backup(destination)
+            check = destination.execute("PRAGMA integrity_check").fetchone()
+            if not check or check[0] != "ok":
+                raise RuntimeError(f"SQLite snapshot integrity check failed for {os.path.basename(path)}")
+        finally:
+            destination.close(); source.close()
+        yield snapshot
+
+
 def backup_asset(asset, dry_run=False, verify_remote=True):
+    with project_lock("asset:" + asset["asset_id"]):
+        return _backup_asset_locked(asset, dry_run, verify_remote)
+
+
+def _backup_asset_locked(asset, dry_run=False, verify_remote=True):
+    source_path = asset["source_path"]
+    if not os.path.exists(source_path):
+        return {"asset_id": asset["asset_id"], "status": "FAILED", "reason": "SOURCE_NOT_FOUND"}
+    try:
+        with consistent_snapshot(source_path) as snapshot:
+            return _backup_asset_snapshot(asset, snapshot, dry_run, verify_remote)
+    except Exception as exc:
+        return {"asset_id": asset["asset_id"], "status": "FAILED", "reason": str(exc)}
+
+
+def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=True):
     asset_id = asset["asset_id"]
     source_path = asset["source_path"]
     target_remote = asset.get("primary_backup_target", "")
@@ -46,12 +108,9 @@ def backup_asset(asset, dry_run=False, verify_remote=True):
     print(f"    Source: {source_path}")
     print(f"    Target: {target_remote}")
 
-    if not os.path.exists(source_path):
-        print(f"[-] ERROR: Source path does not exist physically: {source_path}")
-        return {"asset_id": asset_id, "status": "FAILED", "reason": "SOURCE_NOT_FOUND"}
-
-    size = os.path.getsize(source_path) if os.path.isfile(source_path) else 0
-    checksum = sha256_file(source_path) if os.path.isfile(source_path) else "DIRECTORY_ASSET"
+    size = os.path.getsize(snapshot_path)
+    checksum = sha256_file(snapshot_path)
+    md5_checksum = md5_file(snapshot_path)
     print(f"    Size: {size} bytes | SHA256: {checksum[:16]}...")
 
     if dry_run:
@@ -60,25 +119,31 @@ def backup_asset(asset, dry_run=False, verify_remote=True):
 
     # Step 1: Copy to remote
     print(f"    [*] Uploading to {target_remote}...")
-    cmd = ["rclone", "copy", source_path, target_remote]
+    remote_object = os.path.basename(source_path)
+    remote_destination = asset.get("remote_path") or (target_remote.rstrip("/") + "/" + remote_object)
+    cmd = ["rclone", "copyto", snapshot_path, remote_destination]
     p = subprocess.run(cmd, capture_output=True, text=True)
 
     if p.returncode != 0:
         print(f"[-] Backup upload failed: {p.stderr.strip()}")
         return {"asset_id": asset_id, "status": "FAILED", "reason": p.stderr.strip()}
 
-    print("    [+] Upload completed with rc=0 (Status: BACKUP CREATED)")
+    print("    [+] Upload completed with rc=0 (Status: REMOTE_UPLOAD_COMPLETE)")
 
     # Step 2: Verify remote existence and size
-    status = "BACKUP CREATED"
+    status = "REMOTE_UPLOAD_COMPLETE"
     if verify_remote:
-        dest_filename = os.path.basename(source_path)
-        check_p = subprocess.run(["rclone", "lsf", target_remote], capture_output=True, text=True)
-        if dest_filename in check_p.stdout:
-            print(f"    [+] Remote existence verified for '{dest_filename}' (Status: REMOTE VERIFIED)")
-            status = "REMOTE VERIFIED"
+        dest_filename = remote_object
+        check_p = subprocess.run(["rclone", "lsjson", "--hash", os.path.dirname(remote_destination)], capture_output=True, text=True)
+        try:
+            items = json.loads(check_p.stdout) if check_p.returncode == 0 else []
+        except json.JSONDecodeError:
+            items = []
+        status, match = classify_remote_listing(items, dest_filename, size, checksum, md5_checksum)
+        if match:
+            print(f"    [+] Exact remote object and size verified for '{dest_filename}' (Status: {status})")
         else:
-            print(f"    [!] Remote existence could not be confirmed in listing: {dest_filename}")
+            print(f"    [!] Exact remote object/size could not be confirmed: {dest_filename}")
 
     # Step 3: Catalog entry
     catalog_entry = {
@@ -86,22 +151,39 @@ def backup_asset(asset, dry_run=False, verify_remote=True):
         "asset_id": asset_id,
         "project_id": asset.get("project_id", "unknown"),
         "source_checksum": checksum,
-        "remote_destination": target_remote,
-        "remote_object": os.path.basename(source_path),
+        "remote_checksum_algorithm": "md5" if verify_remote and match and match.get("Hashes", {}).get("md5") else "",
+        "remote_checksum": match.get("Hashes", {}).get("md5", "") if verify_remote and match else "",
+        "remote_destination": os.path.dirname(remote_destination),
+        "remote_object": remote_object,
+        "remote_path": remote_destination,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "size": size,
         "encryption": asset.get("encryption", "none"),
         "status": status,
+        "remote_object_id": match.get("ID", "") if verify_remote and match else "",
+        "remote_size": match.get("Size") if verify_remote and match else None,
         "restore_verification": "PENDING_RESTORE_TEST"
     }
 
     if os.path.exists(CATALOG_FILE):
-        with open(CATALOG_FILE, "r", encoding="utf-8") as f:
-            cat = json.load(f)
-        cat.setdefault("backups", []).append(catalog_entry)
-        cat["last_updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with open(CATALOG_FILE, "w", encoding="utf-8") as f:
-            json.dump(cat, f, indent=2)
+        with registry_lock(CATALOG_FILE):
+            cat = read_json(CATALOG_FILE)
+            cat.setdefault("backups", []).append(catalog_entry)
+            cat["last_updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            atomic_write_json(CATALOG_FILE, cat)
+
+    with registry_lock(REGISTRY_FILE):
+        assets_registry = read_json(REGISTRY_FILE)
+        for registered in assets_registry.get("assets", []):
+            if registered.get("asset_id") == asset_id:
+                registered.update({"last_backup_checksum": checksum, "last_backup_time": catalog_entry["timestamp"],
+                                   "remote_status": status, "remote_path": remote_destination,
+                                   "remote_object_id": catalog_entry["remote_object_id"],
+                                   "remote_size": catalog_entry["remote_size"],
+                                   "remote_checksum_algorithm": catalog_entry["remote_checksum_algorithm"],
+                                   "remote_checksum": catalog_entry["remote_checksum"],
+                                   "restore_status": "PENDING_RESTORE_TEST"})
+        atomic_write_json(REGISTRY_FILE, assets_registry)
 
     return catalog_entry
 

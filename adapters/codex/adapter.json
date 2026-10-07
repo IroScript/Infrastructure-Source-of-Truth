@@ -1,0 +1,54 @@
+{
+  "adapter_id": "codex",
+  "agent_type": "codex",
+  "supported_versions": [
+    "detected-at-runtime"
+  ],
+  "config_discovery": [
+    "${HOME}/.codex/config.toml",
+    "${HOME}/.codex/AGENTS.md",
+    "${HOME}/.codex/rules/*.rules",
+    "workspace/AGENTS.md"
+  ],
+  "config_destinations": [
+    "${HOME}/.codex/rules/sot-governance.rules"
+  ],
+  "precedence_sources": [
+    "Codex CLI official behavior must be version-tested",
+    "user config",
+    "project instructions",
+    "CLI overrides where supported"
+  ],
+  "activation": {
+    "method": "Codex rule discovery",
+    "probe": "isolated Codex CLI prompt checks a harmless rule"
+  },
+  "effective_state_probe": {
+    "method": "Codex CLI observed response plus rule path/hash",
+    "evidence_required": [
+      "command_argv",
+      "exit_code",
+      "stdout_sha256",
+      "stderr_sha256",
+      "runtime_version",
+      "timestamp"
+    ]
+  },
+  "reload": "adapter_specific",
+  "unsupported_capability": "inconclusive",
+  "version_probe": {
+    "command": [
+      "codex",
+      "--version"
+    ],
+    "requires_runtime_measurement": true
+  },
+  "config_precedence_verified": false,
+  "capabilities": {
+    "builder_light": false,
+    "builder_standard": false,
+    "builder_strong": false,
+    "verifier_standard": false,
+    "verifier_strong": false
+  }
+}

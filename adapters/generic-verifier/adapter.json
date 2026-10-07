@@ -1,0 +1,48 @@
+{
+  "adapter_id": "generic-verifier",
+  "agent_type": "generic_cli",
+  "supported_versions": [
+    "contract-versioned"
+  ],
+  "config_discovery": [
+    "task evidence manifest"
+  ],
+  "config_destinations": [],
+  "precedence_sources": [
+    "task scope",
+    "canonical rule packages",
+    "explicit verifier capability binding"
+  ],
+  "activation": {
+    "method": "structured result schema",
+    "probe": "evidence validator negative tests"
+  },
+  "effective_state_probe": {
+    "method": "validate machine-bound evidence bundle",
+    "evidence_required": [
+      "command_argv",
+      "exit_code",
+      "stdout_sha256",
+      "stderr_sha256",
+      "runtime_version",
+      "timestamp"
+    ]
+  },
+  "reload": "none",
+  "unsupported_capability": "inconclusive",
+  "version_probe": {
+    "command": [
+      "python3",
+      "--version"
+    ],
+    "requires_runtime_measurement": true
+  },
+  "config_precedence_verified": false,
+  "capabilities": {
+    "builder_light": false,
+    "builder_standard": false,
+    "builder_strong": false,
+    "verifier_standard": true,
+    "verifier_strong": false
+  }
+}

@@ -1,0 +1,593 @@
+{
+  "adapters": {
+    "agy": {
+      "available": true,
+      "capabilities": "provider/profile declaration only",
+      "config_files_parsed": [
+        {
+          "parse": "PASS",
+          "path": "/home/azureuser/.gemini/AGENTS.md"
+        },
+        {
+          "parse": "PASS",
+          "path": "/home/azureuser/.gemini/config/hooks.json"
+        },
+        {
+          "parse": "PASS",
+          "path": "/home/azureuser/.agents/settings.json"
+        }
+      ],
+      "effective_enforcement": "NOT VERIFIED",
+      "runtime_version_observed": "1.3.1"
+    },
+    "codex": {
+      "available": true,
+      "capabilities": "provider/profile declaration only",
+      "config_files_parsed": [
+        {
+          "parse": "PASS",
+          "path": "/home/azureuser/.codex/config.toml"
+        },
+        {
+          "parse": "PASS",
+          "path": "/home/azureuser/.codex/AGENTS.md"
+        }
+      ],
+      "effective_enforcement": "NOT VERIFIED",
+      "runtime_version_observed": "codex-cli 0.160.0"
+    },
+    "generic-verifier": {
+      "available": true,
+      "capabilities": "provider/profile declaration only",
+      "config_files_parsed": [],
+      "effective_enforcement": "NOT VERIFIED",
+      "runtime_version_observed": "Python 3.13.5"
+    }
+  },
+  "backup": {
+    "assets_checked": 34,
+    "results": [
+      {
+        "asset_id": "recall_sqlite_db",
+        "exists": true,
+        "local_md5": "30f6dbc5c5b9046e088c9fbeb11ecb7f",
+        "object_id": "1dZgyJE3vmNBpfaWQqe90PbZNXmjxLzol",
+        "remote_md5": "d56e52cffff7e5b05721307ce9f8db01",
+        "size_match": true,
+        "source_size": 122953728,
+        "status": "REMOTE_OBJECT_VERIFIED"
+      },
+      {
+        "asset_id": "chrome_history_master_db",
+        "exists": true,
+        "local_md5": "a05f434927a0159fe558303752bd3a6e",
+        "object_id": "13Be1wCSmfI8bgi2ufW7z1lC9QpL1SENO",
+        "remote_md5": "c31c54e994e2a3deca6d1d800e08ea5c",
+        "size_match": true,
+        "source_size": 28344320,
+        "status": "REMOTE_OBJECT_VERIFIED"
+      },
+      {
+        "asset_id": "vault_index_db",
+        "exists": true,
+        "local_md5": "def97b0bf1f0833b7b8d9c7aaccc3bde",
+        "object_id": "1BbKKgJxhXmcHDSM-5vX6O8MOKkSGsVW-",
+        "remote_md5": "8b4393bce0486e9554aa97fbef71a724",
+        "size_match": true,
+        "source_size": 22097920,
+        "status": "REMOTE_OBJECT_VERIFIED"
+      },
+      {
+        "asset_id": "youtube_pipeline_db",
+        "exists": true,
+        "local_md5": "d82676a986a4d1ff9cb344793b685529",
+        "object_id": "1PJ5e1ZiRvgbqlnBJMz1Naih6-9C6sZ58",
+        "remote_md5": "075e1c6030f1219d1b4121c5f1786a0f",
+        "size_match": true,
+        "source_size": 71852032,
+        "status": "REMOTE_OBJECT_VERIFIED"
+      },
+      {
+        "asset_id": "ask_and_research_db",
+        "exists": true,
+        "local_md5": "6c8a25268cb4f1a0d13100e997131875",
+        "object_id": "1EizSdtPux_qO-YQarvn8UwTXSBkB10lu",
+        "remote_md5": "f0e10a748bc08501ffa90b5e9f746bb0",
+        "size_match": true,
+        "source_size": 217088,
+        "status": "REMOTE_OBJECT_VERIFIED"
+      },
+      {
+        "asset_id": "frappe_alco_mariadb",
+        "exists": true,
+        "local_md5": "97201bbd2e3b309929b99dc02c811176",
+        "object_id": "1FB2C2wwHiAMWPOYY4P8_RM-Ilaj3ySsD",
+        "remote_md5": "97201bbd2e3b309929b99dc02c811176",
+        "size_match": true,
+        "source_size": 997129,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_10_level_10_the_infinite_rice_factory",
+        "exists": true,
+        "local_md5": "62440ef42f7afa3d48f71ab1483ba1e4",
+        "object_id": "1MQVlPjW2gXFjLALpkiXqljhJXtIZfe6e",
+        "remote_md5": "62440ef42f7afa3d48f71ab1483ba1e4",
+        "size_match": true,
+        "source_size": 11209274,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_11_level_10_colossal_wheat_combine_titan",
+        "exists": true,
+        "local_md5": "6a8e289d6be5c1fe42305b8cf7620704",
+        "object_id": "1L1m2UqDzF0Dg2AX7mF7cBpOzeT9e7vGN",
+        "remote_md5": "6a8e289d6be5c1fe42305b8cf7620704",
+        "size_match": true,
+        "source_size": 9657643,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_12_level_10_the_solar_wheat_sifter",
+        "exists": true,
+        "local_md5": "c9a430deb11114ebc3ae9c52f27824e5",
+        "object_id": "1CF0UBk16TmegfsiF__BAIJC8piz9y9gx",
+        "remote_md5": "c9a430deb11114ebc3ae9c52f27824e5",
+        "size_match": true,
+        "source_size": 9349776,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_13_level_10_the_wheat_ocean_harvester",
+        "exists": true,
+        "local_md5": "21590434ae69cfa5cefdc01efd65a88c",
+        "object_id": "1Bd1iUnvLmuC8bIfRiCsjqxPApu2tzU1Z",
+        "remote_md5": "21590434ae69cfa5cefdc01efd65a88c",
+        "size_match": true,
+        "source_size": 9544983,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_14_level_10_titan_sunwheel_irrigator",
+        "exists": true,
+        "local_md5": "6177695547c467ff42883e184670277c",
+        "object_id": "1qlQiw0juJtEd4CF3cXVzmAm1DDPM88ca",
+        "remote_md5": "6177695547c467ff42883e184670277c",
+        "size_match": true,
+        "source_size": 13015349,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_15_level_10_wheat_field_weather_engine",
+        "exists": true,
+        "local_md5": "ab042c521d03f05e7700bd84bc5b2009",
+        "object_id": "1yjS14O3Mll86fx8_UsYd_clPV8Qv6wBh",
+        "remote_md5": "ab042c521d03f05e7700bd84bc5b2009",
+        "size_match": true,
+        "source_size": 8504108,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_16_level_10_the_infinite_furrow_walker",
+        "exists": true,
+        "local_md5": "2fcf7292642b7bbed176ef173bf567cf",
+        "object_id": "1kTlW1WpQ09Eirnaj7g0OJKYj2kgQkTcH",
+        "remote_md5": "2fcf7292642b7bbed176ef173bf567cf",
+        "size_match": true,
+        "source_size": 9755520,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_17_level_10_golden_grain_conveyor_city",
+        "exists": true,
+        "local_md5": "d96479700a0513fd4b6356a968f70a58",
+        "object_id": "1pUj9gGijOXIt9rf-OCw1WXFGX85PxGHu",
+        "remote_md5": "d96479700a0513fd4b6356a968f70a58",
+        "size_match": true,
+        "source_size": 10689407,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_18_level_10_wheatfield_solar_crown",
+        "exists": true,
+        "local_md5": "12192a705bfe0f2b5dedfcb8220ce557",
+        "object_id": "19-SSJNJa4If2QGOnzQt9n1L0kpmjh1qB",
+        "remote_md5": "12192a705bfe0f2b5dedfcb8220ce557",
+        "size_match": true,
+        "source_size": 6739116,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_19_level_10_the_root_network_excavator",
+        "exists": true,
+        "local_md5": "72ed9e2c396e30064133e8573b385e30",
+        "object_id": "1dPQviDJsDDP6Hkj6bn0PY2-ZQR55xjnB",
+        "remote_md5": "72ed9e2c396e30064133e8573b385e30",
+        "size_match": true,
+        "source_size": 10034535,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_20_level_10_wheat_sentinel_colossus",
+        "exists": true,
+        "local_md5": "37bd25ebe431e3feadc5b35e0c9504fc",
+        "object_id": "1EmdH-6APKfTGrMfR7E05mVhuMZ6hjlhI",
+        "remote_md5": "37bd25ebe431e3feadc5b35e0c9504fc",
+        "size_match": true,
+        "source_size": 9486448,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_21_level_10_the_atmospheric_grain_elevator",
+        "exists": true,
+        "local_md5": "33a91a69eb5d5a772d2333e89df5fe55",
+        "object_id": "155M7PQdQxU_EqVgQKuiAFlHuyYSg5o9k",
+        "remote_md5": "33a91a69eb5d5a772d2333e89df5fe55",
+        "size_match": true,
+        "source_size": 8453914,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_22_level_10_chrono_harvest_megamachine",
+        "exists": true,
+        "local_md5": "b1313f717f1a1c2609966017675dcfb4",
+        "object_id": "1jezFx87f7O69Id3mhEBJd2YHIn9NT9bq",
+        "remote_md5": "b1313f717f1a1c2609966017675dcfb4",
+        "size_match": true,
+        "source_size": 8898998,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_23_level_10_colossal_corn_thresher_titan",
+        "exists": true,
+        "local_md5": "25a1f5df26f494a4e701a089e6fb3cdc",
+        "object_id": "1Cyij7h57vwJreiGUzg1eW6Iscai1GWmW",
+        "remote_md5": "25a1f5df26f494a4e701a089e6fb3cdc",
+        "size_match": true,
+        "source_size": 8983379,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_24_level_10_the_solar_corn_silo_walker",
+        "exists": true,
+        "local_md5": "00fe09d115975cd09781275c536038a4",
+        "object_id": "1ZYdQ9y3TWhvzI2VuAs1X5naYZr-GFGi-",
+        "remote_md5": "00fe09d115975cd09781275c536038a4",
+        "size_match": true,
+        "source_size": 6958213,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_3_level_10_rice_field_spider_colossus",
+        "exists": true,
+        "local_md5": "6e1b45f286ac6c03c694482d7b2a1507",
+        "object_id": "1DAeYAmDxCeTZdqRWGdw6CfyB3zPk190Q",
+        "remote_md5": "6e1b45f286ac6c03c694482d7b2a1507",
+        "size_match": true,
+        "source_size": 3482191,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_33_level_10_the_whispering_canopy_harvester",
+        "exists": true,
+        "local_md5": "a795be564a7ef77e213d6f57c7f73507",
+        "object_id": "1asLrNnVdAqaO8lLVZqUtRW5hjzvfAaAd",
+        "remote_md5": "a795be564a7ef77e213d6f57c7f73507",
+        "size_match": true,
+        "source_size": 8619743,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_34_level_10_the_timberland_root_walker",
+        "exists": true,
+        "local_md5": "f6d1aecf3d092d9f21aef8a93856078c",
+        "object_id": "19zQwdQwbTpoC7OSrlaVhGMbnimMaNB5K",
+        "remote_md5": "f6d1aecf3d092d9f21aef8a93856078c",
+        "size_match": true,
+        "source_size": 8427667,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_35_level_10_bioluminescent_spore_fortress",
+        "exists": true,
+        "local_md5": "0a0e77b2a7476b6c1cdcb0c4e7cf54dc",
+        "object_id": "1NYSTXn0X1odFQyEfEQTLaMOT8JptvPdM",
+        "remote_md5": "0a0e77b2a7476b6c1cdcb0c4e7cf54dc",
+        "size_match": true,
+        "source_size": 10279589,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_36_level_10_atmospheric_timber_leviathan",
+        "exists": true,
+        "local_md5": "699203ac67eefdac9e04ce8ec3652853",
+        "object_id": "1c_dTm244t2KxQUjdWmqpzla4Oz2bo2oL",
+        "remote_md5": "699203ac67eefdac9e04ce8ec3652853",
+        "size_match": true,
+        "source_size": 8692513,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_37_level_10_the_ancient_grove_siphon",
+        "exists": true,
+        "local_md5": "928f64e2cdf5a2fd9ea1aa7fd23b219b",
+        "object_id": "1cinNmZm3gBlUljjE05jGpIT4tLHbRMoo",
+        "remote_md5": "928f64e2cdf5a2fd9ea1aa7fd23b219b",
+        "size_match": true,
+        "source_size": 9944325,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_4_level_10_the_monsoon_harvesting_ark",
+        "exists": true,
+        "local_md5": "b0a53f71ed098978a4711d0ce1b7022c",
+        "object_id": "1HoV2SiTc-reYyV55vEq4G8MeP5PY-trR",
+        "remote_md5": "b0a53f71ed098978a4711d0ce1b7022c",
+        "size_match": true,
+        "source_size": 12232984,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_5_level_10_paddy_ring_megaharvester",
+        "exists": true,
+        "local_md5": "f8e778d4d4410f761cf392228e492226",
+        "object_id": "1eGokm0ARMX0HKFxJuOC-macNdZlZlxZc",
+        "remote_md5": "f8e778d4d4410f761cf392228e492226",
+        "size_match": true,
+        "source_size": 6485905,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_6_level_10_sky_reaper_rice_fortress",
+        "exists": true,
+        "local_md5": "db0d4d1efc19e1435a81d4fe7528ee91",
+        "object_id": "1P2lkRnGQ-pQcLzDay7frs5LDpRyRjIz6",
+        "remote_md5": "db0d4d1efc19e1435a81d4fe7528ee91",
+        "size_match": true,
+        "source_size": 10964006,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_7_level_10_the_rice_comb_superstructure",
+        "exists": true,
+        "local_md5": "231279ab28d65ccd57f7d7358f22bd32",
+        "object_id": "1raqPSLaANcPTQ0T2gbImaK3lHsjwoxRf",
+        "remote_md5": "231279ab28d65ccd57f7d7358f22bd32",
+        "size_match": true,
+        "source_size": 8939237,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_8_level_10_paddy_gulping_harvest_worm",
+        "exists": true,
+        "local_md5": "ff885363ec91cb304174c54182ff3144",
+        "object_id": "1q17sTnU1hbUrf2B6cGKS_9YsrM7MfDml",
+        "remote_md5": "ff885363ec91cb304174c54182ff3144",
+        "size_match": true,
+        "source_size": 9943062,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_9_level_10_rice_moon_harvester",
+        "exists": true,
+        "local_md5": "392001bfd96a4c944be2d94448b401a8",
+        "object_id": "1iZWTjzbrO5SBlV2faU8-EpCKZ0rM7EsQ",
+        "remote_md5": "392001bfd96a4c944be2d94448b401a8",
+        "size_match": true,
+        "source_size": 11425579,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      },
+      {
+        "asset_id": "yt_media_1_3_level_10_rice_field_spider_colossus_old_omni",
+        "exists": true,
+        "local_md5": "57646c6cc39be27cf103390f27318742",
+        "object_id": "1NSw7v926zfthsA9-t-ii6HMEtEDcR2iA",
+        "remote_md5": "57646c6cc39be27cf103390f27318742",
+        "size_match": true,
+        "source_size": 7300738,
+        "status": "REMOTE_CHECKSUM_VERIFIED"
+      }
+    ],
+    "status": "FAIL"
+  },
+  "docker": {
+    "available": false,
+    "status": "NOT VERIFIED"
+  },
+  "errors": [
+    "external artifacts or managed roots are not reconciled",
+    "SOT is dirty or not in remote parity",
+    "orphan scan failed or found unregistered projects",
+    "one or more registered projects are not ACTIVE",
+    "one or more registered external backup objects are not checksum verified",
+    "runtime mapping reconciliation is not implemented for every consumer",
+    "trust baseline verification failed",
+    "Docker recovery is unavailable on this host"
+  ],
+  "external_artifacts": {
+    "checked": [
+      {
+        "artifact_id": "trust-AGENTS-md",
+        "destination": "/home/azureuser/AGENTS.md",
+        "expected_sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+        "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+        "source_sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8"
+      },
+      {
+        "artifact_id": "trust--gemini-AGENTS-md",
+        "destination": "/home/azureuser/.gemini/AGENTS.md",
+        "expected_sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+        "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+        "source_sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8"
+      },
+      {
+        "artifact_id": "trust--agents-AGENTS-md",
+        "destination": "/home/azureuser/.agents/AGENTS.md",
+        "expected_sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+        "sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8",
+        "source_sha256": "1b82ddc6f1f2eef3ae56cc66763545cbe605aaba4e0693279b46dff4cccf5fc8"
+      },
+      {
+        "artifact_id": "trust--agents-settings-json",
+        "destination": "/home/azureuser/.agents/settings.json",
+        "expected_sha256": "0128282da8273dbf6ff7d565512d0973f2ae4bcc11c1453487ebadd489033d3e",
+        "sha256": "0128282da8273dbf6ff7d565512d0973f2ae4bcc11c1453487ebadd489033d3e",
+        "source_sha256": "0128282da8273dbf6ff7d565512d0973f2ae4bcc11c1453487ebadd489033d3e"
+      },
+      {
+        "artifact_id": "trust--gemini-config-hooks-json",
+        "destination": "/home/azureuser/.gemini/config/hooks.json",
+        "expected_sha256": "2007e7bc163e104a07582e4a0a40c6c31da2287f48df5f9008f5bf4fa1e86c1f",
+        "sha256": "2007e7bc163e104a07582e4a0a40c6c31da2287f48df5f9008f5bf4fa1e86c1f",
+        "source_sha256": "2007e7bc163e104a07582e4a0a40c6c31da2287f48df5f9008f5bf4fa1e86c1f"
+      },
+      {
+        "artifact_id": "trust--agents-hooks-delete_guard-py",
+        "destination": "/home/azureuser/.agents/hooks/delete_guard.py",
+        "expected_sha256": "6dc9cc7cee80820ab79bf7cc837705780b1c528258583c41c25a692a5b79d2b3",
+        "sha256": "6dc9cc7cee80820ab79bf7cc837705780b1c528258583c41c25a692a5b79d2b3",
+        "source_sha256": "6dc9cc7cee80820ab79bf7cc837705780b1c528258583c41c25a692a5b79d2b3"
+      },
+      {
+        "artifact_id": "trust--agents-hooks-completion_gate_stop_hook-py",
+        "destination": "/home/azureuser/.agents/hooks/completion_gate_stop_hook.py",
+        "expected_sha256": "4e5fe86cde094d351fe38d4f6954b657279974f73994ff0035000537d08cb3a6",
+        "sha256": "015b780cae8098c299e80297f3517d9bc75f0730bfd634d93c52e4ff8c039daf",
+        "source_sha256": "4e5fe86cde094d351fe38d4f6954b657279974f73994ff0035000537d08cb3a6"
+      },
+      {
+        "artifact_id": "trust--agents-hooks-tool_audit_hook-py",
+        "destination": "/home/azureuser/.agents/hooks/tool_audit_hook.py",
+        "expected_sha256": "b03cc98315f2336e59421da14a5e3bac7504e15d05923acdc17ad446ebf07126",
+        "sha256": "b03cc98315f2336e59421da14a5e3bac7504e15d05923acdc17ad446ebf07126",
+        "source_sha256": "b03cc98315f2336e59421da14a5e3bac7504e15d05923acdc17ad446ebf07126"
+      },
+      {
+        "artifact_id": "trust--agents-hooks-truth_pre_invocation-py",
+        "destination": "/home/azureuser/.agents/hooks/truth_pre_invocation.py",
+        "expected_sha256": "962f72c13c6adda7915280becb5cada23e64725af328840d969e5adf7ac73faf",
+        "sha256": "962f72c13c6adda7915280becb5cada23e64725af328840d969e5adf7ac73faf",
+        "source_sha256": "962f72c13c6adda7915280becb5cada23e64725af328840d969e5adf7ac73faf"
+      },
+      {
+        "artifact_id": "trust--agents-hooks-verify_10_fold-py",
+        "destination": "/home/azureuser/.agents/hooks/verify_10_fold.py",
+        "expected_sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+        "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+        "source_sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac"
+      },
+      {
+        "artifact_id": "trust--agents-verify_10_fold-py",
+        "destination": "/home/azureuser/.agents/verify_10_fold.py",
+        "expected_sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+        "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+        "source_sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac"
+      },
+      {
+        "artifact_id": "trust--agents-run_regression_suite-py",
+        "destination": "/home/azureuser/.agents/run_regression_suite.py",
+        "expected_sha256": "2b7a84624b34ecca071a2afedf712317b16269ae2fc87de3f3a495fbad50a783",
+        "sha256": "2b7a84624b34ecca071a2afedf712317b16269ae2fc87de3f3a495fbad50a783",
+        "source_sha256": "2b7a84624b34ecca071a2afedf712317b16269ae2fc87de3f3a495fbad50a783"
+      },
+      {
+        "artifact_id": "trust--agents-discover_unregistered_projects-py",
+        "destination": "/home/azureuser/.agents/discover_unregistered_projects.py",
+        "expected_sha256": "5c0724daa9499ecc6130c2a3a02cc728ea391ee0bde7d233ee3705021a08d538",
+        "sha256": "2146d63f51c13b130ac29c4d0e2093ec68c583754360ab5d49b477d014b3db32",
+        "source_sha256": "5c0724daa9499ecc6130c2a3a02cc728ea391ee0bde7d233ee3705021a08d538"
+      },
+      {
+        "artifact_id": "trust--agents-MANAGED_ROOTS-json",
+        "destination": "/home/azureuser/.agents/MANAGED_ROOTS.json",
+        "expected_sha256": "d44a4ab81ccccb48458ea698b8cb5be648c24b0ba366f3c55828f26f32a22922",
+        "sha256": "d44a4ab81ccccb48458ea698b8cb5be648c24b0ba366f3c55828f26f32a22922",
+        "source_sha256": "d44a4ab81ccccb48458ea698b8cb5be648c24b0ba366f3c55828f26f32a22922"
+      },
+      {
+        "artifact_id": "trust--agents-PROJECT_REGISTRY-json",
+        "destination": "/home/azureuser/.agents/PROJECT_REGISTRY.json",
+        "expected_sha256": "ec9a267cbca3de87677a49efefa12523039a3300afa80120275932f4054f77d5",
+        "sha256": "ec9a267cbca3de87677a49efefa12523039a3300afa80120275932f4054f77d5",
+        "source_sha256": "ec9a267cbca3de87677a49efefa12523039a3300afa80120275932f4054f77d5"
+      },
+      {
+        "artifact_id": "agent-sot-root-binding",
+        "destination": "/home/azureuser/.agents/sot_root",
+        "expected_sha256": "8bd4ea1d8e543f70b5fa091f5987a35d90ab4945b19478d97934e3c9904f1c92",
+        "sha256": "8bd4ea1d8e543f70b5fa091f5987a35d90ab4945b19478d97934e3c9904f1c92",
+        "source_sha256": "0e03eb706e7ab97683c8f4f83c5cc48bb72fd5959363156ec4d49dea051ccb03"
+      },
+      {
+        "artifact_id": "codex-current-default-rules",
+        "destination": "/home/azureuser/.codex/rules/default.rules",
+        "expected_sha256": "64c653d55f02fca2b7c7541ffdc561843c0a1d58fb387284e183d901695daf99",
+        "sha256": "64c653d55f02fca2b7c7541ffdc561843c0a1d58fb387284e183d901695daf99",
+        "source_sha256": "64c653d55f02fca2b7c7541ffdc561843c0a1d58fb387284e183d901695daf99"
+      }
+    ],
+    "errors": [
+      "hash mismatch: /home/azureuser/.agents/hooks/completion_gate_stop_hook.py",
+      "hash mismatch: /home/azureuser/.agents/discover_unregistered_projects.py",
+      "missing required external artifact: /home/azureuser/.agents/projects_root"
+    ],
+    "ok": false,
+    "unmanaged": [
+      "UNMANAGED EXTERNAL ARTIFACT: /home/azureuser/.codex/AGENTS.md",
+      "UNMANAGED EXTERNAL ARTIFACT: /home/azureuser/.codex/config.toml"
+    ]
+  },
+  "git": {
+    "ahead": 0,
+    "behind": 0,
+    "branch": "main",
+    "dirty": true,
+    "head": "b9ac4d94bb5e09b3e7aaf73ab8411ffe657b073f",
+    "remote_ref": "b9ac4d94bb5e09b3e7aaf73ab8411ffe657b073f",
+    "status": "FAIL"
+  },
+  "orphan_scan": {
+    "exit_code": 1,
+    "stderr": "",
+    "stdout": "=== ORPHAN PROJECT DISCOVERY SCANNER ===\n[*] Registered canonical projects: 16\n[*] Scanning managed roots: ['/home/azureuser/IroScript_Projects', '/home/azureuser/IroScript_Projects/Frappe-erp-Alco']\n[*] Total project-like candidates evaluated: 29\n[-] UNREGISTERED / ORPHAN PROJECTS DETECTED (11):\n    - /home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/docker_workers (Marker: requirements.txt, Git: False)\n    - /home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/youtube-uploader-eval (Marker: pyproject.toml, Git: False)\n    - /home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/Bangla Audio/hossain/snakers4_silero-models_master (Marker: pyproject.toml, Git: False)\n    - /home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/docker_flow_workers (Marker: requirements.txt, Git: False)\n    - /home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT/telemetry_platform (Marker: Cargo.toml, Git: False)\n    - /home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/frappe (Marker: git, Git: True)\n    - /home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/frappe/frappe/core/doctype/package (Marker: package.json, Git: False)\n    - /home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/frappe/ui (Marker: package.json, Git: False)\n    - /home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/erpnext (Marker: git, Git: True)\n    - /home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/erpnext/banking (Marker: package.json, Git: False)\n    - /home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce (Marker: git, Git: True)\n\n[!] Remediate by registering with:\n    python3 projects/register_project.py --path \"<path>\" --name \"<name>\"\n"
+  },
+  "profile": "azure-current",
+  "projects": {
+    "lifecycle_statuses": {
+      "ONBOARDING_INCOMPLETE": 12
+    },
+    "registered": 12,
+    "status": "FAIL"
+  },
+  "roots": {
+    "BACKUP_ROOT": "/home/azureuser/IroScript_Backups",
+    "FRAPPE_ROOT": "/home/azureuser/Frappe-erp-Alco",
+    "HOME": "/home/azureuser",
+    "PROJECTS_ROOT": "/home/azureuser/IroScript_Projects",
+    "RUNTIME_ROOT": "/home/azureuser/.local/share/sot/runtime",
+    "SOT_ROOT": "/home/azureuser/IroScript_Projects/Infrastructure-Source-of-Truth",
+    "STATE_ROOT": "/home/azureuser/.local/state/sot"
+  },
+  "rules": {
+    "discovered": 7,
+    "status": "PASS"
+  },
+  "runtime_mappings": {
+    "reason": "runtime consumers are not yet resolved through deployment profile",
+    "status": "NOT VERIFIED"
+  },
+  "schema_version": "1.0.0",
+  "trust": {
+    "exit_code": 1,
+    "status": "FAIL",
+    "stderr": "",
+    "stdout": "FILES CHECKED: 22\nFAIL .agents/hooks/completion_gate_stop_hook.py: SHA256 mismatch\nFAIL .agents/discover_unregistered_projects.py: SHA256 mismatch\n"
+  },
+  "verdict": "FAIL",
+  "verifiers": {
+    "agy": true,
+    "claude": false,
+    "codex": true,
+    "qwen": false
+  }
+}

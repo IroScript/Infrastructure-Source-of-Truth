@@ -1,10 +1,11 @@
 {
   "version": "2.0.0",
-  "last_updated": "2026-10-06T16:59:25Z",
+  "last_updated": "2026-10-07T10:34:39Z",
   "derived_from": "PROJECT_REGISTRY.json",
   "connections": [
     {
       "project_id": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
       "session": "agy",
       "windows": [
         "agy:0",
@@ -16,6 +17,7 @@
     },
     {
       "project_id": "youtube_pipeline",
+      "project_uuid": "72501ab1-551a-5de3-a97c-6eeca0407fde",
       "session": "agy",
       "windows": [
         "agy:3"
@@ -25,6 +27,7 @@
     },
     {
       "project_id": "telegram_bot",
+      "project_uuid": "5010b796-6d94-59fd-b530-496b51bd9d60",
       "session": "agy",
       "windows": [
         "agy:4"
@@ -34,6 +37,7 @@
     },
     {
       "project_id": "personal_ai_agent",
+      "project_uuid": "98acf9e6-e1a2-51c2-8f03-d7216c2a102e",
       "session": "agy",
       "windows": [
         "agy:5"
@@ -43,6 +47,7 @@
     },
     {
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "session": "agy",
       "windows": [
         "agy:6"
@@ -52,6 +57,7 @@
     },
     {
       "project_id": "ask_and_research",
+      "project_uuid": "73617410-dff6-5fc8-a44a-3c3acca4db1e",
       "session": "agy",
       "windows": [
         "agy:2"

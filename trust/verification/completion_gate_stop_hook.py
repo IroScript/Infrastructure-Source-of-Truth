@@ -341,8 +341,32 @@ def main():
             fail_closed(f"Vector {vec_key} is not marked PASS (found: '{vectors.get(vec_key)}').", {"vector": vec_key})
             return
 
-    # 11. Mandatory Live Execution of Unified 72-Check Regression & Architecture Suite (Fail-Closed on Missing Runner)
-    reg_runner = "/home/azureuser/.agents/run_regression_suite.py"
+    # 11. SOT-installed orphan detector is mandatory before any completion verdict.
+    agent_root = os.path.join(os.path.expanduser("~"), ".agents")
+    sot_root_file = os.path.join(agent_root, "sot_root")
+    discovery = os.path.join(agent_root, "discover_unregistered_projects.py")
+    if not os.path.isfile(sot_root_file) or not os.path.isfile(discovery):
+        fail_closed("SOT discovery integration is missing; completion is blocked.", {"sot_root": os.path.isfile(sot_root_file), "discovery": os.path.isfile(discovery)})
+        return
+    try:
+        with open(sot_root_file, encoding="utf-8") as stream:
+            sot_root = stream.read().strip()
+        sub_env = dict(os.environ)
+        sub_env["AGY_SOT_ROOT"] = sot_root
+        projects_root_file = os.path.join(agent_root, "projects_root")
+        if os.path.isfile(projects_root_file):
+            with open(projects_root_file, encoding="utf-8") as stream:
+                sub_env["PROJECTS_ROOT"] = stream.read().strip()
+        scan = subprocess.run([sys.executable, discovery], env=sub_env, capture_output=True, text=True, timeout=60)
+        if scan.returncode != 0:
+            fail_closed("Unregistered project scan failed; completion is blocked.", {"returncode": scan.returncode, "stdout_tail": scan.stdout[-500:], "stderr_tail": scan.stderr[-500:]})
+            return
+    except Exception as e:
+        fail_closed(f"Could not run mandatory unregistered project scan: {e}", {"error": str(e)})
+        return
+
+    # 12. Mandatory deterministic regression suite (fail closed if missing).
+    reg_runner = os.path.join(agent_root, "run_regression_suite.py")
     if not os.path.isfile(reg_runner):
         fail_closed(
             f"Mandatory unified regression runner is MISSING from disk: '{reg_runner}'. "

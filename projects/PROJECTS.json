@@ -1,6 +1,7 @@
 [
   {
     "project_key": "whatsapp_master",
+    "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
     "project_name": "Antigravity Global Notifier & WhatsApp Master",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Whatsapp master",
     "symlink_aliases": [
@@ -11,7 +12,7 @@
     "git_remote_fetch": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
     "git_remote_push": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "agy:0,agy:1,agy:12",
     "systemd_services": [
       "agy-agents.service",
@@ -24,10 +25,11 @@
       "recall.db",
       "baileys_auth_info"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "youtube_pipeline",
+    "project_uuid": "72501ab1-551a-5de3-a97c-6eeca0407fde",
     "project_name": "YouTube Pipeline",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation",
     "symlink_aliases": [
@@ -37,7 +39,7 @@
     "git_remote_fetch": "git@github.com:IroScript/Youtube-Pipeline.git",
     "git_remote_push": "git@github.com:IroScript/Youtube-Pipeline.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "agy:3",
     "systemd_services": [],
     "ports": [],
@@ -45,10 +47,11 @@
       "youtube_pipeline.db",
       "exports"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "telegram_bot",
+    "project_uuid": "5010b796-6d94-59fd-b530-496b51bd9d60",
     "project_name": "Telegram Bot & Scraper",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Social Media/telegram-bot",
     "symlink_aliases": [
@@ -59,17 +62,18 @@
     "git_remote_fetch": "https://github.com/IroScript/telegram-scraper-and-automation.git",
     "git_remote_push": "https://github.com/IroScript/telegram-scraper-and-automation.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "agy:4",
     "systemd_services": [],
     "ports": [],
     "databases": [
       "telegram_bot.db"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "personal_ai_agent",
+    "project_uuid": "98acf9e6-e1a2-51c2-8f03-d7216c2a102e",
     "project_name": "Digital History & Personal AI",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
     "symlink_aliases": [
@@ -79,7 +83,7 @@
     "git_remote_fetch": "https://github.com/IroScript/personal_ai_agent.git",
     "git_remote_push": "https://github.com/IroScript/personal_ai_agent.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "agy:5",
     "systemd_services": [],
     "ports": [],
@@ -87,10 +91,11 @@
       "chrome_history_master.db",
       "vault_index.db"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "kids_tube",
+    "project_uuid": "c95f0287-e796-5c52-92cb-2e215617df0f",
     "project_name": "Kids Tube",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection",
     "symlink_aliases": [],
@@ -98,15 +103,16 @@
     "git_remote_fetch": "git@github.com:IroScript/kids_tube_with_folder_seection.git",
     "git_remote_push": "git@github.com:IroScript/kids_tube_with_folder_seection.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "",
     "systemd_services": [],
     "ports": [],
     "databases": [],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "rust_task",
+    "project_uuid": "21559166-0fae-5de8-aa80-feded01c2de7",
     "project_name": "Rust Task APK",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note",
     "symlink_aliases": [],
@@ -114,17 +120,18 @@
     "git_remote_fetch": "git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git",
     "git_remote_push": "git@github.com:IroScript/Rust_Task_With_Time_Keeping_And_Live_Note.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "",
     "systemd_services": [],
     "ports": [],
     "databases": [
       "output_apk"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "three_d_game_studio",
+    "project_uuid": "c276193b-d6ef-5638-b08c-d7f532637aac",
     "project_name": "3D Game Design Studio",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio",
     "symlink_aliases": [],
@@ -132,15 +139,16 @@
     "git_remote_fetch": "git@github.com:IroScript/3d-web-templates.git",
     "git_remote_push": "git@github.com:IroScript/3d-web-templates.git",
     "branch": "master",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "",
     "systemd_services": [],
     "ports": [],
     "databases": [],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "article_publishing_platform",
+    "project_uuid": "fb2ac384-10dd-52c7-9f01-361726c34a3e",
     "project_name": "Article Publishing Platform",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform",
     "symlink_aliases": [
@@ -150,17 +158,18 @@
     "git_remote_fetch": "git@github.com:IroScript/Article-Publishing-Platform.git",
     "git_remote_push": "git@github.com:IroScript/Article-Publishing-Platform.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "",
     "systemd_services": [],
     "ports": [],
     "databases": [
       "public/article_platform_src.zip"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "frappe_erp_alco",
+    "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
     "project_name": "Frappe ERP Alco",
     "canonical_physical_path": "/home/azureuser/Frappe-erp-Alco",
     "symlink_aliases": [
@@ -170,7 +179,7 @@
     "git_remote_fetch": "https://github.com/IroScript/frappe-erp-alco-project",
     "git_remote_push": "https://github.com/IroScript/frappe-erp-alco-project",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "agy:6",
     "systemd_services": [
       "frappe-bench"
@@ -187,10 +196,11 @@
       "alco_localhost_mariadb",
       "site_config.json"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "ask_and_research",
+    "project_uuid": "73617410-dff6-5fc8-a44a-3c3acca4db1e",
     "project_name": "Ask & Research Agent",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Ask-And-Research-Agent",
     "symlink_aliases": [
@@ -200,17 +210,18 @@
     "git_remote_fetch": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
     "git_remote_push": "https://github.com/IroScript/Antigravity-Global-Notifier.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "agy:2",
     "systemd_services": [],
     "ports": [],
     "databases": [
       "ask_and_research.db"
     ],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "openai_codex",
+    "project_uuid": "aaf3f2fe-3155-538c-b49a-fab7be58f813",
     "project_name": "OpenAI Codex Evidence Collector",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/OpenAI_Codex",
     "symlink_aliases": [],
@@ -223,10 +234,11 @@
     "systemd_services": [],
     "ports": [],
     "databases": [],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   },
   {
     "project_key": "infrastructure_source_of_truth",
+    "project_uuid": "ed2c5b92-5b89-528b-a3de-3c870eeab6c0",
     "project_name": "Infrastructure Source of Truth",
     "canonical_physical_path": "/home/azureuser/IroScript_Projects/Infrastructure-Source-of-Truth",
     "symlink_aliases": [],
@@ -234,11 +246,11 @@
     "git_remote_fetch": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git",
     "git_remote_push": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git",
     "branch": "main",
-    "github_backed": true,
+    "github_backed": false,
     "tmux_window": "",
     "systemd_services": [],
     "ports": [],
     "databases": [],
-    "status": "ACTIVE"
+    "status": "ONBOARDING_INCOMPLETE"
   }
 ]

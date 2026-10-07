@@ -1,0 +1,46 @@
+{
+  "$schema": "schemas/agent-manifest.schema.json",
+  "manifest_version": "1.0.0",
+  "repository": "https://github.com/IroScript/Infrastructure-Source-of-Truth",
+  "entrypoint": "AGENT_ENTRYPOINT.md",
+  "operating_standard": "UNIVERSAL_AGENT_OPERATING_STANDARD.md",
+  "cli": "./sot",
+  "roles": [
+    "builder",
+    "deterministic_verifier",
+    "independent_verifier",
+    "operator"
+  ],
+  "canonical_sources": {
+    "projects": "projects/PROJECT_REGISTRY.json",
+    "rules": "governance/rules",
+    "external_artifacts": "external/EXTERNAL_ARTIFACTS.json",
+    "data_assets": "storage/DATA_ASSET_REGISTRY.json",
+    "backup_observations": "storage/BACKUP_CATALOG.json",
+    "verifier_result_schema": "verification/independent_verifier.schema.json",
+    "task_record_schema": "verification/task_record.schema.json",
+    "secret_metadata": "secrets/SECRET_REGISTRY.json",
+    "secret_metadata_schema": "schemas/secret-metadata.schema.json",
+    "secret_registry_schema": "schemas/secret-registry.schema.json"
+  },
+  "commands": {
+    "doctor": "./sot doctor --format json",
+    "bootstrap": "./sot bootstrap --profile <profile>",
+    "rules": "./sot rules list|validate|install|verify|rollback",
+    "project": "./sot project discover|audit|register|finalize",
+    "backup": "./sot backup inventory|verify|restore-test",
+    "evidence": "./sot evidence validate|verify"
+  },
+  "deployment_profiles": "deployment/profiles",
+  "schemas": "schemas",
+  "rule_packages": "governance/rules/*/*/rule.json",
+  "verification_levels": [
+    "DECLARED",
+    "DISCOVERED",
+    "PARSED",
+    "LOADED",
+    "RESOLVED",
+    "ENFORCED",
+    "ADVERSARIAL_VERIFIED"
+  ]
+}

@@ -28,15 +28,30 @@ REGISTRY_FILE = os.path.join(SCRIPT_DIR, "PROJECT_REGISTRY.json")
 
 sys.path.insert(0, SCRIPT_DIR)
 import generate_derived_mappings
+from atomic_json import atomic_write_json, read_json, registry_lock, project_lock, validate_project_registry
 
 
 def connect_project(project_id, args):
+    snapshot = read_json(REGISTRY_FILE)
+    entry = next((p for p in snapshot.get("projects", []) if p.get("project_id") == project_id), None)
+    if not entry:
+        print(f"[-] ERROR: project_id '{project_id}' not found in canonical registry.")
+        return False
+    with project_lock(entry.get("canonical_path", project_id)):
+        with registry_lock(REGISTRY_FILE):
+            result = _connect_project_locked(project_id, args)
+        if result and any((args.github, args.whatsapp, args.route, args.tmux, args.service, args.port, args.verifier)):
+            generate_derived_mappings.generate_all()
+        return result
+
+
+def _connect_project_locked(project_id, args):
     if not os.path.exists(REGISTRY_FILE):
         print(f"[-] Registry missing: {REGISTRY_FILE}")
         return False
 
-    with open(REGISTRY_FILE, "r", encoding="utf-8") as f:
-        registry = json.load(f)
+    registry = read_json(REGISTRY_FILE)
+    validate_project_registry(registry)
 
     target = None
     for p in registry.get("projects", []):
@@ -58,6 +73,10 @@ def connect_project(project_id, args):
         target.setdefault("git", {})["enabled"] = True
         target["git"]["remote"] = args.github
         target["git"]["backup_required"] = True
+        target["status"] = "ONBOARDING_INCOMPLETE"
+        target["lifecycle_state"] = {"current_stage": "REMOTE_CONFIGURED", "last_successful_stage": "REGISTERED",
+                                     "failed_stage": "REMOTE_REVALIDATION_REQUIRED", "error": "Remote changed; push and exact SHA parity must be reverified",
+                                     "retryable": True, "last_verified_at": None}
         modified = True
         print(f"[+] Connected GitHub Remote: {args.github}")
 
@@ -102,11 +121,8 @@ def connect_project(project_id, args):
 
     if modified:
         registry["last_updated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with open(REGISTRY_FILE, "w", encoding="utf-8") as f:
-            json.dump(registry, f, indent=2)
+        atomic_write_json(REGISTRY_FILE, registry, validate_project_registry)
 
-        print("[*] Regenerating derived mappings across system...")
-        generate_derived_mappings.generate_all()
         print(f"[+] Integration updates successfully applied to {project_id}")
         return True
     else:

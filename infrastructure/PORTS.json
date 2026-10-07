@@ -3,36 +3,43 @@
     {
       "port": 8088,
       "project_id": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
       "service": "agy-agents.service"
     },
     {
       "port": 8000,
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "service": "frappe-bench"
     },
     {
       "port": 8008,
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "service": "frappe-bench"
     },
     {
       "port": 9000,
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "service": "frappe-bench"
     },
     {
       "port": 11000,
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "service": "frappe-bench"
     },
     {
       "port": 12000,
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "service": "frappe-bench"
     },
     {
       "port": 13000,
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "service": "frappe-bench"
     }
   ]

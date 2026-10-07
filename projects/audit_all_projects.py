@@ -28,7 +28,7 @@ import discover_unregistered_projects
 def check_git_status(path):
     git_dir = os.path.join(path, ".git")
     if not os.path.exists(git_dir):
-        return {"status": "NOT_GIT", "ahead": 0, "behind": 0, "clean": True}
+        return {"status": "NOT_GIT", "ahead": 0, "behind": 0, "clean": True, "upstream": False}
     
     # Check branch
     branch_p = subprocess.run(["git", "-C", path, "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True)
@@ -37,7 +37,8 @@ def check_git_status(path):
     # Check ahead / behind
     ahead, behind = 0, 0
     upstream_p = subprocess.run(["git", "-C", path, "rev-parse", "--abbrev-ref", "@{upstream}"], capture_output=True, text=True)
-    if upstream_p.returncode == 0 and upstream_p.stdout.strip():
+    has_upstream = upstream_p.returncode == 0 and bool(upstream_p.stdout.strip())
+    if has_upstream:
         upstream = upstream_p.stdout.strip()
         count_p = subprocess.run(["git", "-C", path, "rev-list", "--left-right", "--count", f"HEAD...{upstream}"], capture_output=True, text=True)
         if count_p.returncode == 0:
@@ -50,7 +51,7 @@ def check_git_status(path):
     clean = (len(clean_p.stdout.strip()) == 0)
 
     sync_state = "IN PARITY" if (ahead == 0 and behind == 0) else ("REMOTE BACKUP STALE" if ahead > 0 else f"BEHIND {behind}")
-    return {"status": sync_state, "branch": branch, "ahead": ahead, "behind": behind, "clean": clean}
+    return {"status": sync_state, "branch": branch, "ahead": ahead, "behind": behind, "clean": clean, "upstream": has_upstream}
 
 
 def audit_all():
@@ -101,8 +102,20 @@ def audit_all():
                 gstat = check_git_status(repo_path)
                 rec["git_sync"] = gstat["status"]
                 rec["working_tree"] = "CLEAN" if gstat["clean"] else "DIRTY"
+                if gstat["status"] == "NOT_GIT":
+                    rec["status"] = "INVALID_GIT_REPOSITORY"
+                    has_critical_issue = True
                 if gstat["ahead"] > 0:
                     rec["status"] = "REMOTE_BACKUP_STALE"
+                    has_critical_issue = True
+                backup_required = git_conf.get("backup_required", True)
+                if backup_required and (gstat["behind"] > 0 or not gstat.get("upstream", True)):
+                    rec["status"] = "GIT_NOT_IN_PARITY"
+                    has_critical_issue = True
+                if gstat["ahead"] > 0 and not backup_required:
+                    pass
+                if not gstat["clean"]:
+                    has_critical_issue = True
 
             # Connections
             if p.get("connections", {}).get("whatsapp", {}).get("enabled"):
@@ -135,12 +148,17 @@ def audit_all():
         print(f"[-] Discovered {len(orphans)} Orphan Projects not tracked in registry:")
         for o in orphans:
             print(f"    - {o['path']}")
+        has_critical_issue = True
     else:
         print("[+] Zero orphan projects detected. All managed directories are tracked.")
 
     print("\n=================================================================")
     print(f"  AUDIT SUMMARY: {len(projects)} Projects Evaluated | Orphans: {len(orphans)}")
     print("=================================================================")
+    if has_critical_issue:
+        print("[-] AUDIT FAILED: one or more required project invariants are not satisfied.")
+    else:
+        print("[+] AUDIT PASSED: all configured deterministic checks satisfied.")
     return not has_critical_issue
 
 

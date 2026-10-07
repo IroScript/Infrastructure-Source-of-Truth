@@ -1,0 +1,307 @@
+{
+  "task_id": "sot-universal-baseline-20261007",
+  "project_id": "infrastructure_source_of_truth",
+  "project_uuid": "ed2c5b92-5b89-528b-a3de-3c870eeab6c0",
+  "request_summary": "Implement and test portable universal SOT, rule discovery, evidence, lifecycle and backup architecture; preserve unresolved limitations.",
+  "builder": "OpenAI Codex CLI",
+  "tool": "Codex CLI + Python/Git/shell",
+  "started_at": "2026-10-07T14:18:35.408876+00:00",
+  "ended_at": "2026-10-07T14:18:44.889225+00:00",
+  "changed_files": [
+    {
+      "path": ".gitignore",
+      "before_sha256": "3a8a1ab99b9caff8528645790f88f3e79f2cbceb5da1d24905e25b94756cef8c",
+      "after_sha256": "dc96aec68dcf326b4967895e6095615d1c6b0133607052899dec90793273b18a"
+    },
+    {
+      "path": "bootstrap/BOOTSTRAP_CREDENTIALS.md",
+      "before_sha256": "dbd8e291f4c82efa0b495f87f17678dae1527832707403a3ff90f1385ae2c6d4",
+      "after_sha256": "46f693a91d9758118d58564397cd83cbf97e1be3959ddad3a52418fede99cd2e"
+    },
+    {
+      "path": "bootstrap/bootstrap_trust.sh",
+      "before_sha256": "9261c473ad0528c73af7c2505e97ceb579b5b0581333a88e4ff6ab4929d7afaa",
+      "after_sha256": "8fee11da0ff592f00ba680fb1cab5d5e02485143882a23709476851e34d01fdb"
+    },
+    {
+      "path": "configuration/settings.json",
+      "before_sha256": "99836dfd30305f66adf9e7cbf38f58967828c41fbc821aff965f6f5c9a1c95a8",
+      "after_sha256": "0128282da8273dbf6ff7d565512d0973f2ae4bcc11c1453487ebadd489033d3e"
+    },
+    {
+      "path": "connections/SERVICE_CONNECTIONS.json",
+      "before_sha256": "168d587b59865ac023d8c5b3e927d0558812d83cfa618724f11dae55de073f13",
+      "after_sha256": "74cd1b84f1f005d1392f0894aaf88a7991b472fad3d5c2bb5fc0bcce7341cf3e"
+    },
+    {
+      "path": "connections/TMUX_CONNECTIONS.json",
+      "before_sha256": "481fc1dd5b7f4bd8ab71ce5d9c1863ce463f27825b35d8f111c34e39342e492f",
+      "after_sha256": "b3e53ee0228cb1d1e8cf0e0296529a42ecfaf63c18931ca6ed5e553eb9b45b43"
+    },
+    {
+      "path": "connections/WHATSAPP_CONNECTIONS.json",
+      "before_sha256": "7280f39912e388b589e8ed9c979732940d79102215935dc021dceb7ebf8a2d07",
+      "after_sha256": "deff436719ff85a29d55bdc86ac63ca4f65d033e85b25634cc7a57893c4cffa7"
+    },
+    {
+      "path": "infrastructure/PORTS.json",
+      "before_sha256": "84a247ffe0bbb4924c9dd4fd481ae72a827ad0c56c99a21542fc20c977549f16",
+      "after_sha256": "548dd9daf08cc119ab76bff7b6a3f7ac67937157e466b2c9c532741a15b96148"
+    },
+    {
+      "path": "infrastructure/SERVICES.json",
+      "before_sha256": "774c310a4da6ea6219351771039115607be7c45050ec428431e31fa793b6f0e3",
+      "after_sha256": "478c2363d5ac692d84e170c844a84313d5b38d01b63d3885b7416e8e7ede0309"
+    },
+    {
+      "path": "infrastructure/TMUX_WINDOWS.json",
+      "before_sha256": "ed94b33b017a3f84a0f2bceabd39a1d8802777f8b852bcfe46dfb7ce9d006726",
+      "after_sha256": "21a74fa22ca6894e35bf7736d5a6207f1efe74fe90612735d30aa61ca468074b"
+    },
+    {
+      "path": "projects/GIT_REPOSITORIES.json",
+      "before_sha256": "e1783040967f615163bc85aa8bb519456d943ae1496c8cc80b29f6af228c091e",
+      "after_sha256": "f793685fd253bcd56c8312c43d0a79aa360642706536004ee5bc3bbd316ca358"
+    },
+    {
+      "path": "projects/MANAGED_ROOTS.json",
+      "before_sha256": "1143121590cfa90215ede4bc1df4826511fe27bf1b3fe0adf9340d01e9844b4b",
+      "after_sha256": "d44a4ab81ccccb48458ea698b8cb5be648c24b0ba366f3c55828f26f32a22922"
+    },
+    {
+      "path": "projects/PROJECTS.json",
+      "before_sha256": "857187db258ceb80d86cf7c7d6a5fcf19d15f400d98d89d30f962f076e161e1c",
+      "after_sha256": "2f8c29730920cca1b56cb70c75a4fcafc63ff461e8e77e4fe807855591e2ee88"
+    },
+    {
+      "path": "projects/PROJECT_REGISTRY.json",
+      "before_sha256": "7e52d887c16f3e67b34a7073199f1697588e5443a1886399ef817c99c1542e5c",
+      "after_sha256": "ec9a267cbca3de87677a49efefa12523039a3300afa80120275932f4054f77d5"
+    },
+    {
+      "path": "projects/audit_all_projects.py",
+      "before_sha256": "1660ddb00000dd19f5704ee4e6bebbb306368fbdbb3108f8a5d92b3e1393c1f4",
+      "after_sha256": "4d7ae1f38dfcb6bd97dbb15aca123b6c9dcadbb4ab1cddc9bdab13b6da1acb7c"
+    },
+    {
+      "path": "projects/connect_project.py",
+      "before_sha256": "013f8e0458bebae21a7da21ba3740c8b649b656be8be544691e170d4d0a66ee6",
+      "after_sha256": "ceedacad6c41d2db6824135ad78ecb62f843223ac83747ca05211c4923191b82"
+    },
+    {
+      "path": "projects/create_managed_project.py",
+      "before_sha256": "bc14c3841d507845ae6495bcb9c22a4cf9ed77dbe32e02e73f0ee772343e70d2",
+      "after_sha256": "036f61b2d7e6cc0df21961976b628571936646c633aafc4caed6c9e8ef6b27c2"
+    },
+    {
+      "path": "projects/discover_unregistered_projects.py",
+      "before_sha256": "aad241d03f18509137fa0cfdc46affd26c8ca21420576c6cc7cf2110badc11da",
+      "after_sha256": "5c0724daa9499ecc6130c2a3a02cc728ea391ee0bde7d233ee3705021a08d538"
+    },
+    {
+      "path": "projects/generate_derived_mappings.py",
+      "before_sha256": "85553df156dd5d36e61a8956252dc3dc31ec8fee353a8cdcd6961cdc5b5e1f7e",
+      "after_sha256": "7a10a4204673107061e3653371cf356397cb0640c299bc99adb7df3168033ea3"
+    },
+    {
+      "path": "projects/gitpush_folder_mapping.json",
+      "before_sha256": "f973c315b16d10f12a1bfe12484d2149e699d41bb92403bf5b010d858c0e012b",
+      "after_sha256": "4a4e7aaba1532c0616e665aaddd3ed425e349b09ac866bc18488b734db248409"
+    },
+    {
+      "path": "projects/reconcile_project_registry.py",
+      "before_sha256": "04a6d06819f22427cce46e67cf94625fe67fba0b96893b433238fda85b30e7c7",
+      "after_sha256": "993f454c9b92722dfd8046b993e33aadbb1a57473e75bbad7a03dd7a02b3467e"
+    },
+    {
+      "path": "projects/register_project.py",
+      "before_sha256": "db7dbf42eec8a407b905a924e6a1c89962171dee01837373680e4a634022a617",
+      "after_sha256": "b40a481a8292410ee34d102988bfc7cd0f7d00fd7f3759e7d65a4a790681e033"
+    },
+    {
+      "path": "storage/BACKUP_CATALOG.json",
+      "before_sha256": "fd9dc4b8a8118b789fa7f89a00b4a1a16530d99f05ac4d31308048141795646b",
+      "after_sha256": "de999cd784fc31b7c4d73e993a8f63f4f3d54642ba20a9d8d6687de73bf7fd0d"
+    },
+    {
+      "path": "storage/DATA_ASSET_REGISTRY.json",
+      "before_sha256": "f3f37d436b8d3309122ea4f62626879d6fcc068b29d7bf979ab3984060a7bc00",
+      "after_sha256": "bb12fea9eb5b7f9d53f552ce7e40e487c8b4571ceb1d0e07b727c66af45557c4"
+    },
+    {
+      "path": "storage/STORAGE_POLICY.json",
+      "before_sha256": "e7eb904a5500b8ec276812238cdb68f3da376582f11ca0144685841099c2a3b8",
+      "after_sha256": "781eea655db0d051d6c08db1ae525b1530f5887252f1b87ae592d3bf7fa27630"
+    },
+    {
+      "path": "storage/backup_data.py",
+      "before_sha256": "6d7a8a201b748166dc25aacef2b29a38233050f2f1c74220f40dea53fe93afed",
+      "after_sha256": "a5c9f27416568e9eff204d18fd9743c3424dabc3a9cef428c154c7a124244de1"
+    },
+    {
+      "path": "trust/TRUST_BASELINE.json",
+      "before_sha256": "dc9589dad82a20279532be14666e5865b4265429bbaeacc9f6611b09a7691e60",
+      "after_sha256": "f4d552a31bab224ed9d269ce933c0b2651edf8cd6d706bdaf4c8db652c607f0a"
+    },
+    {
+      "path": "trust/verification/completion_gate_stop_hook.py",
+      "before_sha256": "3417b39e4bdfaaa725fc2e319769daae1e9eac9d6609dc488970a48e14f2c6ac",
+      "after_sha256": "4e5fe86cde094d351fe38d4f6954b657279974f73994ff0035000537d08cb3a6"
+    },
+    {
+      "path": "trust/verify_trust_baseline.sh",
+      "before_sha256": "fa6086bffb3e129e19f4281c1001223a69fb55a5a899501615fa78b95da4cdf0",
+      "after_sha256": "ebb7d2b5dea579a5921e410e8dee35805169fbe2fc9eeae9cc63fd1ad6d58730"
+    },
+    {
+      "path": "verification/codex/manual_review.py",
+      "before_sha256": "d8eb9644da9023301c0d4ba80ff35311a28779382b3f749896be1aee83e54c65",
+      "after_sha256": "f50648b75f42a905d5f6d18f6fc4f6f5f8fb41173784cdf2b4f3ff2f9981b974"
+    },
+    {
+      "path": "verification/codex/review.schema.json",
+      "before_sha256": "043a209efe0152c4d95fd6f94b6e9dd83b7e3d32347647f9df1a1ecfd350d2be",
+      "after_sha256": "b919486177f66ac1f3258ffa003cdc214ccedb39503724ab3929f81408939ad9"
+    },
+    {
+      "path": "AGENT_ENTRYPOINT.md",
+      "before_sha256": null,
+      "after_sha256": "1c3085385539896f0f26b6b65518d510e45cac7a066f330ea1f43da3255d482b"
+    },
+    {
+      "path": "UNIVERSAL_AGENT_OPERATING_STANDARD.md",
+      "before_sha256": null,
+      "after_sha256": "9dd713ba1a05259020baaf13c25df553739a2002058c587acfeb575fcb39e44e"
+    },
+    {
+      "path": "agent-manifest.json",
+      "before_sha256": null,
+      "after_sha256": "1a3fa9c921c9d894f000ac319de9e4320fdfd6559ff03bdf205a8b2b6d2bd385"
+    },
+    {
+      "path": "projects/atomic_json.py",
+      "before_sha256": null,
+      "after_sha256": "a70331a34dfc481bcaf5d29a945eb9d26a05ff604cf77e01591bfcde9aa2a6a0"
+    },
+    {
+      "path": "projects/finalize_project_onboarding.py",
+      "before_sha256": null,
+      "after_sha256": "26c845236007a30e188b79b6502f6f338d869d003104b0e63b2da563583f0e2a"
+    },
+    {
+      "path": "projects/precommit_safety.py",
+      "before_sha256": null,
+      "after_sha256": "78ba3666ee3992604fd42c5325f62c27c7da7c13f3c7d4e75d7a3a5672dab31f"
+    },
+    {
+      "path": "restore/WHATSAPP_CODEX_BRIDGE_GUIDE.md",
+      "before_sha256": null,
+      "after_sha256": "16c67f88a7b89b8044323cbe164d67f08ac9874312c037ac9630f5e3c66be892"
+    },
+    {
+      "path": "sot",
+      "before_sha256": null,
+      "after_sha256": "a77b3a4d2ad4a21e12818a15b6fabb006d4215b2ca15bbd4f2483b1f265e7188"
+    },
+    {
+      "path": "trust/restore_trust_baseline.sh",
+      "before_sha256": null,
+      "after_sha256": "0c61d22903a9b0292082eee2451155e130a8a2fa6adb4b97158d297616670c87"
+    },
+    {
+      "path": "trust/verification/run_regression_suite.py",
+      "before_sha256": null,
+      "after_sha256": "2b7a84624b34ecca071a2afedf712317b16269ae2fc87de3f3a495fbad50a783"
+    },
+    {
+      "path": "verification/CODEX_DELTA_REAUDIT.md",
+      "before_sha256": null,
+      "after_sha256": "359ace2548b102d6d262b6a411229ee7de755c8a46dbf78909f88f5fb245e044"
+    },
+    {
+      "path": "verification/CODEX_DELTA_REAUDIT_DOWNLOAD.md",
+      "before_sha256": null,
+      "after_sha256": "359ace2548b102d6d262b6a411229ee7de755c8a46dbf78909f88f5fb245e044"
+    },
+    {
+      "path": "verification/WORKER_VERIFIER_ARCHITECTURE.md",
+      "before_sha256": null,
+      "after_sha256": "2e9c71cd186808ffb6f1b39498a80c4978d85833646b069417ff374715857d40"
+    },
+    {
+      "path": "verification/independent_verifier.schema.json",
+      "before_sha256": null,
+      "after_sha256": "f3f66e4bc98ba3885c4a94cea0da25f20ec5644ea7bd6b38ff0bee8d457bb4fd"
+    },
+    {
+      "path": "verification/task_record.schema.json",
+      "before_sha256": null,
+      "after_sha256": "f6cf671c9cdab3e7422b1f90d6323641c1c6383becbfcad37cc9b73cf59b52f5"
+    },
+    {
+      "path": "verification/validate_verifier_result.py",
+      "before_sha256": null,
+      "after_sha256": "59ddce4efcefa2802b2bf1c7ebda8130dac059ded3223695a93727c858df9847"
+    }
+  ],
+  "commit_sha": null,
+  "tests": [
+    {
+      "command": "/usr/bin/python3 -m unittest verification.tests.test_universal_architecture verification.tests.test_hardening -v",
+      "exit_code": 0,
+      "result": "pass",
+      "stdout_ref": "unit-tests.stdout.txt",
+      "stderr_ref": "unit-tests.stderr.txt"
+    },
+    {
+      "command": "./sot rules validate --format json",
+      "exit_code": 0,
+      "result": "pass",
+      "stdout_ref": "rule-validation.stdout.txt",
+      "stderr_ref": "rule-validation.stderr.txt"
+    },
+    {
+      "command": "./sot doctor --format json --profile azure-current --home /home/azureuser",
+      "exit_code": 2,
+      "result": "fail",
+      "stdout_ref": "doctor.stdout.txt",
+      "stderr_ref": "doctor.stderr.txt"
+    },
+    {
+      "command": "python3 embedded jsonschema validation over canonical schemas and instances",
+      "exit_code": 0,
+      "result": "pass",
+      "stdout_ref": "schema-validation.stdout.txt",
+      "stderr_ref": "schema-validation.stderr.txt"
+    },
+    {
+      "command": "python3 parse every repository *.json",
+      "exit_code": 0,
+      "result": "pass",
+      "stdout_ref": "json-syntax.stdout.txt",
+      "stderr_ref": "json-syntax.stderr.txt"
+    },
+    {
+      "command": "precommit_safety.unsafe_paths(repository root)",
+      "exit_code": 0,
+      "result": "pass",
+      "stdout_ref": "secret-data-scan.stdout.txt",
+      "stderr_ref": "secret-data-scan.stderr.txt"
+    }
+  ],
+  "deterministic_result": "fail",
+  "verifier_status": "pending",
+  "verifier_identity": null,
+  "final_verdict": "incomplete",
+  "unresolved_items": [
+    "SOT dirty/unpushed",
+    "live trust artifact drift and unmanaged Codex configuration",
+    "orphan candidates",
+    "runtime mapping parity",
+    "five stale SQLite remote snapshots",
+    "article repository behind",
+    "Azure-specific paths",
+    "Docker unavailable",
+    "independent verification pending"
+  ]
+}

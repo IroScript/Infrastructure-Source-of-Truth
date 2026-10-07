@@ -1,0 +1,64 @@
+{
+  "manifest_version": "1.0.0",
+  "rule_id": "RULE-EVIDENCE-HONESTY",
+  "version": "1.0.0",
+  "name": "04 honesty and truth verification",
+  "scope": "managed agent workspace",
+  "severity": "medium",
+  "enabled": true,
+  "supported_agent_classes": [
+    "agy",
+    "codex",
+    "claude",
+    "qwen",
+    "generic_cli"
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "policy",
+      "source": "trust/verification/rules/04-honesty-and-truth-verification.md",
+      "destination_template": "${HOME}/.agents/rules/04-honesty-and-truth-verification.md",
+      "mode": "0644",
+      "sha256": "92cd5248d75cca031ceb375cd8552a94e187db1fa4e6e648eab9833bf7ac6443",
+      "kind": "documentation",
+      "permissions": []
+    }
+  ],
+  "load_order": 10,
+  "precedence": "project may add constraints but cannot weaken global baseline",
+  "activation": {
+    "method": "agent_instructions_file",
+    "argv": [
+      "python3",
+      "-c",
+      "raise SystemExit(0)"
+    ],
+    "expected_exit_code": 0
+  },
+  "reload_requirement": "adapter_specific",
+  "required_proof_level": 3,
+  "expected_effect": "Policy text is versioned, installed at its declared destination, and its hash is verified; L4-L7 require a compatible live agent adapter.",
+  "positive_probe": {
+    "argv": [
+      "python3",
+      "-c",
+      "raise SystemExit(0)"
+    ],
+    "expected_exit_code": 0
+  },
+  "negative_probe": {
+    "argv": [
+      "python3",
+      "-c",
+      "raise SystemExit(1)"
+    ],
+    "expected_exit_code": 1,
+    "expected_effect": "A deliberately failing sentinel exits nonzero."
+  },
+  "supersedes": [],
+  "rollback": {
+    "strategy": "restore_previous_or_remove_new",
+    "preserve_previous": true
+  },
+  "schema_version": "1.0.0"
+}

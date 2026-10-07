@@ -1,0 +1,83 @@
+{
+  "manifest_version": "1.0.0",
+  "schema_version": "1.0.0",
+  "rule_id": "RULE-FUTURE-SANDBOX-EXAMPLE",
+  "version": "1.0.0",
+  "name": "Future package discovery self-test",
+  "scope": "temporary isolated test",
+  "severity": "low",
+  "enabled": true,
+  "supported_agent_classes": [
+    "generic_cli"
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "config",
+      "source": "verification/tests/fixtures/future-rule/config.json",
+      "destination_template": "${RUNTIME_ROOT}/future-rule/config.json",
+      "mode": "0644",
+      "sha256": "c71236740824c60a4a98fb639f86fa2585d6a594107897598c678de8c66854f9",
+      "kind": "config",
+      "permissions": [
+        "read"
+      ]
+    },
+    {
+      "artifact_id": "hook",
+      "source": "verification/tests/fixtures/future-rule/hook.py",
+      "destination_template": "${RUNTIME_ROOT}/future-rule/hook.py",
+      "mode": "0755",
+      "sha256": "b8ed90346608b9d253e2977bde17c199bc6ad5e1a01c3088f682026cee10c31c",
+      "kind": "python",
+      "permissions": [
+        "read",
+        "execute"
+      ]
+    }
+  ],
+  "load_order": 900,
+  "precedence": [
+    "profile",
+    "package"
+  ],
+  "activation": {
+    "method": "python_module_load",
+    "argv": [
+      "python3",
+      "{artifact:hook}",
+      "{artifact:config}",
+      "activation"
+    ],
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "loaded"
+  },
+  "reload_requirement": "none",
+  "required_proof_level": 7,
+  "expected_effect": "The installed hook reads the installed config, permits an explicitly allowed harmless marker, and rejects a denied marker.",
+  "positive_probe": {
+    "argv": [
+      "python3",
+      "{artifact:hook}",
+      "{artifact:config}",
+      "allow"
+    ],
+    "expected_exit_code": 0,
+    "expected_stdout_contains": "allowed"
+  },
+  "negative_probe": {
+    "argv": [
+      "python3",
+      "{artifact:hook}",
+      "{artifact:config}",
+      "deny"
+    ],
+    "expected_exit_code": 3,
+    "expected_stderr_contains": "blocked",
+    "expected_effect": "Denied action is rejected by the hook."
+  },
+  "supersedes": [],
+  "rollback": {
+    "strategy": "restore_previous_or_remove_new",
+    "preserve_previous": true
+  }
+}

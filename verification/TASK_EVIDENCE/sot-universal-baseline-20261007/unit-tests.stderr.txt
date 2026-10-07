@@ -1,0 +1,31 @@
+test_blank_home_bootstrap_binds_alternate_projects_root (verification.tests.test_universal_architecture.UniversalArchitectureTests.test_blank_home_bootstrap_binds_alternate_projects_root) ... ok
+test_evidence_validator_rejects_missing_and_forged_artifacts (verification.tests.test_universal_architecture.UniversalArchitectureTests.test_evidence_validator_rejects_missing_and_forged_artifacts) ... ok
+test_external_artifact_install_preserves_and_rolls_back_prior_files (verification.tests.test_universal_architecture.UniversalArchitectureTests.test_external_artifact_install_preserves_and_rolls_back_prior_files) ... ok
+test_future_rule_auto_discovery_full_proof_and_rollback (verification.tests.test_universal_architecture.UniversalArchitectureTests.test_future_rule_auto_discovery_full_proof_and_rollback) ... ok
+test_portable_profile_uses_provided_home_and_alternate_root (verification.tests.test_universal_architecture.UniversalArchitectureTests.test_portable_profile_uses_provided_home_and_alternate_root) ... ok
+test_tampered_or_missing_rule_artifacts_fail_closed (verification.tests.test_universal_architecture.UniversalArchitectureTests.test_tampered_or_missing_rule_artifacts_fail_closed) ... ok
+test_activation_requires_remote_push_and_sot_publish (verification.tests.test_hardening.HardeningTests.test_activation_requires_remote_push_and_sot_publish) ... ok
+test_blank_home_trust_install_and_tamper_fail_closed (verification.tests.test_hardening.HardeningTests.test_blank_home_trust_install_and_tamper_fail_closed) ... ok
+test_concurrent_atomic_updates_do_not_lose_changes (verification.tests.test_hardening.HardeningTests.test_concurrent_atomic_updates_do_not_lose_changes) ... ok
+test_dirty_source_tree_is_detected (verification.tests.test_hardening.HardeningTests.test_dirty_source_tree_is_detected) ... ok
+test_duplicate_project_uuid_is_rejected (verification.tests.test_hardening.HardeningTests.test_duplicate_project_uuid_is_rejected) ... ok
+test_empty_ai_pass_evidence_is_rejected (verification.tests.test_hardening.HardeningTests.test_empty_ai_pass_evidence_is_rejected) ... ok
+test_failed_push_and_remote_sha_mismatch_are_not_verified (verification.tests.test_hardening.HardeningTests.test_failed_push_and_remote_sha_mismatch_are_not_verified) ... ok
+test_fake_remote_never_verifies (verification.tests.test_hardening.HardeningTests.test_fake_remote_never_verifies) ... ok
+test_fake_remote_registration_is_incomplete (verification.tests.test_hardening.HardeningTests.test_fake_remote_registration_is_incomplete) ... ok
+test_malformed_registry_is_rejected (verification.tests.test_hardening.HardeningTests.test_malformed_registry_is_rejected) ... ok
+test_nested_and_deep_projects_are_discovered (verification.tests.test_hardening.HardeningTests.test_nested_and_deep_projects_are_discovered) ... ok
+test_path_move_regenerates_canonical_mapping_by_immutable_identity (verification.tests.test_hardening.HardeningTests.test_path_move_regenerates_canonical_mapping_by_immutable_identity) ... ok
+test_remote_backup_status_needs_exact_object_and_size (verification.tests.test_hardening.HardeningTests.test_remote_backup_status_needs_exact_object_and_size) ... ok
+test_sensitive_and_large_files_fail_closed (verification.tests.test_hardening.HardeningTests.test_sensitive_and_large_files_fail_closed) ... ok
+test_sensitive_files_block_staging (verification.tests.test_hardening.HardeningTests.test_sensitive_files_block_staging) ... ok
+test_sqlite_snapshot_is_consistent_and_isolated (verification.tests.test_hardening.HardeningTests.test_sqlite_snapshot_is_consistent_and_isolated) ... ok
+test_ssh_cookie_and_database_dump_artifacts_are_blocked (verification.tests.test_hardening.HardeningTests.test_ssh_cookie_and_database_dump_artifacts_are_blocked) ... ok
+test_stale_backup_or_local_restore_cannot_claim_remote_restore (verification.tests.test_hardening.HardeningTests.test_stale_backup_or_local_restore_cannot_claim_remote_restore) ... ok
+test_unknown_or_unbacked_persistent_data_cannot_finalize (verification.tests.test_hardening.HardeningTests.test_unknown_or_unbacked_persistent_data_cannot_finalize) ... ok
+test_verifier_requires_hashed_files_and_negative_tests (verification.tests.test_hardening.HardeningTests.test_verifier_requires_hashed_files_and_negative_tests) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 1.360s
+
+OK

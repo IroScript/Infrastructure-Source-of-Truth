@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitPushWatcherConfig",
+  "type": "object",
+  "properties": {
+    "version": { "type": "string" },
+    "enabled": { "type": "boolean" },
+    "debounce_seconds": { "type": "number", "minimum": 0.1 },
+    "max_checkpoint_seconds": { "type": "number", "minimum": 1.0 },
+    "reconciliation_interval_seconds": { "type": "number", "minimum": 1.0 },
+    "large_file_threshold_bytes": { "type": "integer", "minimum": 1024 },
+    "max_push_retries": { "type": "integer", "minimum": 1 },
+    "base_backoff_seconds": { "type": "number", "minimum": 0.5 },
+    "ignored_patterns": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "ephemeral_patterns": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "secret_patterns": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "database_extensions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": [
+    "version",
+    "enabled",
+    "debounce_seconds",
+    "max_checkpoint_seconds",
+    "reconciliation_interval_seconds",
+    "large_file_threshold_bytes",
+    "max_push_retries",
+    "base_backoff_seconds",
+    "ignored_patterns"
+  ],
+  "additionalProperties": false
+}

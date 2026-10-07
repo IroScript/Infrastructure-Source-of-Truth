@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "debounce_seconds": 1.5,
+  "max_checkpoint_seconds": 10.0,
+  "reconciliation_interval_seconds": 10.0,
+  "large_file_threshold_bytes": 52428800,
+  "max_push_retries": 5,
+  "base_backoff_seconds": 2.0,
+  "ignored_patterns": [
+    ".git",
+    ".git/*",
+    ".git/**",
+    "*.lock",
+    "*.tmp",
+    "__pycache__",
+    "__pycache__/*",
+    "*.pyc",
+    ".pytest_cache",
+    ".pytest_cache/*",
+    ".project-locks",
+    ".project-locks/*",
+    "storage/GITPUSH_WATCHER_STATE.json",
+    "storage/GITPUSH_WATCHER_STATE.json.lock",
+    "storage/GITPUSH_WATCHER_STATE.json.tmp",
+    "projects/CLOUD_PARITY_MATRIX.json",
+    ".mapping-generator.lock"
+  ],
+  "ephemeral_patterns": [
+    "*.swp",
+    "*.swo",
+    "*~",
+    ".DS_Store"
+  ],
+  "secret_patterns": [
+    ".env.prod",
+    ".env.production",
+    "id_rsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "*.pem",
+    "*.key"
+  ],
+  "database_extensions": [
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+    ".db-wal",
+    ".db-shm"
+  ]
+}

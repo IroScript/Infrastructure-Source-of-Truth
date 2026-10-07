@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "artifacts",
+    "managed_roots"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": "1.0.0"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "source",
+          "destination_template",
+          "agent_runtime",
+          "owner",
+          "mode",
+          "sha256",
+          "activation",
+          "reload",
+          "verification_probe",
+          "required",
+          "permissions"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "destination_template": {
+            "type": "string"
+          },
+          "agent_runtime": {
+            "type": "string"
+          },
+          "owner": {
+            "enum": [
+              "current_user",
+              "root",
+              "declared_group"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "pattern": "^[0-7]{4}$"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "activation": {
+            "type": "string"
+          },
+          "reload": {
+            "type": "string"
+          },
+          "verification_probe": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "render_template": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "managed_roots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "root_template",
+          "include_globs",
+          "required"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,48 @@
+[DRY-RUN] Would register project: {
+  "project_id": "fake_remote_test",
+  "project_uuid": "c294c6bc-c12f-4faa-bf50-2d2646c21f33",
+  "display_name": "Fake Remote",
+  "canonical_path": "/tmp/tmprv0y0fsi/project",
+  "aliases": [],
+  "project_type": "application",
+  "git": {
+    "enabled": false,
+    "remote": "git@github.com:missing/fake-audit-remote.git",
+    "branch": "main",
+    "remote_visibility": "private",
+    "backup_required": true
+  },
+  "runtime": {
+    "tmux_window": "",
+    "services": [],
+    "ports": [],
+    "enabled": false
+  },
+  "connections": {
+    "whatsapp": {
+      "enabled": false,
+      "group_id": "",
+      "agent_route": ""
+    }
+  },
+  "data": [],
+  "data_classification": "unknown",
+  "verification": {
+    "required": true,
+    "profile": "standard_project"
+  },
+  "lifecycle_stages": [
+    "DISCOVERED",
+    "REGISTERED",
+    "REMOTE_CONFIGURED"
+  ],
+  "status": "ONBOARDING_INCOMPLETE",
+  "lifecycle_state": {
+    "current_stage": "REMOTE_CONFIGURED",
+    "last_successful_stage": "REMOTE_CONFIGURED",
+    "failed_stage": "LOCAL_COMMIT_MISSING",
+    "error": "LOCAL_COMMIT_MISSING",
+    "retryable": true,
+    "last_verified_at": "2026-10-07T14:18:36Z"
+  }
+}

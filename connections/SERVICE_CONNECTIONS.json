@@ -1,10 +1,11 @@
 {
   "version": "2.0.0",
-  "last_updated": "2026-10-06T16:59:25Z",
+  "last_updated": "2026-10-07T10:34:39Z",
   "derived_from": "PROJECT_REGISTRY.json",
   "connections": [
     {
       "project_id": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
       "service_name": "agy-agents.service",
       "ports": [
         8088
@@ -14,6 +15,7 @@
     },
     {
       "project_id": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
       "service_name": "azure-file-explorer-tunnel.service",
       "ports": [
         8088
@@ -23,6 +25,7 @@
     },
     {
       "project_id": "frappe_erp_alco",
+      "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "service_name": "frappe-bench",
       "ports": [
         8000,

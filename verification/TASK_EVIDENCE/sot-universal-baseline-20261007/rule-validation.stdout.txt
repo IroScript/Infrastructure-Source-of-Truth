@@ -1,0 +1,13 @@
+{
+  "discovered": 7,
+  "manifests": [
+    "governance/rules/RULE-ACTION-SAFETY/1.0.0/rule.json",
+    "governance/rules/RULE-ADDITIVE-GOVERNANCE/1.0.0/rule.json",
+    "governance/rules/RULE-AGENT-ROLES/1.0.0/rule.json",
+    "governance/rules/RULE-EVIDENCE-HONESTY/1.0.0/rule.json",
+    "governance/rules/RULE-GIT-SYNC-GOVERNANCE/1.0.0/rule.json",
+    "governance/rules/RULE-HOOK-GOVERNANCE/1.0.0/rule.json",
+    "governance/rules/RULE-VERIFICATION-PROTOCOL/1.0.0/rule.json"
+  ],
+  "valid": true
+}
