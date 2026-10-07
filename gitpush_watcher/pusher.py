@@ -17,7 +17,7 @@ def normalize_git_url(url: str) -> str:
     if u.lower().endswith(".git"):
         u = u[:-4]
     u = u.rstrip("/")
-    if u.startswith("file://"):
+    if u.lower().startswith("file://"):
         u = u[7:]
     u = u.rstrip("/")
     # Preserve case in git filesystem paths

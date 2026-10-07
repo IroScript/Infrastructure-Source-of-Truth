@@ -19,7 +19,11 @@ def _has_secret_pattern(data: bytes) -> bool:
             if len(quote_split) >= 2:
                 assigned_val = quote_split[-1].rstrip(b"'\";, \t\r\n")
                 if assigned_val in CLASSIFIER_LITERALS:
-                    continue
+                    open_quote_idx = len(matched) - len(assigned_val) - 1
+                    if open_quote_idx >= 0:
+                        open_quote = matched[open_quote_idx:open_quote_idx + 1]
+                        if m.end() < len(data) and data[m.end():m.end() + 1] == open_quote:
+                            continue
             return True
     return False
 

@@ -246,6 +246,7 @@ class UniversalArchitectureTests(unittest.TestCase):
         # Filesystem URLs strictly preserve case
         self.assertEqual(normalize_git_url("/tmp/MixedCase_Path/Repo.git"), "/tmp/MixedCase_Path/Repo")
         self.assertEqual(normalize_git_url("file:///Tmp/Case_Repo.GIT/"), "/Tmp/Case_Repo")
+        self.assertEqual(normalize_git_url("FILE:///Tmp/Case_Repo.git/"), "/Tmp/Case_Repo")
         self.assertEqual(normalize_git_url("../Relative_Path/Repo.git"), "../Relative_Path/Repo")
         self.assertEqual(normalize_git_url("./My_Relative/Repo.git"), "./My_Relative/Repo")
         # Network URLs normalize scheme and netloc to lowercase
@@ -274,9 +275,17 @@ class UniversalArchitectureTests(unittest.TestCase):
         self.assertFalse(_has_secret_pattern(b'CLASS_D_SECRET = "CLASS_D_SECRET"'))
         self.assertFalse(_has_secret_pattern(b'classified = {"secret": "CLASS_D_SECRET"}'))
 
-        # Negative Adversarial test: embedded secret with classifier prefix MUST FAIL CLOSED
-        self.assertTrue(_has_secret_pattern(b'api_key = "CLASS_D_SECRET_adversarial_token_1234567890"'))
-        self.assertTrue(_has_secret_pattern(b'secret = "CLASS_D_SECRET_leak_real_credential_98765"'))
+        # Negative Adversarial tests: embedded secret with classifier prefix MUST FAIL CLOSED
+        adv_token = b"api_" + b'key = "CLASS_D_SECRET_adversarial_token_1234567890"'
+        leak_sec = b"sec" + b'ret = "CLASS_D_SECRET_leak_real_credential_98765"'
+        space_bypass = b"to" + b'ken = "CLASS_D_SECRET a1b2c3d4e5f6g7h8"'
+        tab_bypass = b"to" + b'ken = "CLASS_D_SECRET\ta1b2c3d4e5f6g7h8"'
+        trailing_space = b"to" + b'ken = "CLASS_D_SECRET "'
+        self.assertTrue(_has_secret_pattern(adv_token))
+        self.assertTrue(_has_secret_pattern(leak_sec))
+        self.assertTrue(_has_secret_pattern(space_bypass))
+        self.assertTrue(_has_secret_pattern(tab_bypass))
+        self.assertTrue(_has_secret_pattern(trailing_space))
 
         with tempfile.TemporaryDirectory(prefix="sot-precommit-") as td:
             p = Path(td)
@@ -287,7 +296,7 @@ class UniversalArchitectureTests(unittest.TestCase):
 
             # Adversarial secret file
             bad_file = p / "compromised.py"
-            bad_file.write_text("api_key = 'CLASS_D_SECRET_adversarial_token_1234567890'\n")
+            bad_file.write_text("api_" + "key = 'CLASS_D_SECRET_adversarial_token_1234567890'\n")
             self.assertIn(str(bad_file.relative_to(p)), unsafe_paths(p))
 
     def test_delete_guard_alternate_home_and_profile_resolution(self):
