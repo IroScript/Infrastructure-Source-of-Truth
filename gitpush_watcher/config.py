@@ -80,6 +80,10 @@ class WatcherConfig:
     def debounce_seconds(self) -> float:
         return float(self.raw.get("debounce_seconds", 1.5))
 
+    @debounce_seconds.setter
+    def debounce_seconds(self, val: float) -> None:
+        self.raw["debounce_seconds"] = float(val)
+
     @property
     def max_checkpoint_seconds(self) -> float:
         return float(self.raw.get("max_checkpoint_seconds", 10.0))
@@ -87,6 +91,11 @@ class WatcherConfig:
     @property
     def reconciliation_interval_seconds(self) -> float:
         return float(self.raw.get("reconciliation_interval_seconds", 10.0))
+
+    @reconciliation_interval_seconds.setter
+    def reconciliation_interval_seconds(self, val: float) -> None:
+        self.raw["reconciliation_interval_seconds"] = float(val)
+
 
     @property
     def large_file_threshold_bytes(self) -> int:
