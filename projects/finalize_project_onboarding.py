@@ -139,10 +139,10 @@ def finalize(args):
             raise RuntimeError('activation requirements missing: ' + ','.join(gaps))
         set_state(args.project_id, False, 'SOT_REGISTRATION_PUSH_PENDING')
         generate_derived_mappings.generate_all()
-        publish(PUBLISH_PATHS, f'unverified: register project {args.project_id}')
+        publish(PUBLISH_PATHS, f'User Requested : register project {args.project_id}')
         set_state(args.project_id, True)
         generate_derived_mappings.generate_all()
-        publish(PUBLISH_PATHS, f'unverified: verify active project {args.project_id}')
+        publish(PUBLISH_PATHS, f'User Requested : verify active project {args.project_id}')
     except Exception as exc:
         set_state(args.project_id, False, f'SOT_PUBLISH_FAILED: {exc}')
         generate_derived_mappings.generate_all()

@@ -274,8 +274,9 @@ def _generate_all_locked(sync_operational=True):
     atomic_write_json(canonical_pg, project_groups)
 
     op_webterminal_pg = "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/project_groups.json"
-    if sync_operational and os.path.exists(os.path.dirname(op_webterminal_pg)):
+    if sync_operational:
         try:
+            os.makedirs(os.path.dirname(op_webterminal_pg), exist_ok=True)
             curr_pg = read_json(op_webterminal_pg) if os.path.exists(op_webterminal_pg) else {}
             curr_pg.update(project_groups)
             atomic_write_json(op_webterminal_pg, curr_pg)
@@ -283,8 +284,9 @@ def _generate_all_locked(sync_operational=True):
             pass
 
     home_wt_pg = os.path.expanduser("~/.webterminal/project_groups.json")
-    if sync_operational and os.path.exists(os.path.dirname(home_wt_pg)):
+    if sync_operational:
         try:
+            os.makedirs(os.path.dirname(home_wt_pg), exist_ok=True)
             curr_pg = read_json(home_wt_pg) if os.path.exists(home_wt_pg) else {}
             curr_pg.update(project_groups)
             atomic_write_json(home_wt_pg, curr_pg)

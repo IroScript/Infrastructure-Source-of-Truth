@@ -148,7 +148,7 @@ def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=Tr
     temp_enc = None
     is_encrypted = False
     encryption_setting = asset.get('encryption', 'none')
-    if asset.get('encryption') == 'required' or asset.get('classification') == 'secret':
+    if asset.get('encryption') in {'aes-256-cbc', 'required'} or asset.get('classification') == 'secret':
         try:
             fd, temp_enc = tempfile.mkstemp(prefix='agy-backup-enc-', suffix='.enc')
             os.close(fd)

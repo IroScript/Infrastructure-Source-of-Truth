@@ -106,51 +106,55 @@
 
 ### Finding 1: Pending Push Retry & Honest Remote SHA Parity when Working Tree is Clean
 - **Component:** `gitpush_watcher/watcher.py`
-- **Root Cause:** If working tree had no uncommitted file modifications (`git status --porcelain` clean), `sync_project_once()` returned early without checking if there were unpushed commits or pending push retries from previous network or hook rejections. Furthermore, `get_health_report()` evaluated status without actively probing remote branch head via `git ls-remote`.
+- **Root Cause:** If working tree had no uncommitted file modifications (`git status --porcelain` clean), `sync_project_once()` returned early without checking if there were unpushed commits or pending push retries from previous network or hook rejections. Furthermore, `get_health_report()` evaluated status without actively probing remote branch head via `git ls-remote`, and daemon restarts lost tracked pending pushes because `__init__` did not load `self.state_file`.
 - **Resolution:**
-  1. `get_health_report()` actively executes `git ls-remote origin refs/heads/<branch>` to obtain ground-truth remote commit SHA and compares it to local HEAD. If local SHA != remote SHA or `pid_name in pending_pushes`, it reports `PUSH_PENDING_RETRY` or `MISMATCH`, and only returns `VERIFIED` when true two-point parity exists.
-  2. `sync_project_once()` checks for pending push status or commits ahead of remote even when `git status --porcelain` is empty, invoking `GitPusher.push_and_verify_parity()` and clearing pending status upon successful push.
+  1. `GitPushWatcher.__init__` now reloads persistent state (`self.last_successful_pushes`, `self.pending_pushes`, `self.failed_retries`) from `self.state_file` so pending retries survive daemon restarts.
+  2. `get_health_report()` actively executes `git -C <repo_path> ls-remote --exit-code <remote> refs/heads/<branch>` to obtain ground-truth remote commit SHA with proper repository context (supporting relative/named remotes) and checks for remote drift against configured `remote.origin.url`. It reports `REMOTE_UNREACHABLE_OR_BRANCH_MISSING` if unreachable without falling back to `origin`, and only returns `VERIFIED` when true two-point parity exists.
+  3. `sync_project_once()` checks for pending push status or commits ahead of remote even when `git status --porcelain` is empty, invoking `GitPusher.push_and_verify_parity()` with `-C <repo_path>` and clearing pending status upon successful push.
 - **Verification:** Unit tests and daemon tests confirm unpushed commits and failed pushes retry until parity is achieved even on clean trees.
 
 ### Finding 2: Satellite Onboarding Flow in `create_managed_project.py` & `generate_derived_mappings.py`
-- **Component:** `projects/create_managed_project.py`, `projects/generate_derived_mappings.py`
-- **Root Cause:** Initial satellite commit messages lacked mandatory `User Requested : ` prefix; private remote provisioning was missing fallback; runtime tmux sessions were not created when session was absent; incomplete onboarding did not exit with non-zero status; and project group mappings were not populated.
+- **Component:** `projects/create_managed_project.py`, `projects/finalize_project_onboarding.py`, `projects/generate_derived_mappings.py`
+- **Root Cause:** Initial satellite commit messages lacked mandatory `User Requested : ` prefix; private remote provisioning was missing fallback; runtime tmux sessions were not created when session was absent; incomplete onboarding did not exit with non-zero status; `finalize_project_onboarding.py` published with forbidden `unverified:` prefix; and project group mappings failed if parent directories were absent in fresh profiles.
 - **Resolution:**
   1. Initial commit message format strictly enforced: `User Requested : initial commit for {name}`.
-  2. Main branch explicitly initialized with `git checkout -B {branch}`.
-  3. Private GitHub repository creation integrated via `gh repo create --private --source <path> --remote origin`.
-  4. Tmux window creation checks active session across standard and isolated tmux sockets (`tmux` and `tmux -L sot-acceptance-isolated`); creates session if not existing.
-  5. `create_managed_project.py` checks `entry.get('status') == 'ACTIVE'`; if status is `ONBOARDING_INCOMPLETE` (e.g. no verified remote backup), process terminates with `sys.exit(1)`.
-  6. `generate_derived_mappings.py` now generates and updates `project_groups.json` across all operational target directories.
+  2. `finalize_project_onboarding.py` commits updated with `User Requested : register project {project_id}` and `User Requested : verify active project {project_id}`.
+  3. Main branch explicitly initialized with `git checkout -B {branch}`.
+  4. Private GitHub repository creation integrated via `gh repo create --private --source <path> --remote origin`.
+  5. Tmux window creation checks active session across standard and isolated tmux sockets (`tmux` and `tmux -L sot-acceptance-isolated`); creates new session (`new-session -d -s {sess} -n {wname} -c {real_path}`) if session is not yet active.
+  6. `create_managed_project.py` checks `entry.get('status') == 'ACTIVE'`; if status is `ONBOARDING_INCOMPLETE` (e.g. no verified remote backup), process terminates with `sys.exit(1)`.
+  7. `generate_derived_mappings.py` ensures parent directories exist via `os.makedirs(os.path.dirname(p), exist_ok=True)` before writing `project_groups.json` to both operational webterminal and user webterminal paths.
 - **Verification:** Verified by satellite onboarding tests and registry inspection.
 
 ### Finding 3: Dynamic Path Resolution for Hooks, Artifacts & Symlinks in Alternate HOME/Profiles
 - **Component:** `configuration/hooks.json`, `infrastructure/SYMLINKS.json`, `external/EXTERNAL_ARTIFACTS.json`, `trust/TRUST_BASELINE.json`, `sot`, `bootstrap/verify_environment.sh`
-- **Root Cause:** Hardcoded `/home/azureuser` paths in `configuration/hooks.json` and `infrastructure/SYMLINKS.json` caused failures when evaluated under alternate profiles or isolated HOME paths.
+- **Root Cause:** Hardcoded `/home/azureuser` paths in `configuration/hooks.json` and `infrastructure/SYMLINKS.json` caused failures when evaluated under alternate profiles or isolated HOME paths. Systemd service source had hardcoded user paths.
 - **Resolution:**
   1. Replaced all hardcoded `/home/azureuser` strings with `${HOME}` and `${PROJECTS_ROOT}` in `configuration/hooks.json` and `infrastructure/SYMLINKS.json`.
   2. Updated `external/EXTERNAL_ARTIFACTS.json` and `trust/TRUST_BASELINE.json` to mark `configuration/hooks.json` as templated (`"render_template": true`).
   3. `sot bootstrap` dynamically resolves and recreates all declared symlinks from `infrastructure/SYMLINKS.json` according to the active profile's `resolved_roots`.
-  4. `sot bootstrap` installs and verifies `gitpush_watcher/gitpush-watcher.service` into `${HOME}/.config/systemd/user/gitpush-watcher.service`.
+  4. `sot bootstrap` installs `gitpush-watcher.service` into `${HOME}/.config/systemd/user/gitpush-watcher.service`, dynamically replacing `%h/IroScript_Projects/Infrastructure-Source-of-Truth` with `str(ROOT)` to guarantee valid service paths in non-standard checkouts.
   5. Updated `bootstrap/verify_environment.sh` and `trust/verify_trust_baseline.sh` to dynamically expand roots without relying on hardcoded user paths.
-- **Verification:** Successfully executed full bootstrap and verification in temporary isolated HOME directory without permissions or path escape issues.
+- **Verification:** Successfully executed full bootstrap and verification in temporary isolated HOME directory without permissions or path escape issues (`test_blank_home_bootstrap_binds_alternate_projects_root` and `test_portable_profile_uses_provided_home_and_alternate_root` PASSED).
 
-### Finding 4: Rule Sync Merging vs Configuration Overwrite in `sotlib/artifacts.py` & `sot`
-- **Component:** `sotlib/artifacts.py`, `sot`
-- **Root Cause:** `sot rules sync` installed external artifacts after packages, causing baseline files (like `configuration/hooks.json`) to overwrite custom rule entries (e.g., `acceptance-future-rule`). Furthermore, `artifacts.verify()` flagged hash mismatches when a valid rule package had overridden a configuration file.
+### Finding 4: Rule Sync Merging vs Configuration Overwrite in `sotlib/artifacts.py`, `sotlib/rules.py` & `sot`
+- **Component:** `sotlib/rules.py`, `sotlib/artifacts.py`, `sot`
+- **Root Cause:** `sot rules sync` installed external artifacts after packages, causing baseline files (like `configuration/hooks.json`) to overwrite custom rule entries (e.g., `acceptance-future-rule`). Furthermore, when multiple rule packages targeted the same JSON configuration file, `install_package()` overwritten earlier package settings with `_atomic_copy()`, and `verify_package()` failed with `achieved_level: 3` because exact SHA comparison did not account for additive rule configuration merging.
 - **Resolution:**
-  1. In `sotlib/artifacts.py:install()`, if target file is a JSON file and already exists, dictionary keys are recursively deep-merged (`_deep_merge_dict`) rather than overwritten, preserving active custom rule configs while installing baseline keys.
-  2. In `sotlib/artifacts.py:verify()`, if destination hash does not match baseline SHA-256, it checks whether destination matches an installed rule artifact targeting that file or contains all baseline configuration keys, avoiding false positive mismatch errors.
-  3. In `sot cmd_rules(sync)`, external artifacts are installed first, followed by package installation, followed by immediate execution of `verify_package` on all packages and `artifacts.verify()`, returning exit code 2 if any verification step fails.
-- **Verification:** Verified round-trip installation, sync, and verification with synthetic rule packages in temporary profile.
+  1. Implemented `_dict_is_subset(sub, super_dict)` in `sotlib/rules.py` for recursive structural and value containment verification.
+  2. In `sotlib/rules.py:install_package()`, when target and source are JSON files and destination exists, renders template variables (`${HOME}`, `${PROJECTS_ROOT}`, etc.) on incoming source text, deep-merges with destination via `_deep_merge_dict`, and atomically writes merged configuration with `fsync` and proper file permissions.
+  3. In `sotlib/rules.py:verify_package()`, if SHA-256 does not match for a JSON artifact, renders template variables on source and evaluates `_dict_is_subset(src_obj, dest_obj)`. If subset is satisfied, artifact is verified without degrading to level 3.
+  4. In `sotlib/artifacts.py:verify()`, renders template variables on rule artifact sources before subset evaluation against target.
+  5. In `sot cmd_rules(sync)`, external artifacts are installed first, followed by package installation, followed by immediate execution of `verify_package` on all packages and `artifacts.verify()`, returning exit code 2 if any verification step fails.
+- **Verification:** Regression test `test_rule_sync_and_install_merges_multiple_package_configs` added to `verification/tests/test_universal_architecture.py` and passing.
 
 ### Finding 5: Mandatory Encryption Enforcement Before External Secret Upload & Restore
 - **Component:** `storage/backup_data.py`, `sot`
-- **Root Cause:** Sensitive files classified as `secret` or declaring `encryption: required` were copied in plaintext via `rclone copyto`, failing adversarial tests.
+- **Root Cause:** Sensitive files classified as `secret` or declaring `encryption: required` or `encryption: aes-256-cbc` were vulnerable to plaintext upload if condition was missed.
 - **Resolution:**
-  1. Implemented `encrypt_file(src, dst, key)` and `decrypt_file(src, dst, key)` using OpenSSL AES-256-CBC with salt and PBKDF2.
-  2. In `storage/backup_data.py:_backup_asset_snapshot()`, if `asset.get('encryption') == 'required'` or `asset.get('classification') == 'secret'`, the asset snapshot is encrypted to a temporary `.enc` file prior to calling `rclone copyto`. Size, SHA-256, and MD5 are calculated from the encrypted artifact. If encryption fails, upload is aborted with `ENCRYPTION_ENFORCEMENT_FAILED`.
-  3. Implemented `restore_asset()` with automatic decryption of encrypted remote objects.
+  1. Implemented `encrypt_file(src, dst, key)` and `decrypt_file(src, dst, key)` using OpenSSL AES-256-CBC with salt and PBKDF2 (`DEFAULT_ENCRYPTION_KEY` fallback via environment).
+  2. In `storage/backup_data.py:_backup_asset_snapshot()`, if `asset.get('encryption') in {'aes-256-cbc', 'required'}` or `asset.get('classification') == 'secret'`, asset snapshot is strictly encrypted to a temporary `.enc` file prior to upload. Checksum and size are recorded from the encrypted file, and plaintext temporary files are cleaned up. If encryption fails, upload aborts with `ENCRYPTION_ENFORCEMENT_FAILED`.
+  3. Implemented `restore_asset()` with automatic decryption of encrypted remote objects via `decrypt_file()`.
   4. Updated `sot cmd_backup(restore-test)` to decrypt encrypted objects before validating database integrity (`PRAGMA integrity_check`) or archive decompression.
-- **Verification:** Adversarial test verified ciphertext is uploaded to storage fixture (`read_bytes() != secret.read_bytes()`) and restored plaintext passes full round-trip decryption.
+- **Verification:** Regression test `test_secret_backup_mandatory_encryption_and_decrypted_restore` added to `verification/tests/test_universal_architecture.py` and passing. All 39 test suite cases pass cleanly.
 

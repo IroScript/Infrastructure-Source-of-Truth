@@ -32,6 +32,20 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _dict_is_subset(sub: Any, super_dict: Any) -> bool:
+    if not isinstance(sub, dict) or not isinstance(super_dict, dict):
+        return sub == super_dict
+    for k, v in sub.items():
+        if k not in super_dict:
+            return False
+        if isinstance(v, dict):
+            if not _dict_is_subset(v, super_dict[k]):
+                return False
+        elif super_dict[k] != v:
+            return False
+    return True
+
+
 def _inside(path: Path, root: Path) -> bool:
     try:
         path.resolve().relative_to(root.resolve())
@@ -287,6 +301,33 @@ def install_package(repo_root: Path, package: dict, roots: dict[str, str], state
             backup_record["previous_mode"] = oct(target.stat().st_mode & 0o777)
         record_path = backup_dir / (artifact["artifact_id"] + ".json")
         record_path.write_text(json.dumps(backup_record, sort_keys=True) + "\n")
+        if target.exists() and target.suffix == ".json" and source.suffix == ".json":
+            try:
+                existing_obj = json.loads(target.read_text(encoding="utf-8"))
+                src_text = source.read_text(encoding="utf-8")
+                for name, value in roots.items():
+                    src_text = src_text.replace("${" + name + "}", value)
+                incoming_obj = json.loads(src_text)
+                if isinstance(existing_obj, dict) and isinstance(incoming_obj, dict):
+                    from .artifacts import _deep_merge_dict
+                    merged = _deep_merge_dict(existing_obj, incoming_obj)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    fd, tmp = tempfile.mkstemp(prefix=".sot-rule-", dir=target.parent)
+                    try:
+                        with os.fdopen(fd, "wb") as stream:
+                            stream.write((json.dumps(merged, indent=2) + "\n").encode("utf-8"))
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                        os.chmod(tmp, mode)
+                        os.replace(tmp, target)
+                    finally:
+                        try:
+                            os.unlink(tmp)
+                        except FileNotFoundError:
+                            pass
+                    continue
+            except Exception:
+                pass
         _atomic_copy(source, target, mode)
     if not dry_run:
         receipt = {"rule_id": package["rule_id"], "version": package["version"],
@@ -341,8 +382,24 @@ def verify_package(repo_root: Path, package: dict, roots: dict[str, str], state_
         levels.append({"level": level, "name": status, "result": "VERIFIED", "evidence": description})
     for artifact in package["artifacts"]:
         target = Path(installed[artifact["artifact_id"]])
-        if not target.is_file() or sha256(target) != artifact["sha256"]:
-            errors.append(f"installed artifact missing/hash mismatch: {artifact['artifact_id']}")
+        if not target.is_file():
+            errors.append(f"installed artifact missing: {artifact['artifact_id']}")
+        elif sha256(target) != artifact["sha256"]:
+            merged_ok = False
+            if target.suffix == ".json":
+                try:
+                    dest_obj = json.loads(target.read_text(encoding="utf-8"))
+                    src_text = (repo_root / artifact["source"]).read_text(encoding="utf-8")
+                    for name, value in roots.items():
+                        src_text = src_text.replace("${" + name + "}", value)
+                    src_obj = json.loads(src_text)
+                    if isinstance(dest_obj, dict) and isinstance(src_obj, dict):
+                        if _dict_is_subset(src_obj, dest_obj):
+                            merged_ok = True
+                except Exception:
+                    pass
+            if not merged_ok:
+                errors.append(f"installed artifact missing/hash mismatch: {artifact['artifact_id']}")
     if errors:
         return {"rule_id": package["rule_id"], "required_level": package["required_proof_level"],
                 "achieved_level": 3, "verdict": "NOT VERIFIED", "levels": levels, "errors": errors}

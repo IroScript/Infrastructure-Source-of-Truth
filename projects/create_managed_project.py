@@ -104,6 +104,8 @@ def _create_project_locked(args):
                 has_sess = subprocess.run([*tmux_cmd, 'has-session', '-t', sess], capture_output=True, timeout=5)
                 if has_sess.returncode == 0:
                     subprocess.run([*tmux_cmd, 'new-window', '-d', '-t', sess, '-n', wname, '-c', real_path], capture_output=True, timeout=5)
+                else:
+                    subprocess.run([*tmux_cmd, 'new-session', '-d', '-s', sess, '-n', wname, '-c', real_path], capture_output=True, timeout=5)
         except Exception:
             pass
     reg_args = argparse.Namespace(path=real_path, name=args.name or os.path.basename(real_path), id=args.id, type=args.type, remote=remote, branch=args.branch, visibility='local_only' if args.local_only else 'private', local_only=args.local_only, tmux=args.tmux, whatsapp_group=args.whatsapp_group, whatsapp_route=args.whatsapp_route, data_files=args.data_files, data_classification=args.data_classification, push_verified=push_verified, verification_profile=args.verification_profile, dry_run=False)

@@ -489,7 +489,8 @@ def cmd_bootstrap(args):
         systemd_dest = systemd_user_dir / "gitpush-watcher.service"
         if not args.dry_run:
             systemd_user_dir.mkdir(parents=True, exist_ok=True)
-            systemd_dest.write_bytes(service_src.read_bytes())
+            service_content = service_src.read_text(encoding="utf-8").replace("%h/IroScript_Projects/Infrastructure-Source-of-Truth", str(ROOT))
+            systemd_dest.write_text(service_content, encoding="utf-8")
             service_installed = systemd_dest.is_file()
         else:
             service_installed = True

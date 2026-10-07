@@ -36,6 +36,13 @@ class GitPushWatcher:
         self.last_successful_pushes: Dict[str, Dict[str, Any]] = {}
         self.failed_retries = 0
         self._lock = threading.Lock()
+        prior_state = self.load_state()
+        if prior_state:
+            self.last_successful_pushes = prior_state.get('LAST_SUCCESSFUL_PUSH', {})
+            for p in prior_state.get('PENDING_PUSHES', []):
+                if isinstance(p, dict) and 'project_id' in p:
+                    self.pending_pushes[p['project_id']] = p
+            self.failed_retries = prior_state.get('FAILED_RETRIES', 0)
 
     def load_registered_projects(self) -> List[Dict[str, Any]]:
         """Loads projects from projects/PROJECT_REGISTRY.json."""
@@ -92,21 +99,26 @@ class GitPushWatcher:
                     local_sha = GitPusher.get_head_sha(repo_path) if repo_path.is_dir() else ''
                     remote_sha = ''
                     if local_sha and repo_path.is_dir():
+                        rem_check = subprocess.run(
+                            ['git', '-C', str(repo_path), 'config', '--get', 'remote.origin.url'],
+                            capture_output=True, text=True, timeout=5, env=GitPusher._git_env()
+                        )
+                        configured_url = rem_check.stdout.strip()
+                        from .pusher import normalize_git_url
+                        if configured_url and normalize_git_url(configured_url) != normalize_git_url(remote):
+                            remote_parity[pid_name] = f'REMOTE_DRIFT: configured {configured_url} != {remote}'
+                            continue
+
                         probe = subprocess.run(
-                            ['git', 'ls-remote', '--exit-code', remote, f'refs/heads/{branch}'],
+                            ['git', '-C', str(repo_path), 'ls-remote', '--exit-code', remote, f'refs/heads/{branch}'],
                             capture_output=True, text=True, timeout=10, env=GitPusher._git_env()
                         )
-                        if probe.returncode != 0:
-                            probe = subprocess.run(
-                                ['git', '-C', str(repo_path), 'ls-remote', '--exit-code', 'origin', f'refs/heads/{branch}'],
-                                capture_output=True, text=True, timeout=10, env=GitPusher._git_env()
-                            )
                         if probe.returncode == 0 and probe.stdout.strip():
                             remote_sha = probe.stdout.split()[0]
                     if local_sha and remote_sha and local_sha == remote_sha:
                         remote_parity[pid_name] = 'VERIFIED'
                     elif not remote_sha:
-                        remote_parity[pid_name] = 'UNKNOWN'
+                        remote_parity[pid_name] = 'REMOTE_UNREACHABLE_OR_BRANCH_MISSING'
                     else:
                         remote_parity[pid_name] = f'MISMATCH (local={local_sha[:8]}, remote={remote_sha[:8]})'
             else:
@@ -134,11 +146,8 @@ class GitPushWatcher:
                         is_pending = pid in self.pending_pushes
                         needs_retry = is_pending or (local_sha and last.get('commit_sha') != local_sha)
                         if not needs_retry and local_sha:
-                            probe = subprocess.run(['git', 'ls-remote', '--exit-code', remote, f'refs/heads/{branch}'],
+                            probe = subprocess.run(['git', '-C', str(repo_path), 'ls-remote', '--exit-code', remote, f'refs/heads/{branch}'],
                                                    capture_output=True, text=True, timeout=10, env=GitPusher._git_env())
-                            if probe.returncode != 0:
-                                probe = subprocess.run(['git', '-C', str(repo_path), 'ls-remote', '--exit-code', 'origin', f'refs/heads/{branch}'],
-                                                       capture_output=True, text=True, timeout=10, env=GitPusher._git_env())
                             if probe.returncode == 0 and probe.stdout.strip():
                                 if probe.stdout.split()[0] != local_sha:
                                     needs_retry = True

@@ -9,7 +9,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from .rules import RuleError, _atomic_copy, _inside, discover_packages, resolve_template, sha256
+from .rules import (RuleError, _atomic_copy, _dict_is_subset, _inside,
+                    discover_packages, resolve_template, sha256)
 
 
 def load_manifest(repo_root: Path) -> dict:
@@ -117,9 +118,12 @@ def verify(repo_root: Path, profile: dict) -> dict:
                 if destination.suffix == ".json":
                     try:
                         dest_obj = json.loads(destination.read_text(encoding="utf-8"))
-                        src_obj = json.loads((repo_root / artifact["source"]).read_text(encoding="utf-8"))
+                        src_text = (repo_root / artifact["source"]).read_text(encoding="utf-8")
+                        for name, value in roots.items():
+                            src_text = src_text.replace("${" + name + "}", value)
+                        src_obj = json.loads(src_text)
                         if isinstance(dest_obj, dict) and isinstance(src_obj, dict):
-                            if all(dest_obj.get(k) == v for k, v in src_obj.items()):
+                            if _dict_is_subset(src_obj, dest_obj):
                                 merged_ok = True
                     except Exception:
                         pass

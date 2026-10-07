@@ -123,5 +123,123 @@ class UniversalArchitectureTests(unittest.TestCase):
         self.assertFalse(validate(base)[0])
 
 
+    def test_rule_sync_and_install_merges_multiple_package_configs(self):
+        with tempfile.TemporaryDirectory(prefix="sot-multi-rule-") as td:
+            base = Path(td)
+            repo = base / "repo"
+            shutil.copytree(ROOT / "governance/rules", repo / "governance/rules")
+            shutil.copytree(ROOT / "trust/verification/rules", repo / "trust/verification/rules")
+            shutil.copytree(ROOT / "external", repo / "external")
+            shutil.copytree(ROOT / "configuration", repo / "configuration")
+            shutil.copytree(ROOT / "deployment", repo / "deployment")
+            shutil.copytree(ROOT / "trust", repo / "trust", dirs_exist_ok=True)
+            
+            # Setup Rule 1
+            q1 = repo / "governance/rules/RULE-TEST-MERGE-1/1.0.0"
+            q1.mkdir(parents=True)
+            (q1 / "hook.py").write_text("import sys\nprint('loaded');sys.exit(0)\n")
+            cfg1 = {"rule1_entry": {"enabled": True}}
+            (q1 / "agent-setting.json").write_text(json.dumps(cfg1, indent=2))
+            m1 = {
+                "manifest_version": "1.0.0", "schema_version": "1.0.0", "rule_id": "RULE-TEST-MERGE-1", "version": "1.0.0",
+                "name": "Merge 1", "scope": "test", "severity": "low", "enabled": True, "supported_agent_classes": ["generic_cli"],
+                "artifacts": [
+                    {"artifact_id": "hook", "source": str((q1 / "hook.py").relative_to(repo)), "destination_template": "${HOME}/.agents/hooks/m1.py", "mode": "0755", "sha256": hashlib.sha256((q1 / "hook.py").read_bytes()).hexdigest(), "kind": "python", "permissions": ["read", "execute"]},
+                    {"artifact_id": "agent-config", "source": str((q1 / "agent-setting.json").relative_to(repo)), "destination_template": "${HOME}/.gemini/config/hooks.json", "mode": "0644", "sha256": hashlib.sha256((q1 / "agent-setting.json").read_bytes()).hexdigest(), "kind": "agent_config", "permissions": ["read"]}
+                ],
+                "load_order": 1, "precedence": [], "activation": {"method": "probe", "argv": ["python3", "{artifact:hook}", "load"], "expected_exit_code": 0, "expected_stdout_contains": "loaded"},
+                "reload_requirement": "none", "required_proof_level": 4, "expected_effect": "merge 1",
+                "positive_probe": {"argv": ["python3", "{artifact:hook}", "load"], "expected_exit_code": 0},
+                "negative_probe": {"argv": ["python3", "{artifact:hook}", "load"], "expected_exit_code": 0, "expected_effect": "ok"},
+                "supersedes": [], "rollback": {"strategy": "restore_previous_or_remove_new"}
+            }
+            (q1 / "rule.json").write_text(json.dumps(m1, indent=2))
+
+            # Setup Rule 2
+            q2 = repo / "governance/rules/RULE-TEST-MERGE-2/1.0.0"
+            q2.mkdir(parents=True)
+            (q2 / "hook.py").write_text("import sys\nprint('loaded');sys.exit(0)\n")
+            cfg2 = {"rule2_entry": {"enabled": True}}
+            (q2 / "agent-setting.json").write_text(json.dumps(cfg2, indent=2))
+            m2 = {
+                "manifest_version": "1.0.0", "schema_version": "1.0.0", "rule_id": "RULE-TEST-MERGE-2", "version": "1.0.0",
+                "name": "Merge 2", "scope": "test", "severity": "low", "enabled": True, "supported_agent_classes": ["generic_cli"],
+                "artifacts": [
+                    {"artifact_id": "hook", "source": str((q2 / "hook.py").relative_to(repo)), "destination_template": "${HOME}/.agents/hooks/m2.py", "mode": "0755", "sha256": hashlib.sha256((q2 / "hook.py").read_bytes()).hexdigest(), "kind": "python", "permissions": ["read", "execute"]},
+                    {"artifact_id": "agent-config", "source": str((q2 / "agent-setting.json").relative_to(repo)), "destination_template": "${HOME}/.gemini/config/hooks.json", "mode": "0644", "sha256": hashlib.sha256((q2 / "agent-setting.json").read_bytes()).hexdigest(), "kind": "agent_config", "permissions": ["read"]}
+                ],
+                "load_order": 2, "precedence": [], "activation": {"method": "probe", "argv": ["python3", "{artifact:hook}", "load"], "expected_exit_code": 0, "expected_stdout_contains": "loaded"},
+                "reload_requirement": "none", "required_proof_level": 4, "expected_effect": "merge 2",
+                "positive_probe": {"argv": ["python3", "{artifact:hook}", "load"], "expected_exit_code": 0},
+                "negative_probe": {"argv": ["python3", "{artifact:hook}", "load"], "expected_exit_code": 0, "expected_effect": "ok"},
+                "supersedes": [], "rollback": {"strategy": "restore_previous_or_remove_new"}
+            }
+            (q2 / "rule.json").write_text(json.dumps(m2, indent=2))
+
+            home = base / "home"
+            profile = {
+                "profile_id": "test-merge", "version": "1.0.0", "platform": "linux",
+                "roots": {"HOME": str(home), "PROJECTS_ROOT": str(base / "projects"), "STATE_ROOT": str(base / "state"),
+                          "RUNTIME_ROOT": str(base / "runtime"), "BACKUP_ROOT": str(base / "backups")},
+                "agent_classes": ["generic_cli"]
+            }
+            pp = base / "profile.json"
+            pp.write_text(json.dumps(profile))
+            roots = profile["roots"]
+            state = Path(roots["STATE_ROOT"])
+            for v in roots.values(): Path(v).mkdir(parents=True, exist_ok=True)
+
+            install_package(repo, m1, roots, state)
+            install_package(repo, m2, roots, state)
+
+            target = home / ".gemini/config/hooks.json"
+            self.assertTrue(target.is_file())
+            content = json.loads(target.read_text())
+            self.assertIn("rule1_entry", content)
+            self.assertIn("rule2_entry", content)
+
+            v1 = verify_package(repo, m1, roots, state, base / "evidence")
+            self.assertEqual(v1["verdict"], "VERIFIED", v1)
+            v2 = verify_package(repo, m2, roots, state, base / "evidence")
+            self.assertEqual(v2["verdict"], "VERIFIED", v2)
+
+    def test_secret_backup_mandatory_encryption_and_decrypted_restore(self):
+        import unittest.mock
+        import storage.backup_data as backup_data
+        from storage.backup_data import backup_asset, restore_asset
+        with tempfile.TemporaryDirectory(prefix="sot-enc-backup-") as td:
+            base = Path(td)
+            secret = base / ".env.prod"
+            secret.write_text("API_SECRET_KEY=super-confidential-secret-999\n")
+            cloud = base / "cloud"
+            cloud.mkdir()
+            target_remote = cloud / "env.enc"
+            cat_file = base / "cat.json"
+            cat_file.write_text(json.dumps({"backups": []}))
+            reg_file = base / "reg.json"
+            reg_file.write_text(json.dumps({"assets": []}))
+            asset = {
+                "asset_id": "test-synthetic-secret",
+                "project_id": "test-proj",
+                "source_path": str(secret),
+                "primary_backup_target": str(cloud),
+                "remote_path": str(target_remote),
+                "classification": "secret",
+                "encryption": "required"
+            }
+            with unittest.mock.patch.object(backup_data, "CATALOG_FILE", str(cat_file)), \
+                 unittest.mock.patch.object(backup_data, "REGISTRY_FILE", str(reg_file)):
+                res = backup_asset(asset, verify_remote=False)
+                self.assertEqual(res.get("status"), "REMOTE_UPLOAD_COMPLETE")
+                self.assertTrue(target_remote.is_file())
+                # Must be ciphertext, never unencrypted plaintext
+                self.assertNotEqual(target_remote.read_bytes(), secret.read_bytes())
+
+                restored = base / "restored.env"
+                restore_asset(asset, str(restored))
+                self.assertTrue(restored.is_file())
+                self.assertEqual(restored.read_text(), secret.read_text())
+
+
 if __name__ == "__main__":
     unittest.main()
