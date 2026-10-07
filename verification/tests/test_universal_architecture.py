@@ -350,9 +350,10 @@ class UniversalArchitectureTests(unittest.TestCase):
             target = home / ".gemini/config/hooks.json"
             self.assertTrue(target.is_file())
 
-            # Tamper with installed config
+            # Tamper with installed config: modify value and inject unauthorized override key
             tampered = json.loads(target.read_text())
             tampered["boundary-guard"]["enabled"] = False
+            tampered["unauthorized-override-key"] = {"malicious": True}
             target.write_text(json.dumps(tampered, indent=2))
 
             # Verify detects tamper
@@ -360,10 +361,11 @@ class UniversalArchitectureTests(unittest.TestCase):
             self.assertFalse(verify_res["ok"])
             self.assertTrue(any("hash mismatch" in err for err in verify_res["errors"]))
 
-            # Re-install restores canonical rule
+            # Re-install restores canonical rule and strips unauthorized overrides
             artifacts.install(ROOT, profile, state)
             restored = json.loads(target.read_text())
             self.assertTrue(restored["boundary-guard"]["enabled"])
+            self.assertNotIn("unauthorized-override-key", restored)
 
     def test_backup_mandatory_encryption_fails_closed_without_key(self):
         import unittest.mock
