@@ -16,7 +16,11 @@ for item in manifest.get('artifacts', []):
         continue
     source_sha=hashlib.sha256(source.read_bytes()).hexdigest()
     target_sha=hashlib.sha256(target.read_bytes()).hexdigest()
-    if source_sha != item['sha256'] or target_sha != item['sha256']:
+    expected_target_bytes = source.read_bytes()
+    if b'${HOME}' in expected_target_bytes:
+        expected_target_bytes = expected_target_bytes.decode('utf-8').replace('${HOME}', str(home)).encode('utf-8')
+    expected_target_sha = hashlib.sha256(expected_target_bytes).hexdigest()
+    if source_sha != item['sha256'] or target_sha != expected_target_sha:
         errors.append(f"{item['destination']}: SHA256 mismatch")
     if stat.S_IMODE(target.stat().st_mode) != int(item['mode'], 8):
         errors.append(f"{item['destination']}: permission mismatch")

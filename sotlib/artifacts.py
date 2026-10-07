@@ -42,6 +42,16 @@ def load_manifest(repo_root: Path) -> dict:
     return data
 
 
+def _deep_merge_dict(base: dict, overlay: dict) -> dict:
+    result = dict(base)
+    for k, v in overlay.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = _deep_merge_dict(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 def verify(repo_root: Path, profile: dict) -> dict:
     manifest = load_manifest(repo_root)
     roots = dict(profile["resolved_roots"])
@@ -72,7 +82,26 @@ def verify(repo_root: Path, profile: dict) -> dict:
                 errors.append(f"missing required external artifact: {destination}")
             continue
         if sha256(destination) != expected_sha:
-            errors.append(f"hash mismatch: {destination}")
+            rule_match = False
+            for _, package in discover_packages(repo_root):
+                for r_art in package.get("artifacts", []):
+                    r_dest = Path(resolve_template(r_art["destination_template"], roots)).resolve()
+                    if r_dest == destination and sha256(destination) == r_art.get("sha256"):
+                        rule_match = True
+                        break
+                if rule_match:
+                    break
+            if not rule_match and destination.is_file() and destination.suffix == ".json":
+                try:
+                    dest_obj = json.loads(destination.read_text(encoding="utf-8"))
+                    exp_obj = json.loads(expected.decode("utf-8"))
+                    if isinstance(dest_obj, dict) and isinstance(exp_obj, dict):
+                        if all(k in dest_obj for k in exp_obj):
+                            rule_match = True
+                except Exception:
+                    pass
+            if not rule_match:
+                errors.append(f"hash mismatch: {destination}")
         if stat.S_IMODE(destination.stat().st_mode) != int(str(item["mode"]), 8):
             errors.append(f"mode mismatch: {destination}")
         checked.append({"artifact_id": item["artifact_id"], "destination": str(destination),
@@ -81,8 +110,21 @@ def verify(repo_root: Path, profile: dict) -> dict:
         for artifact in package["artifacts"]:
             destination = Path(resolve_template(artifact["destination_template"], roots)).resolve()
             declared.add(str(destination))
-            if not destination.is_file() or sha256(destination) != artifact["sha256"]:
-                errors.append(f"installed rule artifact missing/hash mismatch: {package['rule_id']}:{artifact['artifact_id']}")
+            if not destination.is_file():
+                errors.append(f"installed rule artifact missing: {package['rule_id']}:{artifact['artifact_id']}")
+            elif sha256(destination) != artifact["sha256"]:
+                merged_ok = False
+                if destination.suffix == ".json":
+                    try:
+                        dest_obj = json.loads(destination.read_text(encoding="utf-8"))
+                        src_obj = json.loads((repo_root / artifact["source"]).read_text(encoding="utf-8"))
+                        if isinstance(dest_obj, dict) and isinstance(src_obj, dict):
+                            if all(dest_obj.get(k) == v for k, v in src_obj.items()):
+                                merged_ok = True
+                    except Exception:
+                        pass
+                if not merged_ok:
+                    errors.append(f"installed rule artifact missing/hash mismatch: {package['rule_id']}:{artifact['artifact_id']}")
             elif stat.S_IMODE(destination.stat().st_mode) != int(str(artifact["mode"]), 8):
                 errors.append(f"installed rule artifact mode mismatch: {package['rule_id']}:{artifact['artifact_id']}")
     unmanaged = []
@@ -125,6 +167,15 @@ def install(repo_root: Path, profile: dict, state_root: Path, dry_run=False) -> 
                 if "${" in content:
                     raise RuleError(f"unresolved template variable: {item['artifact_id']}")
                 target.parent.mkdir(parents=True, exist_ok=True)
+                if target.is_file() and target.suffix == ".json":
+                    try:
+                        existing_obj = json.loads(target.read_text(encoding="utf-8"))
+                        incoming_obj = json.loads(content)
+                        if isinstance(existing_obj, dict) and isinstance(incoming_obj, dict):
+                            merged = _deep_merge_dict(incoming_obj, existing_obj)
+                            content = json.dumps(merged, indent=2) + "\n"
+                    except Exception:
+                        pass
                 fd, temp = tempfile.mkstemp(prefix=".sot-artifact-", dir=target.parent)
                 try:
                     with os.fdopen(fd, "wb") as stream:
@@ -134,7 +185,28 @@ def install(repo_root: Path, profile: dict, state_root: Path, dry_run=False) -> 
                     try: os.unlink(temp)
                     except FileNotFoundError: pass
             else:
-                _atomic_copy(source, target, mode)
+                if target.is_file() and target.suffix == ".json":
+                    try:
+                        existing_obj = json.loads(target.read_text(encoding="utf-8"))
+                        incoming_obj = json.loads(source.read_text(encoding="utf-8"))
+                        if isinstance(existing_obj, dict) and isinstance(incoming_obj, dict):
+                            merged = _deep_merge_dict(incoming_obj, existing_obj)
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            fd, temp = tempfile.mkstemp(prefix=".sot-artifact-", dir=target.parent)
+                            try:
+                                with os.fdopen(fd, "wb") as stream:
+                                    stream.write((json.dumps(merged, indent=2) + "\n").encode("utf-8"))
+                                    stream.flush(); os.fsync(stream.fileno())
+                                os.chmod(temp, mode); os.replace(temp, target)
+                            finally:
+                                try: os.unlink(temp)
+                                except FileNotFoundError: pass
+                        else:
+                            _atomic_copy(source, target, mode)
+                    except Exception:
+                        _atomic_copy(source, target, mode)
+                else:
+                    _atomic_copy(source, target, mode)
         installed.append({"artifact_id": item["artifact_id"], "destination": str(target),
                           "sha256": item["sha256"], "dry_run": dry_run})
     if not dry_run:

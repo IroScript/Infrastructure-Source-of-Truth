@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -71,14 +72,21 @@ def cmd_rules(args):
         emit(results, args.format == "json")
         return 0 if all(x["verdict"] == "VERIFIED" for x in results) else 2
     if args.rules_command == "sync":
+        external = artifacts.install(ROOT, profile, state, args.dry_run)
         installed = []
         for manifest, package in chosen:
             if args.agent_class not in package["supported_agent_classes"]:
                 continue
             installed.append({"rule_id": package["rule_id"], "artifacts": install_package(ROOT, package, roots, state, args.dry_run)})
-        external = artifacts.install(ROOT, profile, state, args.dry_run)
-        emit({"status": "RULES_AND_SETTINGS_SYNCED", "rules_installed": len(installed), "external_artifacts_installed": len(external)}, args.format == "json")
-        return 0
+        evidence_dir = state / "sync-evidence"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        verify_results = [verify_package(ROOT, p, roots, state, evidence_dir) for _, p in chosen]
+        art_verify = artifacts.verify(ROOT, profile)
+        all_ok = all(x.get("verdict") == "VERIFIED" for x in verify_results) and art_verify.get("ok", False)
+        emit({"status": "RULES_AND_SETTINGS_SYNCED" if all_ok else "SYNC_VERIFICATION_FAILED",
+              "rules_installed": len(installed), "external_artifacts_installed": len(external),
+              "rule_verifications": verify_results, "artifacts_verification": art_verify}, args.format == "json")
+        return 0 if all_ok else 2
     if args.rules_command == "rollback":
         results = [{"rule_id": p["rule_id"], "restored": rollback_package(p, state)} for _, p in chosen]
         emit(results, args.format == "json")
@@ -392,7 +400,14 @@ def cmd_backup(args):
         for i, asset in enumerate(assets):
             path = Path(td) / f"asset-{i}"
             try:
-                provider.download(asset["remote_path"], path)
+                is_encrypted = asset.get("encryption") in {"aes-256-cbc", "required"} or asset.get("classification") == "secret"
+                if is_encrypted:
+                    enc_path = Path(td) / f"asset-{i}.enc"
+                    provider.download(asset["remote_path"], enc_path)
+                    from storage.backup_data import decrypt_file
+                    decrypt_file(enc_path, path)
+                else:
+                    provider.download(asset["remote_path"], path)
                 if path.suffix == ".db":
                     with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as db:
                         integrity = db.execute("PRAGMA integrity_check").fetchone()[0]
@@ -426,14 +441,62 @@ def cmd_bootstrap(args):
         emit({"docker_recovery": "NOT VERIFIED", "reason": "No validated compose recovery manifest is currently declared", "compose_version": compose.stdout.strip()})
         return 2
     profile = profile_for(args.profile, args.home)
+    roots = profile["resolved_roots"]
     packages = discover_packages(ROOT)
     installed = []
     for _, package in packages:
         if args.agent_class in package["supported_agent_classes"]:
-            installed.append(install_package(ROOT, package, profile["resolved_roots"], Path(profile["resolved_roots"]["STATE_ROOT"]), args.dry_run))
-    external = artifacts.install(ROOT, profile, Path(profile["resolved_roots"]["STATE_ROOT"]), args.dry_run)
+            installed.append(install_package(ROOT, package, roots, Path(roots["STATE_ROOT"]), args.dry_run))
+    external = artifacts.install(ROOT, profile, Path(roots["STATE_ROOT"]), args.dry_run)
+
+    symlinks_file = ROOT / "infrastructure/SYMLINKS.json"
+    recreated_symlinks = []
+    if symlinks_file.is_file():
+        try:
+            symlinks_data = json.loads(symlinks_file.read_text(encoding="utf-8"))
+            for item in symlinks_data:
+                alias = item["alias_path"]
+                raw_target = item["raw_target"]
+                for k, v in roots.items():
+                    alias = alias.replace("${" + k + "}", v)
+                alias_path = Path(alias)
+                if not item.get("is_relative", False):
+                    target = raw_target
+                    for k, v in roots.items():
+                        target = target.replace("${" + k + "}", v)
+                else:
+                    target = raw_target
+                if not args.dry_run:
+                    alias_path.parent.mkdir(parents=True, exist_ok=True)
+                    if alias_path.is_symlink() or alias_path.is_file():
+                        alias_path.unlink()
+                    elif alias_path.is_dir():
+                        shutil.rmtree(alias_path)
+                    try:
+                        alias_path.symlink_to(target)
+                        recreated_symlinks.append(str(alias_path))
+                    except Exception:
+                        pass
+                else:
+                    recreated_symlinks.append(str(alias_path))
+        except Exception:
+            pass
+
+    service_src = ROOT / "gitpush_watcher/gitpush-watcher.service"
+    service_installed = False
+    if service_src.is_file():
+        systemd_user_dir = Path(roots["HOME"]) / ".config/systemd/user"
+        systemd_dest = systemd_user_dir / "gitpush-watcher.service"
+        if not args.dry_run:
+            systemd_user_dir.mkdir(parents=True, exist_ok=True)
+            systemd_dest.write_bytes(service_src.read_bytes())
+            service_installed = systemd_dest.is_file()
+        else:
+            service_installed = True
+
     if args.dry_run:
-        emit({"status": "DRY_RUN", "rules": len(installed), "external_artifacts": len(external)})
+        emit({"status": "DRY_RUN", "rules": len(installed), "external_artifacts": len(external),
+              "symlinks_recreated": len(recreated_symlinks), "systemd_service_installed": service_installed})
         return 0
     result = artifacts.verify(ROOT, profile)
     if result["ok"]:
@@ -444,7 +507,10 @@ def cmd_bootstrap(args):
                                                 "stdout": legacy.stdout, "stderr": legacy.stderr}
         if legacy.returncode:
             result["ok"] = False
-    emit({"status": "BOOTSTRAP_INCOMPLETE" if not result["ok"] else "BOOTSTRAP_INSTALLED", "rules": len(installed), "external_artifacts": len(external), "verification": result})
+    emit({"status": "BOOTSTRAP_INCOMPLETE" if not result["ok"] else "BOOTSTRAP_INSTALLED",
+          "rules": len(installed), "external_artifacts": len(external),
+          "symlinks_recreated": len(recreated_symlinks), "systemd_service_installed": service_installed,
+          "verification": result})
     return 2 if not result["ok"] else 0
 
 

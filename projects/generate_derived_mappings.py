@@ -246,6 +246,51 @@ def _generate_all_locked(sync_operational=True):
     atomic_write_json(INFRA_TMUX_FILE, {"tmux_windows": infra_tmux})
     atomic_write_json(SETTINGS_FILE, settings_out)
 
+    # WhatsApp Bridge operational project_groups.json
+    project_groups = {}
+    for p in projects:
+        pid = p["project_id"]
+        dname = p.get("display_name", pid)
+        cpath = p.get("canonical_path", "")
+        git_info = p.get("git", {})
+        runtime_info = p.get("runtime", {})
+        conn_info = p.get("connections", {})
+        wa = conn_info.get("whatsapp", {})
+        if wa.get("enabled") or runtime_info.get("tmux_window") or conn_info.get("whatsapp"):
+            route = wa.get("agent_route", "")
+            key = route.split(":")[-1] if ":" in route else pid
+            group_id = wa.get("group_id", "") or f"{pid}@g.us"
+            project_groups[key] = {
+                "id": group_id,
+                "name": dname,
+                "key": key,
+                "window": runtime_info.get("tmux_window", ""),
+                "cwd": cpath,
+                "git_remote": git_info.get("remote", ""),
+                "whatsapp_status": "CONNECTED" if p.get("status") == "ACTIVE" else "DISCOVERED"
+            }
+
+    canonical_pg = os.path.join(SOT_ROOT, "connections", "project_groups.json")
+    atomic_write_json(canonical_pg, project_groups)
+
+    op_webterminal_pg = "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/project_groups.json"
+    if sync_operational and os.path.exists(os.path.dirname(op_webterminal_pg)):
+        try:
+            curr_pg = read_json(op_webterminal_pg) if os.path.exists(op_webterminal_pg) else {}
+            curr_pg.update(project_groups)
+            atomic_write_json(op_webterminal_pg, curr_pg)
+        except Exception:
+            pass
+
+    home_wt_pg = os.path.expanduser("~/.webterminal/project_groups.json")
+    if sync_operational and os.path.exists(os.path.dirname(home_wt_pg)):
+        try:
+            curr_pg = read_json(home_wt_pg) if os.path.exists(home_wt_pg) else {}
+            curr_pg.update(project_groups)
+            atomic_write_json(home_wt_pg, curr_pg)
+        except Exception:
+            pass
+
     print(f"[+] Successfully generated all derived mappings from {REGISTRY_FILE}")
     print(f"    - Projects tracked: {len(projects)}")
     print(f"    - Git repositories: {len(git_repos)}")

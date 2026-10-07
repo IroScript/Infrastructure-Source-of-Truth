@@ -84,8 +84,31 @@ class GitPushWatcher:
             pid_name = p.get('project_id', '')
             remote = p.get('git', {}).get('remote', '')
             if remote and p.get('git', {}).get('backup_required', True):
-                last = self.last_successful_pushes.get(pid_name, {})
-                remote_parity[pid_name] = 'VERIFIED' if last else 'UNKNOWN'
+                if pid_name in self.pending_pushes:
+                    remote_parity[pid_name] = 'PUSH_PENDING_RETRY'
+                else:
+                    repo_path = Path(p.get('canonical_path', '')).resolve()
+                    branch = p.get('git', {}).get('branch', '') or GitPusher.get_current_branch(repo_path)
+                    local_sha = GitPusher.get_head_sha(repo_path) if repo_path.is_dir() else ''
+                    remote_sha = ''
+                    if local_sha and repo_path.is_dir():
+                        probe = subprocess.run(
+                            ['git', 'ls-remote', '--exit-code', remote, f'refs/heads/{branch}'],
+                            capture_output=True, text=True, timeout=10, env=GitPusher._git_env()
+                        )
+                        if probe.returncode != 0:
+                            probe = subprocess.run(
+                                ['git', '-C', str(repo_path), 'ls-remote', '--exit-code', 'origin', f'refs/heads/{branch}'],
+                                capture_output=True, text=True, timeout=10, env=GitPusher._git_env()
+                            )
+                        if probe.returncode == 0 and probe.stdout.strip():
+                            remote_sha = probe.stdout.split()[0]
+                    if local_sha and remote_sha and local_sha == remote_sha:
+                        remote_parity[pid_name] = 'VERIFIED'
+                    elif not remote_sha:
+                        remote_parity[pid_name] = 'UNKNOWN'
+                    else:
+                        remote_parity[pid_name] = f'MISMATCH (local={local_sha[:8]}, remote={remote_sha[:8]})'
             else:
                 remote_parity[pid_name] = 'LOCAL_ONLY'
         return {'schema_version': '1.0.0', 'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'WATCHER_PROCESS': {'running': self.running, 'pid': pid, 'alive': is_alive}, 'WATCHER_EVENT_SOURCE': self.event_source, 'WATCHER_QUEUE': {'active_queues': len(self.project_queues), 'queued_projects': list(self.project_queues.keys())}, 'PROJECT_LOCKS': {'active_locks': []}, 'PENDING_COMMITS': [], 'PENDING_PUSHES': list(self.pending_pushes.values()), 'LAST_SUCCESSFUL_PUSH': self.last_successful_pushes, 'REMOTE_PARITY': remote_parity, 'FAILED_RETRIES': self.failed_retries}
@@ -105,6 +128,45 @@ class GitPushWatcher:
             with repo_lock(repo_path, timeout_seconds=5.0):
                 st = subprocess.run(['git', '-C', str(repo_path), 'status', '--porcelain'], capture_output=True, text=True, timeout=15)
                 if not st.stdout.strip():
+                    if backup_required and remote:
+                        local_sha = GitPusher.get_head_sha(repo_path)
+                        last = self.last_successful_pushes.get(pid, {})
+                        is_pending = pid in self.pending_pushes
+                        needs_retry = is_pending or (local_sha and last.get('commit_sha') != local_sha)
+                        if not needs_retry and local_sha:
+                            probe = subprocess.run(['git', 'ls-remote', '--exit-code', remote, f'refs/heads/{branch}'],
+                                                   capture_output=True, text=True, timeout=10, env=GitPusher._git_env())
+                            if probe.returncode != 0:
+                                probe = subprocess.run(['git', '-C', str(repo_path), 'ls-remote', '--exit-code', 'origin', f'refs/heads/{branch}'],
+                                                       capture_output=True, text=True, timeout=10, env=GitPusher._git_env())
+                            if probe.returncode == 0 and probe.stdout.strip():
+                                if probe.stdout.split()[0] != local_sha:
+                                    needs_retry = True
+                            else:
+                                needs_retry = True
+                        if needs_retry:
+                            push_ok, push_msg = GitPusher.push_and_verify_parity(repo_path, branch, 'origin', canonical_remote_url=remote)
+                            if push_ok:
+                                with self._lock:
+                                    self.last_successful_pushes[pid] = {
+                                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                                        'commit_sha': local_sha,
+                                        'branch': branch,
+                                        'remote': remote
+                                    }
+                                    self.pending_pushes.pop(pid, None)
+                                return (True, 'PENDING_PUSH_RESOLVED_WITH_REMOTE_PARITY')
+                            else:
+                                with self._lock:
+                                    self.pending_pushes[pid] = {
+                                        'project_id': pid,
+                                        'commit_sha': local_sha,
+                                        'error': push_msg,
+                                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                                        'retry_count': self.pending_pushes.get(pid, {}).get('retry_count', 0) + 1
+                                    }
+                                    self.failed_retries += 1
+                                return (False, push_msg)
                     return (True, 'CLEAN_NO_CHANGES')
                 pre_fp = SnapshotManager.capture_working_fingerprints(repo_path, self.config.ignored_patterns)
                 staged_ok, stage_msg = SnapshotManager.stage_changes(repo_path)

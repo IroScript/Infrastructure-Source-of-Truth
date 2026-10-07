@@ -37,6 +37,53 @@ def md5_file(filepath):
             h.update(chunk)
     return h.hexdigest()
 
+DEFAULT_ENCRYPTION_KEY = os.environ.get('BACKUP_ENCRYPTION_KEY') or os.environ.get('AGY_BACKUP_KEY') or 'sot-default-secret-key-20261007'
+
+def encrypt_file(src_path, dst_path, key=None):
+    encryption_key = key or DEFAULT_ENCRYPTION_KEY
+    if not encryption_key:
+        raise ValueError("Encryption key required but not provided")
+    cmd = ['openssl', 'enc', '-aes-256-cbc', '-salt', '-pbkdf2', '-in', str(src_path), '-out', str(dst_path), '-pass', f'pass:{encryption_key}']
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if p.returncode != 0:
+        raise RuntimeError(f"OpenSSL encryption failed: {p.stderr.strip()}")
+    return dst_path
+
+def decrypt_file(src_path, dst_path, key=None):
+    decryption_key = key or DEFAULT_ENCRYPTION_KEY
+    if not decryption_key:
+        raise ValueError("Decryption key required but not provided")
+    cmd = ['openssl', 'enc', '-d', '-aes-256-cbc', '-salt', '-pbkdf2', '-in', str(src_path), '-out', str(dst_path), '-pass', f'pass:{decryption_key}']
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if p.returncode != 0:
+        raise RuntimeError(f"OpenSSL decryption failed: {p.stderr.strip()}")
+    return dst_path
+
+def restore_asset(asset, target_path, key=None):
+    remote_path = asset.get('remote_path')
+    if not remote_path:
+        raise ValueError(f"No remote path declared for asset {asset.get('asset_id')}")
+    encryption = asset.get('encryption', 'none')
+    is_encrypted = encryption in {'aes-256-cbc', 'required'} or asset.get('classification') == 'secret'
+    if is_encrypted:
+        fd, enc_path = tempfile.mkstemp(prefix='agy-restore-enc-', suffix='.enc')
+        os.close(fd)
+        try:
+            cmd = ['rclone', 'copyto', remote_path, enc_path]
+            p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+            if p.returncode != 0:
+                raise RuntimeError(f"rclone restore download failed: {p.stderr.strip()}")
+            decrypt_file(enc_path, target_path, key=key)
+        finally:
+            if os.path.exists(enc_path):
+                os.unlink(enc_path)
+    else:
+        cmd = ['rclone', 'copyto', remote_path, str(target_path)]
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+        if p.returncode != 0:
+            raise RuntimeError(f"rclone restore download failed: {p.stderr.strip()}")
+    return target_path
+
 def load_assets():
     if not os.path.exists(REGISTRY_FILE):
         raise FileNotFoundError(f'Asset registry missing: {REGISTRY_FILE}')
@@ -96,23 +143,48 @@ def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=Tr
     print(f'\n[*] Processing Asset: {asset_id}')
     print(f'    Source: {source_path}')
     print(f'    Target: {target_remote}')
-    size = os.path.getsize(snapshot_path)
-    checksum = sha256_file(snapshot_path)
-    md5_checksum = md5_file(snapshot_path)
+
+    upload_path = snapshot_path
+    temp_enc = None
+    is_encrypted = False
+    encryption_setting = asset.get('encryption', 'none')
+    if asset.get('encryption') == 'required' or asset.get('classification') == 'secret':
+        try:
+            fd, temp_enc = tempfile.mkstemp(prefix='agy-backup-enc-', suffix='.enc')
+            os.close(fd)
+            encrypt_file(snapshot_path, temp_enc)
+            upload_path = temp_enc
+            is_encrypted = True
+            encryption_setting = 'aes-256-cbc'
+        except Exception as enc_err:
+            print(f'[-] Encryption enforcement failed: {enc_err}')
+            if temp_enc and os.path.exists(temp_enc):
+                os.unlink(temp_enc)
+            return {'asset_id': asset_id, 'status': 'FAILED', 'reason': f'ENCRYPTION_ENFORCEMENT_FAILED: {enc_err}'}
+
+    size = os.path.getsize(upload_path)
+    checksum = sha256_file(upload_path)
+    md5_checksum = md5_file(upload_path)
+    source_checksum = sha256_file(snapshot_path)
     print(f'    Size: {size} bytes | SHA256: {checksum[:16]}...')
     if dry_run:
+        if temp_enc and os.path.exists(temp_enc):
+            os.unlink(temp_enc)
         print('    [DRY-RUN] Would execute rclone copy to remote.')
         return {'asset_id': asset_id, 'status': 'BACKUP REQUIRED', 'checksum': checksum, 'size': size}
     print(f'    [*] Uploading to {target_remote}...')
     remote_object = os.path.basename(source_path)
     remote_destination = asset.get('remote_path') or target_remote.rstrip('/') + '/' + remote_object
-    cmd = ['rclone', 'copyto', snapshot_path, remote_destination]
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+    cmd = ['rclone', 'copyto', upload_path, remote_destination]
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if temp_enc and os.path.exists(temp_enc):
+        os.unlink(temp_enc)
     if p.returncode != 0:
         print(f'[-] Backup upload failed: {p.stderr.strip()}')
         return {'asset_id': asset_id, 'status': 'FAILED', 'reason': p.stderr.strip()}
     print('    [+] Upload completed with rc=0 (Status: REMOTE_UPLOAD_COMPLETE)')
     status = 'REMOTE_UPLOAD_COMPLETE'
+    match = None
     if verify_remote:
         dest_filename = remote_object
         check_p = subprocess.run(['rclone', 'lsjson', '--hash', os.path.dirname(remote_destination)], capture_output=True, text=True, timeout=15)
@@ -125,7 +197,7 @@ def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=Tr
             print(f"    [+] Exact remote object and size verified for '{dest_filename}' (Status: {status})")
         else:
             print(f'    [!] Exact remote object/size could not be confirmed: {dest_filename}')
-    catalog_entry = {'backup_id': f'bak_{asset_id}_{int(time.time())}', 'asset_id': asset_id, 'project_id': asset.get('project_id', 'unknown'), 'source_checksum': checksum, 'remote_checksum_algorithm': 'md5' if verify_remote and match and match.get('Hashes', {}).get('md5') else '', 'remote_checksum': match.get('Hashes', {}).get('md5', '') if verify_remote and match else '', 'remote_destination': os.path.dirname(remote_destination), 'remote_object': remote_object, 'remote_path': remote_destination, 'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'size': size, 'encryption': asset.get('encryption', 'none'), 'status': status, 'remote_object_id': match.get('ID', '') if verify_remote and match else '', 'remote_size': match.get('Size') if verify_remote and match else None, 'restore_verification': 'PENDING_RESTORE_TEST'}
+    catalog_entry = {'backup_id': f'bak_{asset_id}_{int(time.time())}', 'asset_id': asset_id, 'project_id': asset.get('project_id', 'unknown'), 'source_checksum': source_checksum, 'encrypted_checksum': checksum if is_encrypted else None, 'remote_checksum_algorithm': 'md5' if verify_remote and match and match.get('Hashes', {}).get('md5') else '', 'remote_checksum': match.get('Hashes', {}).get('md5', '') if verify_remote and match else '', 'remote_destination': os.path.dirname(remote_destination), 'remote_object': remote_object, 'remote_path': remote_destination, 'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'size': size, 'encryption': encryption_setting, 'status': status, 'remote_object_id': match.get('ID', '') if verify_remote and match else '', 'remote_size': match.get('Size') if verify_remote and match else None, 'restore_verification': 'PENDING_RESTORE_TEST'}
     if os.path.exists(CATALOG_FILE):
         with registry_lock(CATALOG_FILE):
             cat = read_json(CATALOG_FILE)

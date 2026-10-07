@@ -54,7 +54,9 @@ def _create_project_locked(args):
         with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write(existing + '\n# AGY fail-closed defaults\n.env*\n!.env.example\n!.env.template\n*.pem\n*.key\n*.p12\n*.pfx\n*.db\n*.sqlite\n*.sqlite3\n*.rdb\n*.log\nnode_modules/\n.venv/\nvenv/\ntarget/\nbuild/\ndist/\nwa_auth/\n')
         safe_stage(real_path)
-        subprocess.run(['git', '-C', real_path, 'commit', '-m', f'initial commit for {args.name or os.path.basename(real_path)}'], check=True, timeout=15)
+        subprocess.run(['git', '-C', real_path, 'commit', '-m', f'User Requested : initial commit for {args.name or os.path.basename(real_path)}'], check=True, timeout=15)
+        branch_name = args.branch or 'main'
+        subprocess.run(['git', '-C', real_path, 'checkout', '-B', branch_name], check=True, timeout=15)
     remote = args.remote
     if not remote and (not args.local_only):
         p = subprocess.run(['git', '-C', real_path, 'config', '--get', 'remote.origin.url'], capture_output=True, text=True, timeout=15)
@@ -94,8 +96,28 @@ def _create_project_locked(args):
             push_verified = True
         except (subprocess.CalledProcessError, RuntimeError) as exc:
             print(f'[-] REMOTE PUSH/VERIFY FAILED: {exc}; recording incomplete onboarding')
+    if args.tmux:
+        try:
+            sess, *win = args.tmux.split(':', 1)
+            wname = win[0] if win else args.id or os.path.basename(real_path)
+            for tmux_cmd in [['tmux'], ['tmux', '-L', 'sot-acceptance-isolated']]:
+                has_sess = subprocess.run([*tmux_cmd, 'has-session', '-t', sess], capture_output=True, timeout=5)
+                if has_sess.returncode == 0:
+                    subprocess.run([*tmux_cmd, 'new-window', '-d', '-t', sess, '-n', wname, '-c', real_path], capture_output=True, timeout=5)
+        except Exception:
+            pass
     reg_args = argparse.Namespace(path=real_path, name=args.name or os.path.basename(real_path), id=args.id, type=args.type, remote=remote, branch=args.branch, visibility='local_only' if args.local_only else 'private', local_only=args.local_only, tmux=args.tmux, whatsapp_group=args.whatsapp_group, whatsapp_route=args.whatsapp_route, data_files=args.data_files, data_classification=args.data_classification, push_verified=push_verified, verification_profile=args.verification_profile, dry_run=False)
     entry = register_project.register_project(reg_args)
+    if push_verified or args.local_only:
+        try:
+            import finalize_project_onboarding
+            fin_args = argparse.Namespace(project_id=entry['project_id'], push=True)
+            fin_rc = finalize_project_onboarding.finalize(fin_args)
+            if fin_rc == 0 or fin_rc is None:
+                reg = register_project.read_json(REGISTRY_FILE)
+                entry = next((p for p in reg.get('projects', []) if p.get('project_id') == entry['project_id']), entry)
+        except Exception as fin_exc:
+            print(f'[-] Finalize onboarding notice: {fin_exc}')
     print('\n==========================================')
     print(f"  PROJECT {('ONBOARDING COMPLETE' if entry['status'] == 'ACTIVE' else 'ONBOARDING INCOMPLETE')}: {entry['project_id']}")
     print(f"  Canonical Path: {entry['canonical_path']}")
@@ -118,4 +140,6 @@ if __name__ == '__main__':
     parser.add_argument('--data-classification', choices=['unknown', 'source_only', 'persistent_data', 'mixed'], default='unknown')
     parser.add_argument('--verification-profile', default='deterministic', help='Verification profile')
     args = parser.parse_args()
-    create_project(args)
+    entry = create_project(args)
+    if entry.get('status') != 'ACTIVE':
+        sys.exit(1)
