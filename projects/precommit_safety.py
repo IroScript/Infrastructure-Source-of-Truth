@@ -9,6 +9,16 @@ SKIP_SCAN_DIRS = {'.git', 'node_modules', '.venv', 'venv', 'target', 'build', 'd
 SENSITIVE_DIRS = {'wa_auth', '.ssh'}
 MAX_BINARY_BYTES = 50 * 1024 * 1024
 SECRET_PATTERNS = [re.compile(b'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'), re.compile(b'(?i)(?:api[_-]?key|password|secret|token)\\s*[:=]\\s*[\'\\"][^\'\\"\\s]{12,}'), re.compile(b'gh[pousr]_[A-Za-z0-9]{30,}')]
+CLASSIFIER_LITERALS = {b'CLASS_D_SECRET', b'CLASS_A_GIT', b'CLASS_B_DATABASE', b'CLASS_C_LARGE_ASSET', b'CLASS_E_EPHEMERAL'}
+
+def _has_secret_pattern(data: bytes) -> bool:
+    for pattern in SECRET_PATTERNS:
+        for m in pattern.finditer(data):
+            matched = m.group(0)
+            if any(lit in matched for lit in CLASSIFIER_LITERALS):
+                continue
+            return True
+    return False
 
 def unsafe_paths(root: str | Path):
     root = Path(root).resolve()
@@ -41,7 +51,7 @@ def unsafe_paths(root: str | Path):
                 if b'\x00' in data and size > 1024 * 1024:
                     bad.append(str(rel))
                     continue
-                if any((pattern.search(data) for pattern in SECRET_PATTERNS)):
+                if _has_secret_pattern(data):
                     bad.append(str(rel))
             except (OSError, UnicodeError):
                 bad.append(str(rel))

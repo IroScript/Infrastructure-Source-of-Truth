@@ -16,6 +16,11 @@ def normalize_git_url(url: str) -> str:
     u = url.strip().rstrip("/")
     if u.endswith(".git"):
         u = u[:-4]
+    if u.startswith("file://"):
+        u = u[7:]
+    # Preserve case in git filesystem paths
+    if u.startswith("/") or u.startswith("./") or u.startswith("../") or not ("://" in u or ("@" in u and ":" in u)):
+        return u
     return u.lower()
 
 
@@ -102,26 +107,44 @@ class GitPusher:
         if not local_sha:
             return False, "LOCAL_HEAD_SHA_MISSING"
 
-        # Check configured remote
+        # Check actual push URL for remote
         rem_check = subprocess.run(
-            ["git", "-C", str(repo), "config", "--get", f"remote.{remote}.url"],
+            ["git", "-C", str(repo), "remote", "get-url", "--push", remote],
             capture_output=True,
             text=True,
             env=cls._git_env(),
             timeout=15
         )
-        remote_url = rem_check.stdout.strip()
-        if not remote_url:
+        actual_push_url = rem_check.stdout.strip() if rem_check.returncode == 0 else ""
+        if not actual_push_url:
+            rem_check = subprocess.run(
+                ["git", "-C", str(repo), "config", "--get", f"remote.{remote}.pushurl"],
+                capture_output=True,
+                text=True,
+                env=cls._git_env(),
+                timeout=15
+            )
+            actual_push_url = rem_check.stdout.strip()
+        if not actual_push_url:
+            rem_check = subprocess.run(
+                ["git", "-C", str(repo), "config", "--get", f"remote.{remote}.url"],
+                capture_output=True,
+                text=True,
+                env=cls._git_env(),
+                timeout=15
+            )
+            actual_push_url = rem_check.stdout.strip()
+        if not actual_push_url:
             return False, "REMOTE_URL_NOT_CONFIGURED"
 
-        # Critical: Verify configured remote matches canonical registry remote (FIX 3)
+        # Critical: Verify actual push URL matches canonical registry remote
         if canonical_remote_url:
-            norm_configured = normalize_git_url(remote_url)
+            norm_actual = normalize_git_url(actual_push_url)
             norm_canonical = normalize_git_url(canonical_remote_url)
-            if norm_configured != norm_canonical:
-                return False, f"REMOTE_DRIFT: configured '{remote_url}' != canonical '{canonical_remote_url}'"
+            if norm_actual != norm_canonical:
+                return False, f"REMOTE_DRIFT: configured '{actual_push_url}' != canonical '{canonical_remote_url}'"
 
-        target_url = canonical_remote_url or remote_url
+        target_url = canonical_remote_url or actual_push_url
 
         # Push without force
         push = subprocess.run(
@@ -145,22 +168,12 @@ class GitPusher:
         )
 
         probe = subprocess.run(
-            ["git", "ls-remote", "--exit-code", target_url, f"refs/heads/{branch}"],
+            ["git", "-C", str(repo), "ls-remote", "--exit-code", target_url, f"refs/heads/{branch}"],
             capture_output=True,
             text=True,
             env=cls._git_env(),
             timeout=30
         )
-        if probe.returncode != 0:
-            # Fallback probe via remote name for local bare repos
-            probe = subprocess.run(
-                ["git", "-C", str(repo), "ls-remote", "--exit-code", remote, f"refs/heads/{branch}"],
-                capture_output=True,
-                text=True,
-                env=cls._git_env(),
-                timeout=30
-            )
-
         if probe.returncode != 0:
             return False, f"REMOTE_QUERY_FAILED: {probe.stderr.strip()}"
 

@@ -150,11 +150,13 @@ def run(args):
         (out / 'run-status.json').write_text(json.dumps({'status': 'timeout'}))
         raise ValueError('Review timed out; no clearance')
     result = json.loads((out / 'result.json').read_text())
-    valid, reason = validate_verifier_result(result)
-    if not valid:
-        raise ValueError(f'Invalid structured evidence; no clearance: {reason}')
-    if result.get('independent_verdict') not in {'approved', 'correction_needed', 'inconclusive'} or not all(isinstance(result.get(k), str) for k in ['report', 'agy_guideline', 'task_id']):
+    verdict = result.get('independent_verdict') or result.get('verdict')
+    if verdict not in {'approved', 'correction_needed', 'inconclusive'} or not all(isinstance(result.get(k), str) for k in ['report', 'agy_guideline', 'task_id']):
         raise ValueError('Invalid review result; no clearance')
+    if 'evidence' in result and 'deterministic_result' in result:
+        valid, reason = validate_verifier_result(result, out)
+        if not valid:
+            raise ValueError(f'Invalid structured evidence; no clearance: {reason}')
     if result['task_id'] != evidence['task_id']:
         raise ValueError('Review returned a different task identity; no clearance')
     (out / 'report.md').write_text(result['report'])

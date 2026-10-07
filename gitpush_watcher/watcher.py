@@ -100,10 +100,22 @@ class GitPushWatcher:
                     remote_sha = ''
                     if local_sha and repo_path.is_dir():
                         rem_check = subprocess.run(
-                            ['git', '-C', str(repo_path), 'config', '--get', 'remote.origin.url'],
+                            ['git', '-C', str(repo_path), 'remote', 'get-url', '--push', 'origin'],
                             capture_output=True, text=True, timeout=5, env=GitPusher._git_env()
                         )
-                        configured_url = rem_check.stdout.strip()
+                        configured_url = rem_check.stdout.strip() if rem_check.returncode == 0 else ""
+                        if not configured_url:
+                            rem_check = subprocess.run(
+                                ['git', '-C', str(repo_path), 'config', '--get', 'remote.origin.pushurl'],
+                                capture_output=True, text=True, timeout=5, env=GitPusher._git_env()
+                            )
+                            configured_url = rem_check.stdout.strip()
+                        if not configured_url:
+                            rem_check = subprocess.run(
+                                ['git', '-C', str(repo_path), 'config', '--get', 'remote.origin.url'],
+                                capture_output=True, text=True, timeout=5, env=GitPusher._git_env()
+                            )
+                            configured_url = rem_check.stdout.strip()
                         from .pusher import normalize_git_url
                         if configured_url and normalize_git_url(configured_url) != normalize_git_url(remote):
                             remote_parity[pid_name] = f'REMOTE_DRIFT: configured {configured_url} != {remote}'

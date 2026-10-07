@@ -26,10 +26,50 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-REGISTRY_PATH = "/home/azureuser/AGY-MASTER/POLICIES/protected_registry.json"
-INCIDENT_DIR = "/home/azureuser/AGY-MASTER/INCIDENTS/active"
-INCIDENT_LOG = "/home/azureuser/AGY-MASTER/INCIDENTS/delete_attempts.jsonl"
-ARCHIVE_ROOT = "/home/azureuser/GLOBAL-ARCHIVE"
+def resolve_roots_and_incident_paths():
+    home = os.environ.get("HOME", str(Path.home()))
+    projects_root = os.environ.get("PROJECTS_ROOT")
+    state_root = os.environ.get("STATE_ROOT") or os.environ.get("SOT_STATE_ROOT")
+    
+    profile_path = os.environ.get("SOT_DEPLOYMENT_PROFILE") or os.environ.get("DEPLOYMENT_PROFILE")
+    if profile_path and os.path.exists(profile_path):
+        try:
+            with open(profile_path, "r", encoding="utf-8") as f:
+                prof = json.load(f)
+            roots = prof.get("roots", {})
+            if "HOME" in roots:
+                home = roots["HOME"].replace("/home/azureuser", os.environ.get("HOME", home))
+            if "PROJECTS_ROOT" in roots and not projects_root:
+                projects_root = roots["PROJECTS_ROOT"].replace("/home/azureuser", home)
+            if "STATE_ROOT" in roots and not state_root:
+                state_root = roots["STATE_ROOT"].replace("/home/azureuser", home)
+        except Exception:
+            pass
+
+    if not projects_root:
+        projects_root = os.path.join(home, "IroScript_Projects")
+
+    inc_dir = os.environ.get("INCIDENT_DIR") or os.environ.get("SOT_INCIDENT_DIR")
+    inc_log = os.environ.get("INCIDENT_LOG") or os.environ.get("SOT_INCIDENT_LOG")
+    
+    if not inc_dir:
+        if state_root:
+            inc_dir = os.path.join(state_root, "incidents", "active")
+        else:
+            inc_dir = os.path.join(home, "AGY-MASTER", "INCIDENTS", "active")
+
+    if not inc_log:
+        if state_root:
+            inc_log = os.path.join(state_root, "incidents", "delete_attempts.jsonl")
+        else:
+            inc_log = os.path.join(home, "AGY-MASTER", "INCIDENTS", "delete_attempts.jsonl")
+
+    registry_path = os.environ.get("PROTECTED_REGISTRY_PATH", os.path.join(home, "AGY-MASTER", "POLICIES", "protected_registry.json"))
+    archive_root = os.environ.get("GLOBAL_ARCHIVE_ROOT", os.path.join(home, "GLOBAL-ARCHIVE"))
+
+    return home, projects_root, inc_dir, inc_log, registry_path, archive_root
+
+HOME, PROJECTS_ROOT, INCIDENT_DIR, INCIDENT_LOG, REGISTRY_PATH, ARCHIVE_ROOT = resolve_roots_and_incident_paths()
 
 # System-level root paths that must never be wiped
 CRITICAL_SYSTEM_ROOTS = [
@@ -65,47 +105,49 @@ PROTECTED_CONFIG_PATTERNS = [
 ]
 
 # Project Boundaries mapping
-PROJECT_BOUNDARIES = {
-    "yt": [
-        "/home/azureuser/IroScript_Projects/Social Media/youtube"
-    ],
-    "frappe": [
-        "/home/azureuser/Frappe-erp-Alco",
-        "/home/azureuser/IroScript_Projects/Frappe-erp-Alco"
-    ],
-    "tg": [
-        "/home/azureuser/IroScript_Projects/Social Media/telegram-bot"
-    ],
-    "history": [
-        "/home/azureuser/IroScript_Projects/Personal Life/PERSONAL AI AGENT",
-        "/home/azureuser/IroScript_Projects/Personal Life/Digital History management",
-        "/home/azureuser/IroScript_Projects/Digital History"
-    ],
-    "kids": [
-        "/home/azureuser/IroScript_Projects/Personal Life/kids_tube_with_folder_seection"
-    ],
-    "rust": [
-        "/home/azureuser/IroScript_Projects/Personal Life/Rust_Task_With_Time_Keeping_And_Live_Note"
-    ],
-    "article": [
-        "/home/azureuser/IroScript_Projects/Article_Publishing_Management/Article-Publishing-Platform"
-    ],
-    "game": [
-        "/home/azureuser/IroScript_Projects/Article_Publishing_Management/3D-Game-Design-Studio"
-    ],
-    "research": [
-        "/home/azureuser/IroScript_Projects/Ask-And-Research-Agent",
-        "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Ask-And-Research"
-    ],
-    "report": [
-        "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/Agy Whatsapp Agents/Reporting-Agent"
-    ]
-}
+def get_project_boundaries(home=None, projects_root=None):
+    h = home or HOME
+    pr = projects_root or PROJECTS_ROOT
+    return {
+        "yt": [
+            os.path.join(pr, "Social Media", "youtube")
+        ],
+        "frappe": [
+            os.path.join(h, "Frappe-erp-Alco"),
+            os.path.join(pr, "Frappe-erp-Alco")
+        ],
+        "tg": [
+            os.path.join(pr, "Social Media", "telegram-bot")
+        ],
+        "history": [
+            os.path.join(pr, "Personal Life", "PERSONAL AI AGENT"),
+            os.path.join(pr, "Personal Life", "Digital History management"),
+            os.path.join(pr, "Digital History")
+        ],
+        "kids": [
+            os.path.join(pr, "Personal Life", "kids_tube_with_folder_seection")
+        ],
+        "rust": [
+            os.path.join(pr, "Personal Life", "Rust_Task_With_Time_Keeping_And_Live_Note")
+        ],
+        "article": [
+            os.path.join(pr, "Article_Publishing_Management", "Article-Publishing-Platform")
+        ],
+        "game": [
+            os.path.join(pr, "Article_Publishing_Management", "3D-Game-Design-Studio")
+        ],
+        "research": [
+            os.path.join(pr, "Ask-And-Research-Agent"),
+            os.path.join(pr, "Whatsapp master", "webterminal", "Agy Whatsapp Agents", "Ask-And-Research")
+        ],
+        "report": [
+            os.path.join(pr, "Whatsapp master", "webterminal", "Agy Whatsapp Agents", "Reporting-Agent")
+        ]
+    }
+
+PROJECT_BOUNDARIES = get_project_boundaries()
 
 def log_incident(tool_name, details, reason, rule_id):
-    os.makedirs(INCIDENT_DIR, exist_ok=True)
-    os.makedirs(os.path.dirname(INCIDENT_LOG), exist_ok=True)
-    
     now = datetime.now(timezone.utc)
     inc_id = f"INC-DEL-{now.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
     
@@ -122,14 +164,16 @@ def log_incident(tool_name, details, reason, rule_id):
     }
 
     try:
-        inc_file = os.path.join(INCIDENT_DIR, f"{inc_id}.json")
+        _, _, inc_dir, inc_log, _, _ = resolve_roots_and_incident_paths()
+        os.makedirs(inc_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(inc_log), exist_ok=True)
+        inc_file = os.path.join(inc_dir, f"{inc_id}.json")
         with open(inc_file, "w", encoding="utf-8") as f:
             json.dump(incident, f, indent=2)
-        with open(INCIDENT_LOG, "a", encoding="utf-8") as f:
-            f.write(json.dumps(incident) + "\n")
+        with open(inc_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(incident) + chr(10))
     except Exception as e:
-        sys.stderr.write(f"Failed to log incident: {e}\n")
-
+        sys.stderr.write(f"Failed to log incident: {e}" + chr(10))
     return incident
 
 def identify_caller_project(cwd_hint=None):
@@ -308,19 +352,27 @@ def main():
         if cwd_arg and caller_key:
             viol, v_msg = check_cross_project_violation(caller_key, allowed_roots, cwd_arg)
             if viol:
-                inc = log_incident(tool_name, {"Cwd": cwd_arg}, v_msg, "RULE_79_INTER_AGENT_ISOLATION")
+                try:
+                    inc = log_incident(tool_name, {"Cwd": cwd_arg}, v_msg, "RULE_79_INTER_AGENT_ISOLATION")
+                    inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+                except Exception:
+                    inc_id = "UNKNOWN"
                 print(json.dumps({
                     "decision": "deny",
-                    "reason": f"🛑 [BOUNDARY-GUARD HARD DENIAL: RULE_79] {v_msg}. Inc-ID: {inc['incident_id']}."
+                    "reason": f"🛑 [BOUNDARY-GUARD HARD DENIAL: RULE_79] {v_msg}. Inc-ID: {inc_id}."
                 }))
                 return
 
         is_dest, reason, rule_id = inspect_command(cmd_line, caller_key, allowed_roots)
         if is_dest:
-            inc = log_incident(tool_name, {"CommandLine": cmd_line}, reason, rule_id)
+            try:
+                inc = log_incident(tool_name, {"CommandLine": cmd_line}, reason, rule_id)
+                inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+            except Exception:
+                inc_id = "UNKNOWN"
             print(json.dumps({
                 "decision": "deny",
-                "reason": f"🛑 [DELETE-GUARD HARD DENIAL: {rule_id}] {reason}. Inc-ID: {inc['incident_id']}."
+                "reason": f"🛑 [DELETE-GUARD HARD DENIAL: {rule_id}] {reason}. Inc-ID: {inc_id}."
             }))
             return
 
@@ -329,19 +381,27 @@ def main():
         if caller_key:
             viol, v_msg = check_cross_project_violation(caller_key, allowed_roots, target_file)
             if viol:
-                inc = log_incident(tool_name, {"TargetFile": target_file}, v_msg, "RULE_79_INTER_AGENT_ISOLATION")
+                try:
+                    inc = log_incident(tool_name, {"TargetFile": target_file}, v_msg, "RULE_79_INTER_AGENT_ISOLATION")
+                    inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+                except Exception:
+                    inc_id = "UNKNOWN"
                 print(json.dumps({
                     "decision": "deny",
-                    "reason": f"🛑 [BOUNDARY-GUARD HARD DENIAL: RULE_79] {v_msg}. Inc-ID: {inc['incident_id']}."
+                    "reason": f"🛑 [BOUNDARY-GUARD HARD DENIAL: RULE_79] {v_msg}. Inc-ID: {inc_id}."
                 }))
                 return
 
         if is_path_protected_config(target_file):
             reason = f"Overwriting/modifying protected governance/hook/verifier target '{target_file}' is strictly prohibited (Rule 38)"
-            inc = log_incident(tool_name, {"TargetFile": target_file}, reason, "RULE_38_POLICY_TAMPERING")
+            try:
+                inc = log_incident(tool_name, {"TargetFile": target_file}, reason, "RULE_38_POLICY_TAMPERING")
+                inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+            except Exception:
+                inc_id = "UNKNOWN"
             print(json.dumps({
                 "decision": "deny",
-                "reason": f"🛑 [DELETE-GUARD HARD DENIAL: RULE_38] {reason}. Inc-ID: {inc['incident_id']}."
+                "reason": f"🛑 [DELETE-GUARD HARD DENIAL: RULE_38] {reason}. Inc-ID: {inc_id}."
             }))
             return
 
@@ -350,10 +410,14 @@ def main():
         if caller_key:
             viol, v_msg = check_cross_project_violation(caller_key, allowed_roots, abs_path)
             if viol:
-                inc = log_incident(tool_name, {"AbsolutePath": abs_path}, v_msg, "RULE_79_INTER_AGENT_ISOLATION")
+                try:
+                    inc = log_incident(tool_name, {"AbsolutePath": abs_path}, v_msg, "RULE_79_INTER_AGENT_ISOLATION")
+                    inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+                except Exception:
+                    inc_id = "UNKNOWN"
                 print(json.dumps({
                     "decision": "deny",
-                    "reason": f"🛑 [BOUNDARY-GUARD HARD DENIAL: RULE_79] {v_msg}. Inc-ID: {inc['incident_id']}."
+                    "reason": f"🛑 [BOUNDARY-GUARD HARD DENIAL: RULE_79] {v_msg}. Inc-ID: {inc_id}."
                 }))
                 return
 

@@ -17,6 +17,7 @@ import time
 import sqlite3
 import tempfile
 from contextlib import contextmanager
+from pathlib import Path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(SCRIPT_DIR), 'projects'))
 from atomic_json import atomic_write_json, read_json, registry_lock, project_lock
@@ -37,12 +38,34 @@ def md5_file(filepath):
             h.update(chunk)
     return h.hexdigest()
 
-DEFAULT_ENCRYPTION_KEY = os.environ.get('BACKUP_ENCRYPTION_KEY') or os.environ.get('AGY_BACKUP_KEY') or 'sot-default-secret-key-20261007'
+def resolve_encryption_key(explicit_key=None) -> str:
+    """Resolves externally provisioned encryption key; rejects tracked fallback."""
+    if explicit_key:
+        return str(explicit_key).strip()
+    env_key = os.environ.get('BACKUP_ENCRYPTION_KEY') or os.environ.get('AGY_BACKUP_KEY')
+    if env_key:
+        return env_key.strip()
+    key_file = os.environ.get('BACKUP_KEY_FILE')
+    if not key_file:
+        candidate = Path.home() / '.agents/.verification_secret.key'
+        if candidate.is_file():
+            key_file = str(candidate)
+    if key_file and os.path.isfile(key_file):
+        try:
+            with open(key_file, 'r', encoding='utf-8') as f:
+                k = f.read().strip()
+                if k:
+                    return k
+        except OSError:
+            pass
+    return ""
+
+DEFAULT_ENCRYPTION_KEY = resolve_encryption_key()
 
 def encrypt_file(src_path, dst_path, key=None):
-    encryption_key = key or DEFAULT_ENCRYPTION_KEY
+    encryption_key = resolve_encryption_key(key)
     if not encryption_key:
-        raise ValueError("Encryption key required but not provided")
+        raise ValueError("Encryption key required but not provisioned (set BACKUP_ENCRYPTION_KEY or AGY_BACKUP_KEY)")
     cmd = ['openssl', 'enc', '-aes-256-cbc', '-salt', '-pbkdf2', '-in', str(src_path), '-out', str(dst_path), '-pass', f'pass:{encryption_key}']
     p = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     if p.returncode != 0:
@@ -50,9 +73,9 @@ def encrypt_file(src_path, dst_path, key=None):
     return dst_path
 
 def decrypt_file(src_path, dst_path, key=None):
-    decryption_key = key or DEFAULT_ENCRYPTION_KEY
+    decryption_key = resolve_encryption_key(key)
     if not decryption_key:
-        raise ValueError("Decryption key required but not provided")
+        raise ValueError("Decryption key required but not provisioned (set BACKUP_ENCRYPTION_KEY or AGY_BACKUP_KEY)")
     cmd = ['openssl', 'enc', '-d', '-aes-256-cbc', '-salt', '-pbkdf2', '-in', str(src_path), '-out', str(dst_path), '-pass', f'pass:{decryption_key}']
     p = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     if p.returncode != 0:
@@ -149,10 +172,14 @@ def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=Tr
     is_encrypted = False
     encryption_setting = asset.get('encryption', 'none')
     if asset.get('encryption') in {'aes-256-cbc', 'required'} or asset.get('classification') == 'secret':
+        key = resolve_encryption_key()
+        if not key:
+            print('[-] Encryption key missing for encrypted asset; failing immediately before upload')
+            return {'asset_id': asset_id, 'status': 'FAILED', 'reason': 'ENCRYPTION_KEY_MISSING: Externally provisioned encryption key required'}
         try:
             fd, temp_enc = tempfile.mkstemp(prefix='agy-backup-enc-', suffix='.enc')
             os.close(fd)
-            encrypt_file(snapshot_path, temp_enc)
+            encrypt_file(snapshot_path, temp_enc, key=key)
             upload_path = temp_enc
             is_encrypted = True
             encryption_setting = 'aes-256-cbc'

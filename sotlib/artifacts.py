@@ -97,8 +97,29 @@ def verify(repo_root: Path, profile: dict) -> dict:
                     dest_obj = json.loads(destination.read_text(encoding="utf-8"))
                     exp_obj = json.loads(expected.decode("utf-8"))
                     if isinstance(dest_obj, dict) and isinstance(exp_obj, dict):
-                        if all(k in dest_obj for k in exp_obj):
-                            rule_match = True
+                        if _dict_is_subset(exp_obj, dest_obj):
+                            pkg_ok = True
+                            for _, package in discover_packages(repo_root):
+                                for r_art in package.get("artifacts", []):
+                                    r_dest = Path(resolve_template(r_art["destination_template"], roots)).resolve()
+                                    if r_dest == destination:
+                                        p_src = repo_root / r_art["source"]
+                                        if p_src.suffix == ".json":
+                                            p_text = p_src.read_text(encoding="utf-8")
+                                            for name, value in roots.items():
+                                                p_text = p_text.replace("${" + name + "}", value)
+                                            try:
+                                                p_obj = json.loads(p_text)
+                                                if not _dict_is_subset(p_obj, dest_obj):
+                                                    pkg_ok = False
+                                                    break
+                                            except Exception:
+                                                pkg_ok = False
+                                                break
+                                if not pkg_ok:
+                                    break
+                            if pkg_ok:
+                                rule_match = True
                 except Exception:
                     pass
             if not rule_match:
@@ -176,7 +197,7 @@ def install(repo_root: Path, profile: dict, state_root: Path, dry_run=False) -> 
                         existing_obj = json.loads(target.read_text(encoding="utf-8"))
                         incoming_obj = json.loads(content)
                         if isinstance(existing_obj, dict) and isinstance(incoming_obj, dict):
-                            merged = _deep_merge_dict(incoming_obj, existing_obj)
+                            merged = _deep_merge_dict(existing_obj, incoming_obj)
                             content = json.dumps(merged, indent=2) + "\n"
                     except Exception:
                         pass
@@ -194,7 +215,7 @@ def install(repo_root: Path, profile: dict, state_root: Path, dry_run=False) -> 
                         existing_obj = json.loads(target.read_text(encoding="utf-8"))
                         incoming_obj = json.loads(source.read_text(encoding="utf-8"))
                         if isinstance(existing_obj, dict) and isinstance(incoming_obj, dict):
-                            merged = _deep_merge_dict(incoming_obj, existing_obj)
+                            merged = _deep_merge_dict(existing_obj, incoming_obj)
                             target.parent.mkdir(parents=True, exist_ok=True)
                             fd, temp = tempfile.mkstemp(prefix=".sot-artifact-", dir=target.parent)
                             try:
