@@ -40,10 +40,10 @@ def md5_file(filepath):
 
 def resolve_encryption_key(explicit_key=None) -> str:
     """Resolves externally provisioned encryption key; rejects tracked fallback."""
-    if explicit_key:
+    if explicit_key and str(explicit_key).strip():
         return str(explicit_key).strip()
     env_key = os.environ.get('BACKUP_ENCRYPTION_KEY') or os.environ.get('AGY_BACKUP_KEY')
-    if env_key:
+    if env_key and env_key.strip():
         return env_key.strip()
     key_file = os.environ.get('BACKUP_KEY_FILE')
     if not key_file:
@@ -145,21 +145,21 @@ def consistent_snapshot(source_path):
             source.close()
         yield snapshot
 
-def backup_asset(asset, dry_run=False, verify_remote=True):
+def backup_asset(asset, dry_run=False, verify_remote=True, key=None):
     with project_lock('asset:' + asset['asset_id']):
-        return _backup_asset_locked(asset, dry_run, verify_remote)
+        return _backup_asset_locked(asset, dry_run, verify_remote, key=key)
 
-def _backup_asset_locked(asset, dry_run=False, verify_remote=True):
+def _backup_asset_locked(asset, dry_run=False, verify_remote=True, key=None):
     source_path = asset['source_path']
     if not os.path.exists(source_path):
         return {'asset_id': asset['asset_id'], 'status': 'FAILED', 'reason': 'SOURCE_NOT_FOUND'}
     try:
         with consistent_snapshot(source_path) as snapshot:
-            return _backup_asset_snapshot(asset, snapshot, dry_run, verify_remote)
+            return _backup_asset_snapshot(asset, snapshot, dry_run, verify_remote, key=key)
     except Exception as exc:
         return {'asset_id': asset['asset_id'], 'status': 'FAILED', 'reason': str(exc)}
 
-def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=True):
+def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=True, key=None):
     asset_id = asset['asset_id']
     source_path = asset['source_path']
     target_remote = asset.get('primary_backup_target', '')
@@ -172,14 +172,14 @@ def _backup_asset_snapshot(asset, snapshot_path, dry_run=False, verify_remote=Tr
     is_encrypted = False
     encryption_setting = asset.get('encryption', 'none')
     if asset.get('encryption') in {'aes-256-cbc', 'required'} or asset.get('classification') == 'secret':
-        key = resolve_encryption_key()
-        if not key:
+        enc_key = resolve_encryption_key(key)
+        if not enc_key:
             print('[-] Encryption key missing for encrypted asset; failing immediately before upload')
             return {'asset_id': asset_id, 'status': 'FAILED', 'reason': 'ENCRYPTION_KEY_MISSING: Externally provisioned encryption key required'}
         try:
             fd, temp_enc = tempfile.mkstemp(prefix='agy-backup-enc-', suffix='.enc')
             os.close(fd)
-            encrypt_file(snapshot_path, temp_enc, key=key)
+            encrypt_file(snapshot_path, temp_enc, key=enc_key)
             upload_path = temp_enc
             is_encrypted = True
             encryption_setting = 'aes-256-cbc'

@@ -53,8 +53,10 @@ class GitPushWatcherTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(prefix='sot-watcher-test-')
         self.base = Path(self.temp_dir.name)
+        os.environ['GITPUSH_WATCHER_STATE_FILE'] = str(self.base / 'GITPUSH_WATCHER_STATE.json')
 
     def tearDown(self):
+        os.environ.pop('GITPUSH_WATCHER_STATE_FILE', None)
         self.temp_dir.cleanup()
 
     def _init_repo(self, path: Path) -> Path:
@@ -280,22 +282,3 @@ class GitPushWatcherTests(unittest.TestCase):
         self.assertEqual(len(uuids), num_workers)
 if __name__ == '__main__':
     unittest.main()
-    def test_adversarial_stdin_dev_null_termination(self, temp_home):
-        """FIX 1: Prove deterministic termination with stdin=/dev/null."""
-        import subprocess
-        root = Path("/home/azureuser/IroScript_Projects/Infrastructure-Source-of-Truth")
-        sot_exec = root / "sot"
-        
-        with open(os.devnull, 'r') as devnull:
-            try:
-                # Add some test flag if available, or just run version/help
-                result = subprocess.run(
-                    [sys.executable, str(sot_exec)],
-                    stdin=devnull,
-                    capture_output=True,
-                    timeout=5,
-                    text=True
-                )
-                assert result.returncode in (0, 1, 2)
-            except subprocess.TimeoutExpired:
-                pytest.fail("Process did not terminate when stdin=/dev/null (hanging on prompt?)")

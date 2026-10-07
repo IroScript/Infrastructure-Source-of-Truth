@@ -15,8 +15,11 @@ def _has_secret_pattern(data: bytes) -> bool:
     for pattern in SECRET_PATTERNS:
         for m in pattern.finditer(data):
             matched = m.group(0)
-            if any(lit in matched for lit in CLASSIFIER_LITERALS):
-                continue
+            quote_split = re.split(b"['\"]", matched)
+            if len(quote_split) >= 2:
+                assigned_val = quote_split[-1].rstrip(b"'\";, \t\r\n")
+                if assigned_val in CLASSIFIER_LITERALS:
+                    continue
             return True
     return False
 

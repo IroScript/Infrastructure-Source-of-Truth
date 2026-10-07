@@ -28,21 +28,24 @@ from pathlib import Path
 
 def resolve_roots_and_incident_paths():
     home = os.environ.get("HOME", str(Path.home()))
-    projects_root = os.environ.get("PROJECTS_ROOT")
+    projects_root = os.environ.get("PROJECTS_ROOT") or os.environ.get("AGY_PROJECTS_ROOT")
     state_root = os.environ.get("STATE_ROOT") or os.environ.get("SOT_STATE_ROOT")
     
-    profile_path = os.environ.get("SOT_DEPLOYMENT_PROFILE") or os.environ.get("DEPLOYMENT_PROFILE")
+    profile_path = os.environ.get("SOT_DEPLOYMENT_PROFILE") or os.environ.get("DEPLOYMENT_PROFILE") or os.environ.get("AGY_DEPLOYMENT_PROFILE")
     if profile_path and os.path.exists(profile_path):
         try:
             with open(profile_path, "r", encoding="utf-8") as f:
                 prof = json.load(f)
             roots = prof.get("roots", {})
             if "HOME" in roots:
-                home = roots["HOME"].replace("/home/azureuser", os.environ.get("HOME", home))
+                val = roots["HOME"].replace("$" + "{HOME}", home)
+                home = val.replace("/home/azureuser", os.environ.get("HOME", home))
             if "PROJECTS_ROOT" in roots and not projects_root:
-                projects_root = roots["PROJECTS_ROOT"].replace("/home/azureuser", home)
+                val = roots["PROJECTS_ROOT"].replace("$" + "{HOME}", home)
+                projects_root = val.replace("/home/azureuser", home)
             if "STATE_ROOT" in roots and not state_root:
-                state_root = roots["STATE_ROOT"].replace("/home/azureuser", home)
+                val = roots["STATE_ROOT"].replace("$" + "{HOME}", home)
+                state_root = val.replace("/home/azureuser", home)
         except Exception:
             pass
 

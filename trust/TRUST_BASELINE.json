@@ -89,7 +89,7 @@
     {
       "source": "trust/verification/delete_guard.py",
       "destination": ".agents/hooks/delete_guard.py",
-      "sha256": "b5f2599794d6e5ee76fad8dd98ea89304daee216279b66499fd64b93c56956a0",
+      "sha256": "7db266a939211a4945d40a95c4f59cae7d80f132f603a649d2f19023397a915d",
       "mode": "0755",
       "required": true
     },
@@ -131,7 +131,7 @@
     {
       "source": "trust/verification/run_regression_suite.py",
       "destination": ".agents/run_regression_suite.py",
-      "sha256": "0a4414acb4ef4706130e173a5ed741c4ecf1915edf0d4e1884123677ab82abc9",
+      "sha256": "626a095015a463724f07bb7cf016db4606acbc6eb83c1d452e62114f62f57f95",
       "mode": "0755",
       "required": true
     },

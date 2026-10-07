@@ -14,10 +14,12 @@ from typing import Dict, Optional, Tuple
 def normalize_git_url(url: str) -> str:
     """Normalizes git URL for canonical equivalence comparison."""
     u = url.strip().rstrip("/")
-    if u.endswith(".git"):
+    if u.lower().endswith(".git"):
         u = u[:-4]
+    u = u.rstrip("/")
     if u.startswith("file://"):
         u = u[7:]
+    u = u.rstrip("/")
     # Preserve case in git filesystem paths
     if u.startswith("/") or u.startswith("./") or u.startswith("../") or not ("://" in u or ("@" in u and ":" in u)):
         return u

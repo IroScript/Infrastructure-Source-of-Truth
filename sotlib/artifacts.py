@@ -48,6 +48,12 @@ def _deep_merge_dict(base: dict, overlay: dict) -> dict:
     for k, v in overlay.items():
         if k in result and isinstance(result[k], dict) and isinstance(v, dict):
             result[k] = _deep_merge_dict(result[k], v)
+        elif k in result and isinstance(result[k], list) and isinstance(v, list):
+            merged_list = list(result[k])
+            for item in v:
+                if item not in merged_list:
+                    merged_list.append(item)
+            result[k] = merged_list
         else:
             result[k] = v
     return result

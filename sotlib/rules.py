@@ -33,17 +33,20 @@ def sha256(path: Path) -> str:
 
 
 def _dict_is_subset(sub: Any, super_dict: Any) -> bool:
-    if not isinstance(sub, dict) or not isinstance(super_dict, dict):
-        return sub == super_dict
-    for k, v in sub.items():
-        if k not in super_dict:
-            return False
-        if isinstance(v, dict):
+    if isinstance(sub, dict) and isinstance(super_dict, dict):
+        for k, v in sub.items():
+            if k not in super_dict:
+                return False
             if not _dict_is_subset(v, super_dict[k]):
                 return False
-        elif super_dict[k] != v:
-            return False
-    return True
+        return True
+    elif isinstance(sub, list) and isinstance(super_dict, list):
+        for sub_item in sub:
+            if not any(_dict_is_subset(sub_item, super_item) for super_item in super_dict):
+                return False
+        return True
+    else:
+        return sub == super_dict
 
 
 def _inside(path: Path, root: Path) -> bool:

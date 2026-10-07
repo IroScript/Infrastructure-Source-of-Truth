@@ -127,4 +127,7 @@ class WatcherConfig:
 
     @property
     def state_file(self) -> Path:
+        custom = os.environ.get("GITPUSH_WATCHER_STATE_FILE") or os.environ.get("SOT_WATCHER_STATE_FILE")
+        if custom:
+            return Path(custom).resolve()
         return self.root / "storage" / "GITPUSH_WATCHER_STATE.json"

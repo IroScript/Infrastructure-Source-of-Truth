@@ -241,5 +241,156 @@ class UniversalArchitectureTests(unittest.TestCase):
                 self.assertEqual(restored.read_text(), secret.read_text())
 
 
+    def test_git_push_normalize_url_case_preservation_and_remote_drift(self):
+        from gitpush_watcher.pusher import normalize_git_url, GitPusher
+        # Filesystem URLs strictly preserve case
+        self.assertEqual(normalize_git_url("/tmp/MixedCase_Path/Repo.git"), "/tmp/MixedCase_Path/Repo")
+        self.assertEqual(normalize_git_url("file:///Tmp/Case_Repo.GIT/"), "/Tmp/Case_Repo")
+        self.assertEqual(normalize_git_url("../Relative_Path/Repo.git"), "../Relative_Path/Repo")
+        self.assertEqual(normalize_git_url("./My_Relative/Repo.git"), "./My_Relative/Repo")
+        # Network URLs normalize scheme and netloc to lowercase
+        self.assertEqual(normalize_git_url("https://github.com/Org/Repo.git"), "https://github.com/org/repo")
+
+        # Test remote drift rejection
+        with tempfile.TemporaryDirectory(prefix="sot-drift-") as td:
+            repo = Path(td) / "local_repo"
+            repo.mkdir()
+            subprocess.run(["git", "-C", str(repo), "init"], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@test.local"], check=True)
+            (repo / "f.txt").write_text("content\n")
+            subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-m", "Unverified : init"], check=True)
+            subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", "file:///tmp/Configured_Path.git"], check=True)
+
+            ok, reason = GitPusher.push_and_verify_parity(repo, "main", "origin", canonical_remote_url="file:///tmp/Canonical_Different.git")
+            self.assertFalse(ok)
+            self.assertIn("REMOTE_DRIFT", reason)
+
+    def test_precommit_safety_classifier_literals_and_adversarial_bypass_prevention(self):
+        from projects.precommit_safety import unsafe_paths, _has_secret_pattern
+        # Exact classifier literals do not flag as secrets
+        self.assertFalse(_has_secret_pattern(b"CLASS_D_SECRET = 'CLASS_D_SECRET'"))
+        self.assertFalse(_has_secret_pattern(b'CLASS_D_SECRET = "CLASS_D_SECRET"'))
+        self.assertFalse(_has_secret_pattern(b'classified = {"secret": "CLASS_D_SECRET"}'))
+
+        # Negative Adversarial test: embedded secret with classifier prefix MUST FAIL CLOSED
+        self.assertTrue(_has_secret_pattern(b'api_key = "CLASS_D_SECRET_adversarial_token_1234567890"'))
+        self.assertTrue(_has_secret_pattern(b'secret = "CLASS_D_SECRET_leak_real_credential_98765"'))
+
+        with tempfile.TemporaryDirectory(prefix="sot-precommit-") as td:
+            p = Path(td)
+            # Safe file with classifier literal
+            safe_file = p / "classifier.py"
+            safe_file.write_text("CLASS_D_SECRET = 'CLASS_D_SECRET'\n")
+            self.assertEqual(unsafe_paths(p), [])
+
+            # Adversarial secret file
+            bad_file = p / "compromised.py"
+            bad_file.write_text("api_key = 'CLASS_D_SECRET_adversarial_token_1234567890'\n")
+            self.assertIn(str(bad_file.relative_to(p)), unsafe_paths(p))
+
+    def test_delete_guard_alternate_home_and_profile_resolution(self):
+        from trust.verification.delete_guard import resolve_roots_and_incident_paths, log_incident
+        with tempfile.TemporaryDirectory(prefix="sot-del-guard-") as td:
+            alt_home = Path(td) / "alternate_home"
+            alt_home.mkdir()
+            prof_file = Path(td) / "profile.json"
+            prof_file.write_text(json.dumps({
+                "profile_id": "portable-test",
+                "roots": {
+                    "HOME": "${HOME}",
+                    "PROJECTS_ROOT": "${HOME}/projects",
+                    "STATE_ROOT": "${HOME}/.state"
+                }
+            }))
+            old_env = dict(os.environ)
+            try:
+                os.environ["HOME"] = str(alt_home)
+                os.environ["AGY_DEPLOYMENT_PROFILE"] = str(prof_file)
+                os.environ.pop("PROJECTS_ROOT", None)
+                os.environ.pop("STATE_ROOT", None)
+
+                home_res, proj_res, inc_dir_res, inc_log_res, _, _ = resolve_roots_and_incident_paths()
+                self.assertEqual(home_res, str(alt_home))
+                self.assertEqual(proj_res, str(alt_home / "projects"))
+                self.assertNotIn("azureuser", proj_res)
+                self.assertNotIn("${HOME}", proj_res)
+
+                # Test log_incident returns enforcement decision even if disk write fails
+                with unittest.mock.patch("os.makedirs", side_effect=PermissionError("read-only filesystem")):
+                    inc = log_incident("run_command", {"CommandLine": "rm -rf /"}, "Catastrophic root deletion", "RULE_37")
+                    self.assertEqual(inc["decision"], "DENIED")
+                    self.assertEqual(inc["rule_id"], "RULE_37")
+            finally:
+                os.environ.clear()
+                os.environ.update(old_env)
+
+    def test_config_tamper_detection_and_restoration(self):
+        with tempfile.TemporaryDirectory(prefix="sot-tamper-") as td:
+            base = Path(td)
+            home = base / "home"
+            home.mkdir()
+            state = base / "state"
+            state.mkdir()
+            profile = load_profile(ROOT / "deployment/profiles/portable-linux.json", {**os.environ, "HOME": str(home)})
+
+            # Install canonical external artifacts
+            artifacts.install(ROOT, profile, state)
+
+            target = home / ".gemini/config/hooks.json"
+            self.assertTrue(target.is_file())
+
+            # Tamper with installed config
+            tampered = json.loads(target.read_text())
+            tampered["boundary-guard"]["enabled"] = False
+            target.write_text(json.dumps(tampered, indent=2))
+
+            # Verify detects tamper
+            verify_res = artifacts.verify(ROOT, profile)
+            self.assertFalse(verify_res["ok"])
+            self.assertTrue(any("hash mismatch" in err for err in verify_res["errors"]))
+
+            # Re-install restores canonical rule
+            artifacts.install(ROOT, profile, state)
+            restored = json.loads(target.read_text())
+            self.assertTrue(restored["boundary-guard"]["enabled"])
+
+    def test_backup_mandatory_encryption_fails_closed_without_key(self):
+        import unittest.mock
+        import storage.backup_data as backup_data
+        from storage.backup_data import backup_asset
+
+        with tempfile.TemporaryDirectory(prefix="sot-fail-enc-") as td:
+            base = Path(td)
+            secret = base / ".env.secret"
+            secret.write_text("SUPER_SECRET_KEY=1234567890123456\n")
+            cloud = base / "remote_cloud"
+            cloud.mkdir()
+            cat_file = base / "cat.json"
+            cat_file.write_text(json.dumps({"backups": []}))
+            reg_file = base / "reg.json"
+            reg_file.write_text(json.dumps({"assets": []}))
+            asset = {
+                "asset_id": "test-no-key-asset",
+                "project_id": "test-proj",
+                "source_path": str(secret),
+                "primary_backup_target": str(cloud),
+                "remote_path": str(cloud / "secret.enc"),
+                "classification": "secret",
+                "encryption": "required"
+            }
+
+            # Negative test: resolve_encryption_key returns "" -> MUST FAIL CLOSED before upload
+            with unittest.mock.patch.object(backup_data, "CATALOG_FILE", str(cat_file)), \
+                 unittest.mock.patch.object(backup_data, "REGISTRY_FILE", str(reg_file)), \
+                 unittest.mock.patch("storage.backup_data.resolve_encryption_key", return_value=""):
+                res = backup_asset(asset, verify_remote=False)
+                self.assertEqual(res.get("status"), "FAILED")
+                self.assertIn("ENCRYPTION_KEY_MISSING", res.get("reason", ""))
+                # Remote file MUST NOT be created
+                self.assertFalse((cloud / "secret.enc").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
