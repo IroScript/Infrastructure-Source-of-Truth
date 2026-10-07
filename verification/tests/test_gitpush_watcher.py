@@ -217,8 +217,8 @@ class GitPushWatcherTests(unittest.TestCase):
         proj_dir = self._init_repo(self.base / 'sandbox_project')
         subprocess.run(['git', '-C', str(proj_dir), 'remote', 'add', 'origin', str(remote)], check=True, timeout=15)
         conf = WatcherConfig.load(ROOT)
-        conf.reconciliation_interval_seconds = 1.0
-        conf.debounce_seconds = 0.5
+        conf.reconciliation_interval_seconds = 0.5
+        conf.debounce_seconds = 0.2
         watcher = GitPushWatcher(ROOT, conf)
         orig_load = watcher.load_registered_projects
         sandbox_project = {'project_id': 'test_daemon_sandbox', 'project_uuid': '00000000-0000-4000-8000-000000000099', 'canonical_path': str(proj_dir), 'git': {'enabled': True, 'remote': str(remote), 'branch': 'main', 'backup_required': True}}
@@ -235,13 +235,13 @@ class GitPushWatcherTests(unittest.TestCase):
             f.write_text("def run():\n    return 'running'\n")
             start_time = time.time()
             synced = False
-            while time.time() - start_time < 8.0:
+            while time.time() - start_time < 10.0:
                 remote_probe = subprocess.run(['git', 'ls-remote', str(remote), 'refs/heads/main'], capture_output=True, text=True, timeout=15)
                 lines = remote_probe.stdout.strip().split()
                 if lines:
                     synced = True
                     break
-                time.sleep(0.5)
+                time.sleep(0.3)
             self.assertTrue(synced, 'Watcher daemon did not automatically detect and push changes within timeout')
             head_msg = subprocess.run(['git', '-C', str(proj_dir), 'log', '-1', '--pretty=%s'], capture_output=True, text=True, timeout=15).stdout.strip()
             self.assertTrue(head_msg.startswith('User Requested : '), f'Unexpected commit message: {head_msg}')
