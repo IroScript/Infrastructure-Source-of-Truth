@@ -117,21 +117,21 @@
     {
       "source": "trust/verification/verify_10_fold.py",
       "destination": ".agents/hooks/verify_10_fold.py",
-      "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+      "sha256": "822996a512c66b6c4368f9bf8466470567bc92dfe66f4129e3916028b08a24de",
       "mode": "0755",
       "required": true
     },
     {
       "source": "trust/verification/verify_10_fold.py",
       "destination": ".agents/verify_10_fold.py",
-      "sha256": "83d928e724160cac26c5f644c937ea5c0b46f835754e89f67b0621c9d3d54bac",
+      "sha256": "822996a512c66b6c4368f9bf8466470567bc92dfe66f4129e3916028b08a24de",
       "mode": "0755",
       "required": true
     },
     {
       "source": "trust/verification/run_regression_suite.py",
       "destination": ".agents/run_regression_suite.py",
-      "sha256": "2b7a84624b34ecca071a2afedf712317b16269ae2fc87de3f3a495fbad50a783",
+      "sha256": "0a4414acb4ef4706130e173a5ed741c4ecf1915edf0d4e1884123677ab82abc9",
       "mode": "0755",
       "required": true
     },
