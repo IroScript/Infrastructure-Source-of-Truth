@@ -303,3 +303,103 @@ def test_generic_project_profile_manager_and_cli(sot_root, bench_root):
     bad_ok, bad_reason, _ = manager.evaluate_coding_gate(proj, code_snippets=bad_code)
     assert bad_ok is False
     assert bad_reason == "OUTDATED_FRAPPE_PATTERN"
+
+def test_codex_b1_fabricated_api_and_get_doc_blocked(sot_root, bench_root):
+    """
+    Codex B1: Tests that get_doc import from frappe.model.document and
+    fabricated APIs like frappe.this_api_does_not_exist_427 are rejected.
+    """
+    manager = ProjectProfileManager(sot_root)
+    proj = manager.resolve_project("frappe_erp_alco")
+    assert proj is not None
+
+    legacy_pattern = " ".join(["from", "frappe.model.document", "import", "get_doc"])
+    code_get_doc = {"doc_test.py": f"{legacy_pattern}\nd = get_doc('Task')"}
+    ok1, reason1, det1 = manager.evaluate_coding_gate(proj, code_snippets=code_get_doc)
+    assert ok1 is False
+    assert reason1 == "OUTDATED_FRAPPE_PATTERN"
+
+    # Test fabricated API
+    code_fab = {"fab_test.py": "def test():\n    frappe.this_api_does_not_exist_427()\n"}
+    ok2, reason2, det2 = manager.evaluate_coding_gate(proj, code_snippets=code_fab)
+    assert ok2 is False
+    assert reason2 == "OUTDATED_FRAPPE_PATTERN"
+
+
+def test_codex_b2_manifest_and_reference_verification_integrity(sot_root, tmp_path):
+    """
+    Codex B2: Directories without MANIFEST.json, or with version mismatch or corrupt manifest, fail.
+    """
+    ref_mgr = FrappeReferenceManager(sot_root)
+
+    # Empty folder without manifest
+    empty_ref = tmp_path / "empty_ref"
+    empty_ref.mkdir()
+    res1 = ref_mgr.verify_reference(target_major=16, target_branch="version-16", state_root=tmp_path, reference_override=empty_ref)
+    assert res1.is_pass is False
+
+    # Folder with manifest but wrong branch
+    bad_branch_ref = tmp_path / "bad_branch"
+    bad_branch_ref.mkdir()
+    manifest_bad = {
+        "manifest_version": "1.0.0",
+        "frappe_major": 16,
+        "branch": "version-15",
+        "source": "https://docs.frappe.io",
+        "fetched_at_utc": "2026-10-08T00:00:00Z",
+        "pages": {"index.md": "dummy_sha"}
+    }
+    (bad_branch_ref / "MANIFEST.json").write_text(json.dumps(manifest_bad))
+    (bad_branch_ref / "index.md").write_text("dummy")
+    res2 = ref_mgr.verify_reference(target_major=16, target_branch="version-16", state_root=tmp_path, reference_override=bad_branch_ref)
+    assert res2.is_pass is False
+    assert any("BRANCH_MISMATCH" in e for e in res2.errors)
+
+
+def test_codex_b4_blank_vm_reference_sync(sot_root, tmp_path):
+    """
+    Codex B4: SOT seed reference can be synced without /home/azureuser dependencies.
+    """
+    ref_mgr = FrappeReferenceManager(sot_root)
+    seed_ref = sot_root / "frappe" / "docs-reference"
+    assert seed_ref.is_dir()
+    assert (seed_ref / "MANIFEST.json").is_file()
+
+    res = ref_mgr.sync_reference_to_state(seed_ref, tmp_path)
+    assert res["status"] == "SYNCED"
+    assert res["page_count"] > 200
+
+    # Verify synced reference
+    v_res = ref_mgr.verify_reference(target_major=16, target_branch="version-16", state_root=tmp_path)
+    assert v_res.is_pass is True
+
+
+def test_codex_b5_native_test_contract_catches_errors(sot_root, tmp_path):
+    """
+    Codex B5: verify_native_test_contract catches syntax errors and runtime exceptions in custom app hooks.
+    """
+    profile = FrappeProjectProfile(sot_root)
+
+    # Setup a mock bench with a broken custom app
+    mock_bench = tmp_path / "mock-bench"
+    apps_dir = mock_bench / "apps"
+    apps_dir.mkdir(parents=True)
+    (apps_dir / "frappe").mkdir()
+    (apps_dir / "erpnext").mkdir()
+
+    # Broken syntax app
+    broken_app = apps_dir / "broken_app"
+    broken_pkg = broken_app / "broken_app"
+    broken_pkg.mkdir(parents=True)
+    (broken_pkg / "hooks.py").write_text("app_name = 'broken_app'\ndef bad_syntax(:\n")
+
+    res = profile.verify_native_test_contract(mock_bench)
+    assert res.is_pass is False
+    assert any("APP_SYNTAX_ERROR" in e for e in res.errors)
+
+    # Broken runtime app
+    (broken_pkg / "hooks.py").write_text("app_name = 'broken_app'\nraise RuntimeError('intentional failure')\n")
+    res2 = profile.verify_native_test_contract(mock_bench)
+    assert res2.is_pass is False
+    assert any("APP_HOOKS_RUNTIME_ERROR" in e for e in res2.errors)
+

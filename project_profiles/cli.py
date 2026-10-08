@@ -53,13 +53,15 @@ def handle_frappe_cli(args, sot_root: Path) -> int:
         contract = profile.get_compatibility_contract(proj_path)
         ref_res = profile.verify_reference(proj_path, state_root)
         core_res = profile.verify_core_isolation(proj_path)
-        passed = bool(contract) and ref_res.is_pass and core_res.is_pass
+        test_res = profile.verify_native_test_contract(proj_path)
+        passed = bool(contract) and ref_res.is_pass and core_res.is_pass and test_res.is_pass
         payload = {
             "status": "PASS" if passed else "FAIL",
             "contract": contract,
             "reference": ref_res.details,
             "core_isolation": core_res.details,
-            "errors": ref_res.errors + core_res.errors,
+            "test_contract": test_res.details,
+            "errors": ref_res.errors + core_res.errors + test_res.errors,
         }
         if getattr(args, "format", "json") == "json":
             print(json.dumps(payload, indent=2))
@@ -73,13 +75,16 @@ def handle_frappe_cli(args, sot_root: Path) -> int:
         source_dir = getattr(args, "source_dir", None)
         if not source_dir:
             candidates = [
+                sot_root / "frappe" / "docs-reference",
                 proj_path / "frappe-docs-latest",
                 projects_root / "Frappe-erp-Alco" / "frappe-docs-latest",
                 home / "Frappe-erp-Alco" / "frappe-docs-latest",
                 sot_root.parent / "Frappe-erp-Alco" / "frappe-docs-latest",
-                sot_root / "frappe" / "docs-reference",
             ]
-            source_dir = next((c for c in candidates if c.is_dir()), proj_path / "frappe-docs-latest")
+            source_dir = next((c for c in candidates if c.is_dir() and (c / "MANIFEST.json").is_file()), None)
+        if not source_dir or not Path(source_dir).is_dir():
+            print(json.dumps({"status": "FAIL", "error": "No valid reference source found with MANIFEST.json"}))
+            return 1
         source_p = Path(source_dir).resolve()
         from .frappe import FrappeReferenceManager
         ref_mgr = FrappeReferenceManager(sot_root)
@@ -137,7 +142,9 @@ def handle_profile_cli(args, sot_root: Path) -> int:
         if not proj:
             print(json.dumps({"error": f"Project not found: {pid}"}))
             return 1
-        ok, reason, details = manager.evaluate_coding_gate(proj, state_root=state_root)
+        file_arg = getattr(args, "file", None)
+        proposed = [Path(file_arg).resolve()] if file_arg else None
+        ok, reason, details = manager.evaluate_coding_gate(proj, proposed_files=proposed, state_root=state_root)
         print(json.dumps({"passed": ok, "verdict": reason, "details": details}, indent=2))
         return 0 if ok else 2
 

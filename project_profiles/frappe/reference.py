@@ -57,11 +57,9 @@ class FrappeReferenceManager:
         project_path: Optional[Path] = None,
         state_root: Optional[Path] = None,
     ) -> Optional[Path]:
-        """Finds the first existing valid official reference directory."""
+        """Finds the first existing valid official reference directory containing a MANIFEST.json."""
         for cand in self.resolve_reference_locations(project_path, state_root):
             if cand.is_dir() and (cand / "MANIFEST.json").is_file():
-                return cand
-            elif cand.is_dir() and any(cand.glob("*.md")):
                 return cand
         return None
 
@@ -72,13 +70,15 @@ class FrappeReferenceManager:
         project_path: Optional[Path] = None,
         state_root: Optional[Path] = None,
         max_age_days: int = 90,
+        reference_override: Optional[Path] = None,
     ) -> ProfileVerificationResult:
         """
         Doc/Source Freshness Gate (Section E & B):
-        - Detects reference presence.
+        - Detects reference presence with mandatory MANIFEST.json.
         - Audits against old deprecated frappe_docs (marks DEPRECATED_REFERENCE_ONLY).
-        - Verifies target major/branch match.
-        - Checks freshness against max_age_days.
+        - Verifies target major/branch match explicitly without guessing.
+        - Checks freshness against max_age_days and validates UTC ISO timestamps.
+        - Verifies physical page existence and artifact hash integrity.
         """
         errors: List[str] = []
         warnings: List[str] = []
@@ -104,54 +104,87 @@ class FrappeReferenceManager:
             }
             warnings.append("Archived frappe/frappe_docs detected; marked DEPRECATED_REFERENCE_ONLY.")
 
-        ref_dir = self.find_active_reference(project_path, state_root)
+        ref_dir = Path(reference_override).resolve() if reference_override else self.find_active_reference(project_path, state_root)
         if not ref_dir or not ref_dir.is_dir():
             return ProfileVerificationResult(
                 status="FAIL",
                 profile_name="frappe",
-                errors=["FRAPPE_REFERENCE_NOT_VERIFIED: No official local Frappe documentation reference found."],
+                errors=["FRAPPE_REFERENCE_NOT_VERIFIED: No official local Frappe documentation reference found with valid MANIFEST.json."],
                 details={"checked_locations": [str(p) for p in self.resolve_reference_locations(project_path, state_root)]},
             )
 
         manifest_file = ref_dir / "MANIFEST.json"
-        manifest_data: Dict[str, Any] = {}
-        if manifest_file.is_file():
-            try:
-                manifest_data = json.loads(manifest_file.read_text(encoding="utf-8"))
-            except Exception as exc:
-                warnings.append(f"MANIFEST.json unreadable: {exc}")
-
-        # 1. Check source domain (must originate from docs.frappe.io)
-        source = manifest_data.get("source", "https://docs.frappe.io")
-        if not (source.startswith("https://docs.frappe.io") or source.startswith("http://docs.frappe.io")):
+        if not manifest_file.is_file():
             return ProfileVerificationResult(
                 status="FAIL",
                 profile_name="frappe",
-                errors=[f"INVALID_SOURCE_DOMAIN: Reference source '{source}' must originate from docs.frappe.io."],
+                errors=["FRAPPE_REFERENCE_NOT_VERIFIED: Reference directory missing required MANIFEST.json."],
+                details={"reference_path": str(ref_dir)},
+            )
+
+        try:
+            manifest_data: Dict[str, Any] = json.loads(manifest_file.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"FRAPPE_REFERENCE_CORRUPT: MANIFEST.json unreadable: {exc}"],
+                details={"reference_path": str(ref_dir)},
+            )
+
+        # 1. Check source domain (must explicitly declare source from docs.frappe.io)
+        source = manifest_data.get("source")
+        if not source or not (source.startswith("https://docs.frappe.io") or source.startswith("http://docs.frappe.io")):
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"FRAPPE_REFERENCE_NOT_VERIFIED: INVALID_SOURCE_DOMAIN: Reference source '{source}' missing or not from docs.frappe.io."],
                 details={"reference_path": str(ref_dir), "source": source},
             )
 
-        # 2. Check major version match (prioritized so version mismatch triggers accurately)
+        # 2. Check major version match (MUST be explicitly declared, NO guessing!)
         manifest_major = manifest_data.get("frappe_major")
         if manifest_major is None:
-            if "docs.frappe.io" in source and target_major == 16:
-                manifest_major = 16
-            else:
-                return ProfileVerificationResult(
-                    status="FAIL",
-                    profile_name="frappe",
-                    errors=[f"VERSION_MISMATCH: Manifest does not declare frappe_major {target_major} for target branch {target_branch}."],
-                    details={"reference_path": str(ref_dir), "manifest_major": None, "target_major": target_major},
-                )
-        if int(manifest_major) != target_major:
             return ProfileVerificationResult(
                 status="FAIL",
                 profile_name="frappe",
-                errors=[f"VERSION_MISMATCH: Reference major {manifest_major} does not match target major {target_major}."],
-                details={"reference_path": str(ref_dir), "manifest_major": manifest_major, "target_major": target_major},
+                errors=[f"FRAPPE_REFERENCE_NOT_VERIFIED: VERSION_MISMATCH: Manifest missing required explicit 'frappe_major' declaration."],
+                details={"reference_path": str(ref_dir), "manifest_major": None, "target_major": target_major},
+            )
+        try:
+            if int(manifest_major) != target_major:
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"FRAPPE_REFERENCE_NOT_VERIFIED: VERSION_MISMATCH: Reference major {manifest_major} does not match target major {target_major}."],
+                    details={"reference_path": str(ref_dir), "manifest_major": manifest_major, "target_major": target_major},
+                )
+        except (ValueError, TypeError):
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"FRAPPE_REFERENCE_NOT_VERIFIED: VERSION_MISMATCH: Malformed 'frappe_major' declaration: {manifest_major}"],
+                details={"reference_path": str(ref_dir), "manifest_major": manifest_major},
             )
 
-        # 3. Check physical markdown documentation pages on disk (fail closed, never trust manifest blindly)
+        # 3. Check branch match (MUST be explicitly declared and match target branch!)
+        manifest_branch = manifest_data.get("branch") or manifest_data.get("target_branch")
+        if not manifest_branch:
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"FRAPPE_REFERENCE_NOT_VERIFIED: BRANCH_MISMATCH: Manifest missing required 'branch' declaration."],
+                details={"reference_path": str(ref_dir), "manifest_branch": None, "target_branch": target_branch},
+            )
+        if manifest_branch.strip().lower() != target_branch.strip().lower():
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"FRAPPE_REFERENCE_NOT_VERIFIED: BRANCH_MISMATCH: Reference branch '{manifest_branch}' does not match target branch '{target_branch}'."],
+                details={"reference_path": str(ref_dir), "manifest_branch": manifest_branch, "target_branch": target_branch},
+            )
+
+        # 4. Check physical markdown documentation pages on disk (fail closed, never trust manifest blindly)
         physical_pages = list(ref_dir.glob("**/*.md"))
         page_count = len(physical_pages)
         if page_count == 0:
@@ -162,22 +195,62 @@ class FrappeReferenceManager:
                 details={"reference_path": str(ref_dir), "physical_pages": 0},
             )
 
-        # 4. Check freshness age
+        # 5. Check freshness age and valid timestamp
         fetched_at = manifest_data.get("fetched_at_utc")
-        if fetched_at and max_age_days > 0:
-            try:
-                clean_ts = fetched_at.replace("Z", "+00:00")
-                parsed_dt = datetime.datetime.fromisoformat(clean_ts)
-                age_days = (datetime.datetime.now(datetime.timezone.utc) - parsed_dt).total_seconds() / 86400
-                if age_days > max_age_days:
-                    return ProfileVerificationResult(
-                        status="FAIL",
-                        profile_name="frappe",
-                        errors=[f"REFERENCE_STALE: Reference age ({age_days:.1f} days) exceeds maximum allowed age ({max_age_days} days)."],
-                        details={"reference_path": str(ref_dir), "age_days": age_days, "max_age_days": max_age_days},
-                    )
-            except Exception as exc:
-                warnings.append(f"Could not parse fetched_at_utc timestamp: {exc}")
+        if not fetched_at:
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=["INVALID_TIMESTAMP: Manifest missing required 'fetched_at_utc' timestamp."],
+                details={"reference_path": str(ref_dir)},
+            )
+        try:
+            clean_ts = fetched_at.replace("Z", "+00:00")
+            parsed_dt = datetime.datetime.fromisoformat(clean_ts)
+            now_dt = datetime.datetime.now(datetime.timezone.utc)
+            diff_sec = (now_dt - parsed_dt).total_seconds()
+            if diff_sec < 0:
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"INVALID_TIMESTAMP: Manifest timestamp '{fetched_at}' is in the future."],
+                    details={"reference_path": str(ref_dir), "fetched_at_utc": fetched_at},
+                )
+            age_days = diff_sec / 86400
+            if max_age_days > 0 and age_days > max_age_days:
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"REFERENCE_STALE: Reference age ({age_days:.1f} days) exceeds maximum allowed age ({max_age_days} days)."],
+                    details={"reference_path": str(ref_dir), "age_days": age_days, "max_age_days": max_age_days},
+                )
+        except Exception as exc:
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"INVALID_TIMESTAMP: Malformed ISO-8601 timestamp '{fetched_at}': {exc}"],
+                details={"reference_path": str(ref_dir), "fetched_at_utc": fetched_at},
+            )
+
+        # 6. Check artifact integrity if page hashes are declared in manifest
+        pages_list = manifest_data.get("pages")
+        if isinstance(pages_list, list) and pages_list:
+            import hashlib
+            sample_pages = pages_list[:10]
+            for p_info in sample_pages:
+                rel_path = p_info.get("path")
+                expected_sha = p_info.get("sha256")
+                if rel_path and expected_sha:
+                    f_on_disk = ref_dir / rel_path
+                    if f_on_disk.is_file():
+                        actual_sha = hashlib.sha256(f_on_disk.read_bytes()).hexdigest()
+                        if actual_sha != expected_sha:
+                            return ProfileVerificationResult(
+                                status="FAIL",
+                                profile_name="frappe",
+                                errors=[f"ARTIFACT_INTEGRITY_FAILED: Page '{rel_path}' sha256 mismatch."],
+                                details={"file": str(f_on_disk), "expected": expected_sha, "actual": actual_sha},
+                            )
 
         details["reference_path"] = str(ref_dir)
         details["page_count"] = page_count
@@ -226,5 +299,6 @@ class FrappeReferenceManager:
             "target": str(target_dir),
             "source": str(source_dir),
             "link_type": link_type,
+            "page_count": len(list(source_dir.glob("**/*.md"))),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }

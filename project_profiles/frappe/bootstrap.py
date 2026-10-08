@@ -89,19 +89,34 @@ class FrappeBootstrapEngine:
 
         # 3. Restore local official reference link if source is available
         cand_docs = [
+            self.sot_root / "frappe" / "docs-reference",
             projects_root / "Frappe-erp-Alco" / "frappe-docs-latest",
             home / "Frappe-erp-Alco" / "frappe-docs-latest",
-            self.sot_root / "frappe" / "docs-reference",
         ]
         target_ref = state_root / "official-references" / "frappe"
         for cand in cand_docs:
-            if cand.is_dir() and not target_ref.is_symlink() and not any(target_ref.iterdir()):
+            if cand.is_dir() and (cand / "MANIFEST.json").is_file():
                 try:
-                    target_ref.rmdir()
+                    if target_ref.is_symlink():
+                        target_ref.unlink()
+                    elif target_ref.is_dir():
+                        shutil.rmtree(target_ref)
                     target_ref.symlink_to(cand.resolve(), target_is_directory=True)
                     report["official_reference_linked"] = str(cand)
                     break
                 except Exception:
                     pass
+
+        # 4. Mandatory reference verification before declaring BOOTSTRAP_COMPLETE
+        from .reference import FrappeReferenceManager
+        ref_mgr = FrappeReferenceManager(self.sot_root)
+        ref_res = ref_mgr.verify_reference(state_root=state_root)
+        if not ref_res.is_pass:
+            report["status"] = "BOOTSTRAP_INCOMPLETE"
+            report["failed_stage"] = "REFERENCE_VERIFICATION"
+            report["error"] = ref_res.errors[0] if ref_res.errors else "Official reference verification failed"
+        else:
+            report["status"] = "BOOTSTRAP_COMPLETE" if not dry_run else "DRY_RUN"
+            report["reference_verified"] = True
 
         return report

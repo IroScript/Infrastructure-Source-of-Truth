@@ -89,7 +89,7 @@
     {
       "source": "trust/verification/delete_guard.py",
       "destination": ".agents/hooks/delete_guard.py",
-      "sha256": "6cecde5c0814122646f645c2c9566432d75f938d3a7bf1cd0af05e1415ad158c",
+      "sha256": "31ef92ade3fc6e5edab128048acb4bcdb5fa50585f892f5b8b222b4e82282f66",
       "mode": "0755",
       "required": true
     },

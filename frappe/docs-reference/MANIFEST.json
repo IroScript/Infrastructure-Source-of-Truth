@@ -1,0 +1,1424 @@
+{
+  "frappe_major": 16,
+  "branch": "version-16",
+  "fetched_at_utc": "2026-10-03T19:59:06Z",
+  "source": "https://docs.frappe.io",
+  "spaces": [
+    "framework"
+  ],
+  "pages_ok": 235,
+  "pages_failed": 0,
+  "failures": [],
+  "pages": [
+    {
+      "path": "framework/keyboard-shortcuts.md",
+      "url": "https://docs.frappe.io/framework/keyboard-shortcuts.md",
+      "bytes": 3133,
+      "sha256": "a8cb2a7cb2bfce26298c791636b45b833080f90f50d40b5903cb4e55f63eef27"
+    },
+    {
+      "path": "framework/permission-types.md",
+      "url": "https://docs.frappe.io/framework/permission-types.md",
+      "bytes": 2486,
+      "sha256": "49f14e61d614a7de30716f9cff2a516fcc6a1f3a8104108e625f576363b3e61a"
+    },
+    {
+      "path": "framework/notifications.md",
+      "url": "https://docs.frappe.io/framework/notifications.md",
+      "bytes": 6296,
+      "sha256": "ead3a050443633732465a22a1c420d89e02def46cc1683cc5c529c3c83271644"
+    },
+    {
+      "path": "framework/automations.md",
+      "url": "https://docs.frappe.io/framework/automations.md",
+      "bytes": 6161,
+      "sha256": "60f5e3a7b726d4f03d652a30fe106079ed036608bae3e3bb79fe08b30320090c"
+    },
+    {
+      "path": "framework/oauth2.md",
+      "url": "https://docs.frappe.io/framework/oauth2.md",
+      "bytes": 4159,
+      "sha256": "a8e172b381e27c3fa4bf1c773e3e0f00ba4ad9ab8e42fbf8884f74de6e639c8e"
+    },
+    {
+      "path": "framework/get_query.md",
+      "url": "https://docs.frappe.io/framework/get_query.md",
+      "bytes": 24301,
+      "sha256": "860b16a74f8a215bb03c1982fd647f41a85d99af06db95b17d8f067a39c11562"
+    },
+    {
+      "path": "framework/data-masking.md",
+      "url": "https://docs.frappe.io/framework/data-masking.md",
+      "bytes": 3329,
+      "sha256": "8af914e362f80e0ad33ac634323664ba86477898230232467a378691fc384395"
+    },
+    {
+      "path": "framework/sqlite-search.md",
+      "url": "https://docs.frappe.io/framework/sqlite-search.md",
+      "bytes": 14884,
+      "sha256": "93a94570cc962f7b81c60d1a5e3c330a2f6138a49fa14cb6669bc9983e725160"
+    },
+    {
+      "path": "framework/using-vue-inside-a-desk-page.md",
+      "url": "https://docs.frappe.io/framework/using-vue-inside-a-desk-page.md",
+      "bytes": 4267,
+      "sha256": "22cf3c0e9ee0acc7dcd31848bb0150deab3ecaac01ff82f93336d0fe44e1c8fb"
+    },
+    {
+      "path": "framework/assignments-and-todos.md",
+      "url": "https://docs.frappe.io/framework/assignments-and-todos.md",
+      "bytes": 4183,
+      "sha256": "bf412ed3ba47fe0c7938884f9c27d9a4af19a499c64c945cf33ecefaac159229"
+    },
+    {
+      "path": "framework/desk-reports/excel-xlsx-export-styling.md",
+      "url": "https://docs.frappe.io/framework/desk-reports/excel-xlsx-export-styling.md",
+      "bytes": 5881,
+      "sha256": "43df6d7659b8d8f11dbf493e538d30e3ffb51d2cbadda1ff917d9e1a8fe2952d"
+    },
+    {
+      "path": "framework/deployment/rate-limiting.md",
+      "url": "https://docs.frappe.io/framework/deployment/rate-limiting.md",
+      "bytes": 5888,
+      "sha256": "002609eaca63c99d4a2317e345aedcc948f5f5d72c92dc41d48b2fc4084facfb"
+    },
+    {
+      "path": "framework/guides-app-development/updating-a-field-from-a-linked-doctype.md",
+      "url": "https://docs.frappe.io/framework/guides-app-development/updating-a-field-from-a-linked-doctype.md",
+      "bytes": 4437,
+      "sha256": "c92308a29fda74201bab302248e5974426185d878aef7864155dabe56596cd1c"
+    },
+    {
+      "path": "framework/automations/steps-and-actions.md",
+      "url": "https://docs.frappe.io/framework/automations/steps-and-actions.md",
+      "bytes": 8164,
+      "sha256": "a970ea6a3baec81409684cd154dd58e22d48958da3be05e6c4d842d6130994b5"
+    },
+    {
+      "path": "framework/automations/extending-automations.md",
+      "url": "https://docs.frappe.io/framework/automations/extending-automations.md",
+      "bytes": 8846,
+      "sha256": "7d12de95b341951022a6ccf746df1082f3585e37231ca2da537d7785fac5fa27"
+    },
+    {
+      "path": "framework/automations/triggers-and-conditions.md",
+      "url": "https://docs.frappe.io/framework/automations/triggers-and-conditions.md",
+      "bytes": 5665,
+      "sha256": "006e8db381b3e2a6745d60e65c353846d7b79478d11ecd5a551488bef10a43dc"
+    },
+    {
+      "path": "framework/doctypes/docstatus.md",
+      "url": "https://docs.frappe.io/framework/doctypes/docstatus.md",
+      "bytes": 1824,
+      "sha256": "8b16041175dcc1a841f2f6a58ead86971f9e7fa10670fe223a2307fb6eadc831"
+    },
+    {
+      "path": "framework/doctypes/doctype-layout.md",
+      "url": "https://docs.frappe.io/framework/doctypes/doctype-layout.md",
+      "bytes": 8259,
+      "sha256": "363c54883bbcb689ff1798c63aa2cb2794131cb4950b9f0e263e634b00a622a8"
+    },
+    {
+      "path": "framework/doctypes/allow-on-submit.md",
+      "url": "https://docs.frappe.io/framework/doctypes/allow-on-submit.md",
+      "bytes": 3702,
+      "sha256": "4faca3388ffd3e4642f78229163bb0964025dbd35b63e2338fac6e59126507e4"
+    },
+    {
+      "path": "framework/help/event-streaming.md",
+      "url": "https://docs.frappe.io/framework/help/event-streaming.md",
+      "bytes": 2841,
+      "sha256": "ec900549d43d752862e2af552fc68f9f8e26e07bca8c83edf70e1f550681314c"
+    },
+    {
+      "path": "framework/portal-web-form/web-form-request.md",
+      "url": "https://docs.frappe.io/framework/portal-web-form/web-form-request.md",
+      "bytes": 3253,
+      "sha256": "5d751a356b43ae74d6b7873a5d6264c54879e71a8afdba14febfbc0cfade4860"
+    },
+    {
+      "path": "framework/user/en/production-setup.md",
+      "url": "https://docs.frappe.io/framework/user/en/production-setup.md",
+      "bytes": 3523,
+      "sha256": "2acf25c01bb363ecff53ff1e0f55bf56dc4683f2fa02d04faf18bc55114d8182"
+    },
+    {
+      "path": "framework/user/en/database-optimization-hardware-and-configuration.md",
+      "url": "https://docs.frappe.io/framework/user/en/database-optimization-hardware-and-configuration.md",
+      "bytes": 11467,
+      "sha256": "6cb5196a5c3e47d0f6d9805db9c358e3dcacd27e6f1d0fddafc1b36ddd6152c9"
+    },
+    {
+      "path": "framework/user/en/testing.md",
+      "url": "https://docs.frappe.io/framework/user/en/testing.md",
+      "bytes": 9219,
+      "sha256": "7889b14e0af9864e0c272f0a8929870fdc6c4d35cabf80c9ba67d8182c92380b"
+    },
+    {
+      "path": "framework/user/en/web-form.md",
+      "url": "https://docs.frappe.io/framework/user/en/web-form.md",
+      "bytes": 1486,
+      "sha256": "8cc7da4a1cb2963b4e98c42b6c6b8b6db19f586cb7bccb7119bc4755b6f0cdda"
+    },
+    {
+      "path": "framework/user/en/database-migrations.md",
+      "url": "https://docs.frappe.io/framework/user/en/database-migrations.md",
+      "bytes": 5286,
+      "sha256": "b8499819a609e00a4ac15bc288373d051687d8ffefde8376260a881425059bfa"
+    },
+    {
+      "path": "framework/user/en/audit-trail.md",
+      "url": "https://docs.frappe.io/framework/user/en/audit-trail.md",
+      "bytes": 1580,
+      "sha256": "a2da3de3896cccbba388b854d5d35ac251750b6f4891bf58e9ea26a140da84eb"
+    },
+    {
+      "path": "framework/user/en/installation.md",
+      "url": "https://docs.frappe.io/framework/user/en/installation.md",
+      "bytes": 4653,
+      "sha256": "c1504984014b536ec39d337b668fea054e4a259bb9d80aeccaaa11b8b41d33d7"
+    },
+    {
+      "path": "framework/user/en/zero*_downtime_migrations.md",
+      "url": "https://docs.frappe.io/framework/user/en/zero*_downtime_migrations.md",
+      "bytes": 2628,
+      "sha256": "2354ff3dfa4f769709def777ab3c6b53215b7f4b3bcb21349046810b71df5699"
+    },
+    {
+      "path": "framework/user/en/bench-update-po-files.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench-update-po-files.md",
+      "bytes": 1398,
+      "sha256": "6002e2c91b2471184b163c93ad093171b0428ee6e552725e57fcded75433edbc"
+    },
+    {
+      "path": "framework/user/en/desk.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk.md",
+      "bytes": 5559,
+      "sha256": "b5dfd9197a2757c888dde957818816a4be042841339d733d7c5544c9e5d2fc1e"
+    },
+    {
+      "path": "framework/user/en/form-tours.md",
+      "url": "https://docs.frappe.io/framework/user/en/form-tours.md",
+      "bytes": 2711,
+      "sha256": "e43fc593a9a2d8c220d24704800ef039a3fe720a524a8b17c8c98db3b2a3a8d4"
+    },
+    {
+      "path": "framework/user/en/bench-generate-pot-file.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench-generate-pot-file.md",
+      "bytes": 878,
+      "sha256": "0d1470124f53341379ce22d8744efb02d649503d9e2ab4b8090f478d6a008c15"
+    },
+    {
+      "path": "framework/user/en/discussions.md",
+      "url": "https://docs.frappe.io/framework/user/en/discussions.md",
+      "bytes": 1076,
+      "sha256": "5bfa87a1d2cee03d03c1f08277b4cd553cbae3e42624c9b11959564bb1f679eb"
+    },
+    {
+      "path": "framework/user/en/profiling.md",
+      "url": "https://docs.frappe.io/framework/user/en/profiling.md",
+      "bytes": 6658,
+      "sha256": "a993c202807fe846e87448dfd72d59c9cd795c666eccc51ba4abf48e6a1afeb3"
+    },
+    {
+      "path": "framework/user/en/logging.md",
+      "url": "https://docs.frappe.io/framework/user/en/logging.md",
+      "bytes": 8830,
+      "sha256": "806dabfbde98a7ed2d64480eec32184c1ef3c531e1804db97f11735a9fb58ce2"
+    },
+    {
+      "path": "framework/user/en/basics.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics.md",
+      "bytes": 5136,
+      "sha256": "249794dee8cb764f7fd4c8f1c41a5225e60be67edf40e3d0aad6037bc4163260"
+    },
+    {
+      "path": "framework/user/en/bench-migrate-csv-to-po.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench-migrate-csv-to-po.md",
+      "bytes": 1354,
+      "sha256": "e54c1044493297c1c8db7e87830785280c10ae1ae084a1a9a30c57f4ab43e8c6"
+    },
+    {
+      "path": "framework/user/en/bench-compile-po-to-mo.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench-compile-po-to-mo.md",
+      "bytes": 1556,
+      "sha256": "5919ddb2b1658dfb07e91dc91d80544c1de48e0e8d3ed02fb90ba4567b6b8360"
+    },
+    {
+      "path": "framework/user/en/guides.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides.md",
+      "bytes": 1252,
+      "sha256": "ccee771e1a11dfff6ac42df8320380d4fff9019b688a6648447ffa5b444818b0"
+    },
+    {
+      "path": "framework/user/en/blog-post.md",
+      "url": "https://docs.frappe.io/framework/user/en/blog-post.md",
+      "bytes": 4757,
+      "sha256": "ef48243ae940410507d4f69ebe013cc721aa3317611c8e9186a13c3028987b56"
+    },
+    {
+      "path": "framework/user/en/ui-testing.md",
+      "url": "https://docs.frappe.io/framework/user/en/ui-testing.md",
+      "bytes": 6918,
+      "sha256": "79259e5aba512b0ce88324a2f094839ec587a090307e8c2afbebff136a2fa083"
+    },
+    {
+      "path": "framework/user/en/prerequisites.md",
+      "url": "https://docs.frappe.io/framework/user/en/prerequisites.md",
+      "bytes": 2474,
+      "sha256": "8e925648bf30dc80805473f61acad0b9fa21916690d23ff92aa22990ac6f873f"
+    },
+    {
+      "path": "framework/user/en/debugging.md",
+      "url": "https://docs.frappe.io/framework/user/en/debugging.md",
+      "bytes": 9443,
+      "sha256": "946baed82c550124cb5aa4b29fa1cae4c589b251014b6c3656f04be622ac4537"
+    },
+    {
+      "path": "framework/user/en/bench.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench.md",
+      "bytes": 1681,
+      "sha256": "46e01002f5b6d11839e39b055bc1ff0e640306af647f39b090e14ce305cbe86a"
+    },
+    {
+      "path": "framework/user/en/email-groups.md",
+      "url": "https://docs.frappe.io/framework/user/en/email-groups.md",
+      "bytes": 1718,
+      "sha256": "1c9820ddd2ed9a75b656c2d8c676be1f9b25162c3bc59029839028c68e70534d"
+    },
+    {
+      "path": "framework/user/en/api.md",
+      "url": "https://docs.frappe.io/framework/user/en/api.md",
+      "bytes": 1845,
+      "sha256": "d5d1d07b39cb8a16feb0ff33f4823cb6d6a6fa7a36af584fca0409a9bad23091"
+    },
+    {
+      "path": "framework/user/en/using_frappe_as_oauth_service.md",
+      "url": "https://docs.frappe.io/framework/user/en/using_frappe_as_oauth_service.md",
+      "bytes": 5943,
+      "sha256": "2fd9040bb939c21064c29a8f23048cdd0cdba90468828f2dd4fca5cbe9371e89"
+    },
+    {
+      "path": "framework/user/en/apps-page.md",
+      "url": "https://docs.frappe.io/framework/user/en/apps-page.md",
+      "bytes": 1430,
+      "sha256": "5be6cd3fae1f2aa12283ab3ccbe0b35a5d51a122a45edd4385037a70c5351376"
+    },
+    {
+      "path": "framework/user/en/translations.md",
+      "url": "https://docs.frappe.io/framework/user/en/translations.md",
+      "bytes": 7350,
+      "sha256": "431cf613dadaf608cbe5fb89c6675678939daed8e2757c157e5bb6dcc9478b68"
+    },
+    {
+      "path": "framework/user/en/introduction.md",
+      "url": "https://docs.frappe.io/framework/user/en/introduction.md",
+      "bytes": 2524,
+      "sha256": "8ada44d25ca278fa4065d4307e545f6095407c2b1d19152b58b66d308843eec6"
+    },
+    {
+      "path": "framework/user/en/customize-geolocation-map.md",
+      "url": "https://docs.frappe.io/framework/user/en/customize-geolocation-map.md",
+      "bytes": 3154,
+      "sha256": "1b7f9133c9cdb2ea307a6b8352a1b55446d08b8170ca337317ed506cfd4716a5"
+    },
+    {
+      "path": "framework/user/en/microsoft-email-oauth.md",
+      "url": "https://docs.frappe.io/framework/user/en/microsoft-email-oauth.md",
+      "bytes": 4680,
+      "sha256": "e146f472cc70af88c95c6be4bfec6416695289abcb0fd85bc65b52287daf6b0d"
+    },
+    {
+      "path": "framework/user/en/how_to_contribute.md",
+      "url": "https://docs.frappe.io/framework/user/en/how_to_contribute.md",
+      "bytes": 2739,
+      "sha256": "78737dc6d69829728f9cacee32824f94873625984c66160d2f1ce1a92fc14d32"
+    },
+    {
+      "path": "framework/user/en/videos.md",
+      "url": "https://docs.frappe.io/framework/user/en/videos.md",
+      "bytes": 571,
+      "sha256": "c2039df2fad8178d3709d33f70b4e76389ae2fe3f41872ddc6b25e3884184cb2"
+    },
+    {
+      "path": "framework/user/en/security-faqs.md",
+      "url": "https://docs.frappe.io/framework/user/en/security-faqs.md",
+      "bytes": 5318,
+      "sha256": "5b3a1f6726cb3f57715451f1da74d241adadde13dd1b4fe23488cb8cf3d4512a"
+    },
+    {
+      "path": "framework/user/en/portal-pages.md",
+      "url": "https://docs.frappe.io/framework/user/en/portal-pages.md",
+      "bytes": 7122,
+      "sha256": "e57c5ea90b33cef6c484403d432cdf30754e028d7969a40d592e6d4825520494"
+    },
+    {
+      "path": "framework/user/en/desk/scripting.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/scripting.md",
+      "bytes": 577,
+      "sha256": "49f72f13372abe547ce44634fef518551af1a45e54062e2e2114331ffcad346e"
+    },
+    {
+      "path": "framework/user/en/desk/printing.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/printing.md",
+      "bytes": 3978,
+      "sha256": "69ec383e7d341168dfd37bda359aaecabc0b844cbb289db5ca743ca039717ce2"
+    },
+    {
+      "path": "framework/user/en/desk/reports.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/reports.md",
+      "bytes": 2709,
+      "sha256": "de5ed8c9cca50a9f59598c4f11aead6c4fb33a490ab7dd3f26ff00cac5ff5848"
+    },
+    {
+      "path": "framework/user/en/desk/attachments.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/attachments.md",
+      "bytes": 3994,
+      "sha256": "59dad5ad92b723ec20d31e084dcf1b4f28d791615c8354bc4a4eb38fca63b581"
+    },
+    {
+      "path": "framework/user/en/desk/workspace.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/workspace.md",
+      "bytes": 2668,
+      "sha256": "93f27fdb2225ff4dda48fd66c92e32b370b52d28c4985b273664f3064499dacc"
+    },
+    {
+      "path": "framework/user/en/guides/desk.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/desk.md",
+      "bytes": 352,
+      "sha256": "bb38a2181765dfc2ed0be846ab83bc469feb654325f98c4c702b52ee62f0ee7c"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development.md",
+      "bytes": 437,
+      "sha256": "2f995186c22233e1bf2de579ff447626ad0d8b7cf14e1ab07a2308778b9bb982"
+    },
+    {
+      "path": "framework/user/en/guides/caching.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/caching.md",
+      "bytes": 7351,
+      "sha256": "b0e47b33062923fdbf6edc2bef162c5ac20817269202dc9cd8e16d6539a7259c"
+    },
+    {
+      "path": "framework/user/en/guides/automated-testing.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/automated-testing.md",
+      "bytes": 337,
+      "sha256": "b93104a7b6a9a543dee19b0f0344c223a38a16c6778a554b50df3f7036c591ef"
+    },
+    {
+      "path": "framework/user/en/api/document.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/document.md",
+      "bytes": 11102,
+      "sha256": "194bea84e4f9d396b1218e17bcea8eb37154ec9eafc030f113f5917f4e638f54"
+    },
+    {
+      "path": "framework/user/en/api/logging.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/logging.md",
+      "bytes": 4661,
+      "sha256": "4e2d450bef8a265f3186db2dc04f25187aba8b6a2d0b865fb21c826522ef480d"
+    },
+    {
+      "path": "framework/user/en/api/js-utils.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/js-utils.md",
+      "bytes": 1593,
+      "sha256": "6bc5dde6895addee1638222c53b59593cab3d0ea134218b7932b9c08bf4b11a5"
+    },
+    {
+      "path": "framework/user/en/api/jinja.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/jinja.md",
+      "bytes": 4519,
+      "sha256": "f5afd932b6fd33c5f69883baa46968bbf00ccebfb98a6d9843bc9b48c4317dd7"
+    },
+    {
+      "path": "framework/user/en/api/py-dialog.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/py-dialog.md",
+      "bytes": 2628,
+      "sha256": "091b1059b852d1f52796961d58e17b76acfb2f931c7e696587be2f21cb223a0d"
+    },
+    {
+      "path": "framework/user/en/api/full-text-search.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/full-text-search.md",
+      "bytes": 1276,
+      "sha256": "de12121819e72207b32455cdf11e9b640dbec3bd574df04caa206080b41633e0"
+    },
+    {
+      "path": "framework/user/en/api/server-calls.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/server-calls.md",
+      "bytes": 3947,
+      "sha256": "58286a4e897df09e96629227a561f0fd97a73b2eb267a8027fed18aecfd4fb30"
+    },
+    {
+      "path": "framework/user/en/api/controls.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/controls.md",
+      "bytes": 4218,
+      "sha256": "a95c1a824c860ddf2da910d33cc28e17825fe73dbfa24583696e39383ffd5b3a"
+    },
+    {
+      "path": "framework/user/en/api/list.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/list.md",
+      "bytes": 5300,
+      "sha256": "50f163622d265a8820a8fc5ef78cffae441909db58bc9a79d7ec28523638566e"
+    },
+    {
+      "path": "framework/user/en/api/tree.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/tree.md",
+      "bytes": 1896,
+      "sha256": "5bb689ad2e6246bf25892d194d862adc55f3f7ce41997ebade0e0c9834e24b24"
+    },
+    {
+      "path": "framework/user/en/api/query-builder.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/query-builder.md",
+      "bytes": 11719,
+      "sha256": "74064e79aee77df84bf3bb883621c6d2d312a9cd9ecff7262b2c87862ec44266"
+    },
+    {
+      "path": "framework/user/en/api/background_jobs.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/background_jobs.md",
+      "bytes": 6419,
+      "sha256": "d0301580b298a81502322f380b713d6ea839ba1e308de6da9c8801687225fef3"
+    },
+    {
+      "path": "framework/user/en/api/form.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/form.md",
+      "bytes": 14617,
+      "sha256": "c58b0cbc2e289a00d219978148d1d7af623d19bca8742dae11d1cad2a626556a"
+    },
+    {
+      "path": "framework/user/en/api/chart.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/chart.md",
+      "bytes": 2435,
+      "sha256": "29e95e026caee18ba6f201c8c33e88054df15d89fa5d412092680612ea3eba8c"
+    },
+    {
+      "path": "framework/user/en/api/rest.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/rest.md",
+      "bytes": 12851,
+      "sha256": "1506c72f507825b57da7d1e83135b661872c702af3bf12db827e56193fc2c428"
+    },
+    {
+      "path": "framework/user/en/api/dialog.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/dialog.md",
+      "bytes": 14163,
+      "sha256": "604b38b595f13975635487195215c754d81b7e4a5b0ff197b83221ff4ee96aa3"
+    },
+    {
+      "path": "framework/user/en/api/scanner.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/scanner.md",
+      "bytes": 1442,
+      "sha256": "719e5db365b052f02ab58b9ebbb1895e426d0d1cce906c8aab3b9cafc9b2416a"
+    },
+    {
+      "path": "framework/user/en/api/database.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/database.md",
+      "bytes": 12678,
+      "sha256": "a80f261ad957c6fd6e935ff757df583e9a2515ddb7a7ab60eddab9ebe06f6b60"
+    },
+    {
+      "path": "framework/user/en/api/realtime.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/realtime.md",
+      "bytes": 10756,
+      "sha256": "8af2b9efe16ca3cd5880c72adf5d9f84a2889d6c38030d40a1bbb5f6ba583d7e"
+    },
+    {
+      "path": "framework/user/en/api/page.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/page.md",
+      "bytes": 5107,
+      "sha256": "998ad8d7cf2e497c128e243a2d17e1df3a2a4ee749110491b6553b106f1e1c9a"
+    },
+    {
+      "path": "framework/user/en/api/utils.md",
+      "url": "https://docs.frappe.io/framework/user/en/api/utils.md",
+      "bytes": 14611,
+      "sha256": "ee320d121ce5e52855de3674c8dd03f4656cac40eedb11040b9d80267c8c7c07"
+    },
+    {
+      "path": "framework/user/en/python-api/routing-and-rendering.md",
+      "url": "https://docs.frappe.io/framework/user/en/python-api/routing-and-rendering.md",
+      "bytes": 6095,
+      "sha256": "316682fa93eeb49253136f70e81fd5458425de33ad50effe4d2fedcae6d841ef"
+    },
+    {
+      "path": "framework/user/en/python-api/language.md",
+      "url": "https://docs.frappe.io/framework/user/en/python-api/language.md",
+      "bytes": 2303,
+      "sha256": "d385737ab75cae5b5d41c88def51b63aa0ac56a027979ad9c9a3560139c0ffec"
+    },
+    {
+      "path": "framework/user/en/python-api/response.md",
+      "url": "https://docs.frappe.io/framework/user/en/python-api/response.md",
+      "bytes": 2745,
+      "sha256": "17eba38ae8ec7f009933295c8b66353094f892e5fcb50a1443f3c2f171bd0aa1"
+    },
+    {
+      "path": "framework/user/en/python-api/hooks.md",
+      "url": "https://docs.frappe.io/framework/user/en/python-api/hooks.md",
+      "bytes": 60149,
+      "sha256": "b6cdb8ac5dbdc0a1cfe3dc0000ae88a907d8839a99c6398285c0f0078db8ec21"
+    },
+    {
+      "path": "framework/user/en/python-api/search.md",
+      "url": "https://docs.frappe.io/framework/user/en/python-api/search.md",
+      "bytes": 2692,
+      "sha256": "2bdeac1ad44851a92c3b3eb5c70529690dd1d5d51ad34ad258e82fd85ac2d5a9"
+    },
+    {
+      "path": "framework/user/en/bench/reference.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference.md",
+      "bytes": 1775,
+      "sha256": "2577fc0253418cdc11628d45018f4577a69f0828d7ec2b036b75065da5940ce0"
+    },
+    {
+      "path": "framework/user/en/bench/extending-the-cli.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/extending-the-cli.md",
+      "bytes": 1592,
+      "sha256": "90017237648cd1b262ea5c3728c8a061329acf36a681950c3a80b0f342c315c6"
+    },
+    {
+      "path": "framework/user/en/bench/frappe-commands.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/frappe-commands.md",
+      "bytes": 18327,
+      "sha256": "7f12d23242adf3e07b99517a1539bea334ff43dd66d807fe29e5f9f346ef98c4"
+    },
+    {
+      "path": "framework/user/en/bench/bench-commands.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/bench-commands.md",
+      "bytes": 12205,
+      "sha256": "27a183ec65fb12910b71f07432d1caebc81b2a30c0abb4ab894d2b4bbac5aad4"
+    },
+    {
+      "path": "framework/user/en/web-form/customization.md",
+      "url": "https://docs.frappe.io/framework/user/en/web-form/customization.md",
+      "bytes": 4812,
+      "sha256": "844a016d6dd7e51376b0c931bb41aa32aa744c9fb8d5847629b8fb3ffb8d53dc"
+    },
+    {
+      "path": "framework/user/en/web-form/settings.md",
+      "url": "https://docs.frappe.io/framework/user/en/web-form/settings.md",
+      "bytes": 3360,
+      "sha256": "83ecd001d3e8748338bdbad8787fc0a1a25545501b0b95fb3044baf5ae58c6cb"
+    },
+    {
+      "path": "framework/user/en/basics/static-assets.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/static-assets.md",
+      "bytes": 2790,
+      "sha256": "3cb71cbb2c2795b47ca3d0543008b34a80f0994304400a98bf6b220affa241e0"
+    },
+    {
+      "path": "framework/user/en/basics/why.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/why.md",
+      "bytes": 1674,
+      "sha256": "3763f16140c438ffc3c1906932d8affb527216374fe3152c9e7a76427717d6f0"
+    },
+    {
+      "path": "framework/user/en/basics/architecture.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/architecture.md",
+      "bytes": 1501,
+      "sha256": "1abcad2bd1829e126919ea5da6757749d1fb98df5841a5426bb971b5f2cb7f19"
+    },
+    {
+      "path": "framework/user/en/basics/users-and-permissions.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/users-and-permissions.md",
+      "bytes": 6672,
+      "sha256": "94361aae1c03cfd993f449eff97cd0d81d84f6d41588871cdce65b302d2abc42"
+    },
+    {
+      "path": "framework/user/en/basics/site_config.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/site_config.md",
+      "bytes": 40247,
+      "sha256": "2bb1abc0f3ca87decf5ad69cdb95e724c3018caa3480ecf48b758d59b32e3ec2"
+    },
+    {
+      "path": "framework/user/en/basics/virtual_docfield.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/virtual_docfield.md",
+      "bytes": 6332,
+      "sha256": "dc601f34a12404a496a888dfabfd0619da827b55185bea50cda5d00a0b9e8d24"
+    },
+    {
+      "path": "framework/user/en/basics/asset-bundling.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/asset-bundling.md",
+      "bytes": 7372,
+      "sha256": "da08497f05cda552af58a556486efc398a4c650c1ea50ff2d3082ce745d7f8e5"
+    },
+    {
+      "path": "framework/user/en/basics/directory-structure.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/directory-structure.md",
+      "bytes": 3048,
+      "sha256": "617643814348e913f2dbb84865bba63d98d74a3959ed2c0c05263a4c91a52fdc"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes.md",
+      "bytes": 2563,
+      "sha256": "540d0f628a3bf3a53a40ae1bb7cd8b79e28d7ea5e818ada878c52891e5dc251b"
+    },
+    {
+      "path": "framework/user/en/basics/sites.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/sites.md",
+      "bytes": 3754,
+      "sha256": "4322530781665d5c48994c52d28597b8945839f09e94b9694a2f044594148473"
+    },
+    {
+      "path": "framework/user/en/basics/apps.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/apps.md",
+      "bytes": 4932,
+      "sha256": "e8531f03007e34ddb7a08be6b0fd7599f3ee705b2f06827099f54d4420441c92"
+    },
+    {
+      "path": "framework/user/en/hidden-features/desk.md",
+      "url": "https://docs.frappe.io/framework/user/en/hidden-features/desk.md",
+      "bytes": 621,
+      "sha256": "1c32bbb36102779306a2aeb409803be915c1cfb22a2983c0a23a9b5dae70b76b"
+    },
+    {
+      "path": "framework/user/en/tutorial/install-and-setup-bench.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/install-and-setup-bench.md",
+      "bytes": 7239,
+      "sha256": "51b2a6355040b4d70c8c6424859e6db89ae1ca5223f1194afd455599ab5966a7"
+    },
+    {
+      "path": "framework/user/en/tutorial/doctype-features.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/doctype-features.md",
+      "bytes": 3445,
+      "sha256": "c0c61e92ad4e85cf64ce242cbcea89b79dd2e87b4ed6b13f24c77820780ce8f6"
+    },
+    {
+      "path": "framework/user/en/tutorial/create-a-site.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/create-a-site.md",
+      "bytes": 7214,
+      "sha256": "8210ee36338062e5482567a643de1370a0b45286743318f361caf911241214f5"
+    },
+    {
+      "path": "framework/user/en/tutorial/form-scripts.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/form-scripts.md",
+      "bytes": 1494,
+      "sha256": "570ea5cad4d0ef687696878186880585d195782869e024f0153515a2b19b5d9a"
+    },
+    {
+      "path": "framework/user/en/tutorial/create-an-app.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/create-an-app.md",
+      "bytes": 2920,
+      "sha256": "c242ad0ce27020776939d00d91c15f795dc6c390b0642e14a54a195e1c104782"
+    },
+    {
+      "path": "framework/user/en/tutorial/create-a-doctype.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/create-a-doctype.md",
+      "bytes": 8382,
+      "sha256": "55d68c49c750a8b2e8da9bccf5f121b51a5fd39ef161e3aa78dce6347b9d5bc9"
+    },
+    {
+      "path": "framework/user/en/tutorial/whats-next.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/whats-next.md",
+      "bytes": 848,
+      "sha256": "6b16cf761865c6e11a7a2a9ae1e081f6c598d2e2e9b7f28777d9fc662ab300dc"
+    },
+    {
+      "path": "framework/user/en/tutorial/types-of-doctype.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/types-of-doctype.md",
+      "bytes": 11779,
+      "sha256": "e6221d689ab40adff68d659211acdb643fd0b730bcc0f238a67c8640830a3888"
+    },
+    {
+      "path": "framework/user/en/tutorial/controller-methods.md",
+      "url": "https://docs.frappe.io/framework/user/en/tutorial/controller-methods.md",
+      "bytes": 1851,
+      "sha256": "36310df1d0e8217e1e945645bfad4c4ebd2a040c98a00c61fb93db328a8b23ed"
+    },
+    {
+      "path": "framework/user/en/integration/google_drive.md",
+      "url": "https://docs.frappe.io/framework/user/en/integration/google_drive.md",
+      "bytes": 4085,
+      "sha256": "5e247030abe27b49c4e80a235b460754efceb18132602d7f6f6f706dfbb594d7"
+    },
+    {
+      "path": "framework/user/en/integration/ldap-integration.md",
+      "url": "https://docs.frappe.io/framework/user/en/integration/ldap-integration.md",
+      "bytes": 9235,
+      "sha256": "7b437322ac6e23919824b7fbd394df272c128ae6092fa40e5e6a0b0162f4e025"
+    },
+    {
+      "path": "framework/user/en/integration/razorpay.md",
+      "url": "https://docs.frappe.io/framework/user/en/integration/razorpay.md",
+      "bytes": 3284,
+      "sha256": "99e71d410c2226deb6b3f748c54195747ce5f34597eed71138775b5b12c5cd13"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/form_&_view_settings.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/form_&_view_settings.md",
+      "bytes": 822,
+      "sha256": "112dd17f89fd3801d0f99cb69267bf0f722ec3c200ebf053ee2ae8e14a78c233"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/modules.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/modules.md",
+      "bytes": 1286,
+      "sha256": "59e972d8f732a6cddc3faf52be3d5d3e704053a8e0809f013a07c1452a303685"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/actions-and-links.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/actions-and-links.md",
+      "bytes": 4211,
+      "sha256": "c72b655267abc600d1cc351d97efb2e145f8dd077958a998825488abd4e90c72"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/fieldtypes.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/fieldtypes.md",
+      "bytes": 11653,
+      "sha256": "c100679e2066304e1e0699a5f68c08982006613292608568706fa7c92303dbea"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/naming.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/naming.md",
+      "bytes": 5415,
+      "sha256": "1b677daca459a4cb5034cf0a72508c23134aa7b60b74e004f4c30b78ce71f566"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/controllers.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/controllers.md",
+      "bytes": 7530,
+      "sha256": "7454ba065b42ed0659b252c1e76be34e84737419c9eb561a2543c3b1b3eccfb0"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/child-doctype.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/child-doctype.md",
+      "bytes": 1343,
+      "sha256": "83756adc3f2f59d7f4d352fc642fbcc7d761e939ca45648b9406d425d7f7eec5"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/customize.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/customize.md",
+      "bytes": 1814,
+      "sha256": "4fc2a2aac643400c90f1675dfb803e4ed5a570f808fd7fc17927fcefb2d9b933"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/virtual-doctype.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/virtual-doctype.md",
+      "bytes": 3780,
+      "sha256": "df05a385512bb69d0867900be79ffce8b9a45729d5793b5e28b256144979f106"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/single-doctype.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/single-doctype.md",
+      "bytes": 660,
+      "sha256": "43567029048285a57a74045782758d9aeeae953d9f123aec970cd81016a31932"
+    },
+    {
+      "path": "framework/user/en/basics/doctypes/docfield.md",
+      "url": "https://docs.frappe.io/framework/user/en/basics/doctypes/docfield.md",
+      "bytes": 2269,
+      "sha256": "b89c27684d23ff31feeeffa4214d8438f183f8687a12f1e499fc40a0755b5e39"
+    },
+    {
+      "path": "framework/user/en/bench/guides/lets-encrypt-ssl-setup.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/guides/lets-encrypt-ssl-setup.md",
+      "bytes": 3301,
+      "sha256": "4f4b98af2a619422bc974acaf171b6f0978f78d3f6de602638bf39990cb18588"
+    },
+    {
+      "path": "framework/user/en/bench/guides/diagnosing-the-scheduler.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/guides/diagnosing-the-scheduler.md",
+      "bytes": 725,
+      "sha256": "41fe0566e46a8798328a169c6826fec04b50f9b5a86f064448d35b739921293c"
+    },
+    {
+      "path": "framework/user/en/bench/guides/adding-custom-domains.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/guides/adding-custom-domains.md",
+      "bytes": 1158,
+      "sha256": "091efb07cb899d63496a54f73a9a11d8a6f09f2b5b3355d59656a08e72b1c75b"
+    },
+    {
+      "path": "framework/user/en/bench/guides/settings-limits.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/guides/settings-limits.md",
+      "bytes": 1405,
+      "sha256": "4f649e8dc3a80d1e41cf771c57ca04eaeb14d2b091758a1d2583d63e14abd3a6"
+    },
+    {
+      "path": "framework/user/en/bench/guides/setup-production.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/guides/setup-production.md",
+      "bytes": 2791,
+      "sha256": "cf9961fea958ba83e3b4e291f89439effb8c57ce8200a5b9e379bd73a39b9602"
+    },
+    {
+      "path": "framework/user/en/bench/guides/setup-multitenancy.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/guides/setup-multitenancy.md",
+      "bytes": 1448,
+      "sha256": "db26a569870bc1b37c533b48579016a71c9f8ab7b9ebf8f17fcc783ffe58f11e"
+    },
+    {
+      "path": "framework/user/en/bench/guides/configuring-https.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/guides/configuring-https.md",
+      "bytes": 2373,
+      "sha256": "a75b7f464d69e6642c9656228d29fcd24b692838ff263d16104722274b0f9b30"
+    },
+    {
+      "path": "framework/user/en/bench/reference/restore.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/restore.md",
+      "bytes": 2908,
+      "sha256": "075dcfbc49db3582aea61200a8fd442ffe7a378370285e446a7ea9a368dc91f4"
+    },
+    {
+      "path": "framework/user/en/bench/reference/set-config.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/set-config.md",
+      "bytes": 2173,
+      "sha256": "53ab15d71cd8b143301f8e9c4fa6fc98b2703bab16a5c252567a24b3867a72f2"
+    },
+    {
+      "path": "framework/user/en/bench/reference/backup.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/backup.md",
+      "bytes": 2609,
+      "sha256": "da047298e05da0a9a16ad8159e2be133f69ca9c9b4401732faca59e96d90f485"
+    },
+    {
+      "path": "framework/user/en/bench/reference/reinstall.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/reinstall.md",
+      "bytes": 1232,
+      "sha256": "13ec3a1d9dc60df4c4d7382918a7974ca02944b63debfcd1618402c2713f1f7f"
+    },
+    {
+      "path": "framework/user/en/bench/reference/list-apps.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/list-apps.md",
+      "bytes": 1218,
+      "sha256": "589145171000f4f3f497404b83e87cf1e34da1fd2162589f5c7de6c453c852c2"
+    },
+    {
+      "path": "framework/user/en/bench/reference/new-site.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/new-site.md",
+      "bytes": 2927,
+      "sha256": "a8d12a2ab1142c3bc48ba91fcd54af71b594520ee7d55dfbfd29d2c859047284"
+    },
+    {
+      "path": "framework/user/en/bench/reference/partial-restore.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/partial-restore.md",
+      "bytes": 1152,
+      "sha256": "7aa34127ed5517c87f7b8783c5748f1555ca1f2d612b81a1ca9ef7c7a357fa89"
+    },
+    {
+      "path": "framework/user/en/bench/reference/uninstall-app.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/uninstall-app.md",
+      "bytes": 1275,
+      "sha256": "fd2c245185e2fd9e4cda862ee2f0b93a23894c759d9e7532d7d9b5ccf9e3b244"
+    },
+    {
+      "path": "framework/user/en/bench/reference/transform-database.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/transform-database.md",
+      "bytes": 1856,
+      "sha256": "0814600bbea269c8c6145c9b13fe46ce3f269cbd179a914d0a6d983dc8445b16"
+    },
+    {
+      "path": "framework/user/en/bench/reference/trim-database.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/trim-database.md",
+      "bytes": 1481,
+      "sha256": "6eac002b9675e62354f480f75db62a10962395dc9496f1ffee20aec0fd553dd8"
+    },
+    {
+      "path": "framework/user/en/bench/reference/trim-tables.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/trim-tables.md",
+      "bytes": 1710,
+      "sha256": "c24c9aa2a547293f0891ba95a58448d5bc3d985641d97d31e76782ecc0844ac3"
+    },
+    {
+      "path": "framework/user/en/bench/reference/show-config.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/show-config.md",
+      "bytes": 1143,
+      "sha256": "16b3c51e46967d4b46096d8aabd26f6eebf5cedd5970bb89154fe66e23e47627"
+    },
+    {
+      "path": "framework/user/en/bench/reference/execute.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/execute.md",
+      "bytes": 10376,
+      "sha256": "ba1eae2c2e2b5a299ad28e3b0f5da3192d41f77c35365f8d4cb95c92eb19eb27"
+    },
+    {
+      "path": "framework/user/en/bench/reference/migrate.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/migrate.md",
+      "bytes": 1289,
+      "sha256": "ee611809e3b80f055f8ced85d680ba1f879736695b68e8f9d531381221822b31"
+    },
+    {
+      "path": "framework/user/en/bench/reference/bench-version.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/bench-version.md",
+      "bytes": 2002,
+      "sha256": "b9ae7050301ba86dd3c682bc17e6bc0482d9dfc9b027202a043ae2e2fe55489e"
+    },
+    {
+      "path": "framework/user/en/bench/reference/drop-site.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/reference/drop-site.md",
+      "bytes": 1233,
+      "sha256": "b1955c24720e57bd20fba1cee5ffde64a4cd09ed0c7cf362ad928253238f7f9e"
+    },
+    {
+      "path": "framework/user/en/bench/resources/bench-commands-cheatsheet.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/resources/bench-commands-cheatsheet.md",
+      "bytes": 7716,
+      "sha256": "664e2de0377100672ec8aaa6f7ee81fad36cec705989100d30d6416cc715a95e"
+    },
+    {
+      "path": "framework/user/en/bench/resources/bench-procfile.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/resources/bench-procfile.md",
+      "bytes": 1249,
+      "sha256": "cf18069b439df4a55f36536abcd2831a1a6b7d9ab1b68b9fd7f61e4c61c6c8b4"
+    },
+    {
+      "path": "framework/user/en/bench/resources/background-services.md",
+      "url": "https://docs.frappe.io/framework/user/en/bench/resources/background-services.md",
+      "bytes": 1914,
+      "sha256": "76801bfde6ed2870b9dc84acac25e6af62334e451c780dff898debd164e20bf2"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/generators.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/generators.md",
+      "bytes": 2738,
+      "sha256": "cea6e2f2ecef42900d7881a02ba011c72a8e9bc650a88ec6f260d3db8059f626"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/context.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/context.md",
+      "bytes": 850,
+      "sha256": "e39a3ce0734577958cf18b2a06cab25453dd85edb27d6f40b7a39b3a0e28eae9"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/portal-roles.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/portal-roles.md",
+      "bytes": 1055,
+      "sha256": "959240c4cc4b570c0fe9473a8936c9ee0d4c23a1fa24810d881b7d182921e8e4"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/ordering.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/ordering.md",
+      "bytes": 472,
+      "sha256": "6e6302be08956cee1ae5d7feb3f4b33ab26c1a43568e939227722a93575ee293"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/table-of-contents.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/table-of-contents.md",
+      "bytes": 560,
+      "sha256": "6433f4bad8cb396108291246208e81dd9344759801d09073ff03d7689bc8433a"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/web-forms.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/web-forms.md",
+      "bytes": 3017,
+      "sha256": "e1d7ace1115b5ee70622f0f5e34e1f1c504a60c3d07c7f0d0003d86d83aeb1df"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/adding-pages.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/adding-pages.md",
+      "bytes": 1674,
+      "sha256": "3a656f8d1ed8f8fd84225bb823fd3464ceae6e119772dfa3e8ceb405d7315b0e"
+    },
+    {
+      "path": "framework/user/en/guides/portal-development/redirects.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/portal-development/redirects.md",
+      "bytes": 679,
+      "sha256": "9095b97dd5ce62dae475a3fe172cd010a715a607bc60a9393262e1197c8606a0"
+    },
+    {
+      "path": "framework/user/en/guides/desk/formatter_for_link_fields.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/desk/formatter_for_link_fields.md",
+      "bytes": 925,
+      "sha256": "26a9ec91e489f694a63df31eb678dcd6d59d67addc3c035bd596650fd2d89208"
+    },
+    {
+      "path": "framework/user/en/guides/desk/making_charts.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/desk/making_charts.md",
+      "bytes": 449,
+      "sha256": "3eb1df63e3165913760c11f46d1b23c49c4825d82769499ec396b2f6ddd1864c"
+    },
+    {
+      "path": "framework/user/en/guides/deployment/how-to-migrate-doctype-changes-to-production.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/deployment/how-to-migrate-doctype-changes-to-production.md",
+      "bytes": 703,
+      "sha256": "43d438030b6c462d76bd09566706f76445df83a78bc7e6ef5b004df41c556c5d"
+    },
+    {
+      "path": "framework/user/en/guides/deployment/migrations.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/deployment/migrations.md",
+      "bytes": 3250,
+      "sha256": "bf0c5ac9836110719bb937230a024b8054c1536ac667fb8bc89c7907dd4fc6f7"
+    },
+    {
+      "path": "framework/user/en/guides/deployment/email-notifications-for-failed-background-jobs.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/deployment/email-notifications-for-failed-background-jobs.md",
+      "bytes": 929,
+      "sha256": "34c7e591595aec10a18bde7993d4fb65ec00a9083d61dbcdfc9d2ba35c40765e"
+    },
+    {
+      "path": "framework/user/en/guides/deployment/how-to-enable-social-logins.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/deployment/how-to-enable-social-logins.md",
+      "bytes": 5364,
+      "sha256": "16ea88f27dd6b86df354bb2c7e753bb87b301253c283157db334ea89a00dfc25"
+    },
+    {
+      "path": "framework/user/en/guides/deployment/packages.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/deployment/packages.md",
+      "bytes": 1924,
+      "sha256": "186ae3530c869cadcaa30bfffc0922935dddae07ba7eb940d9181f0b7ff6228d"
+    },
+    {
+      "path": "framework/user/en/guides/basics/how-to-enable-backup-encryption.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/basics/how-to-enable-backup-encryption.md",
+      "bytes": 2418,
+      "sha256": "9af651f52193e4f4cf79dd516a4046f4253f215ae978c6baaaf4fe9a717148d4"
+    },
+    {
+      "path": "framework/user/en/guides/basics/frappe_ajax_call.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/basics/frappe_ajax_call.md",
+      "bytes": 2854,
+      "sha256": "4b857dddb10e2ab5b7819e92ef9b235736f6e8034a4338d8704f015bfe5867bf"
+    },
+    {
+      "path": "framework/user/en/guides/basics/translations.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/basics/translations.md",
+      "bytes": 4244,
+      "sha256": "51206d5c68da5e1f79d637f060268004ebef69e665a55ec3d8dc893dbf77dfe3"
+    },
+    {
+      "path": "framework/user/en/guides/basics/sites.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/basics/sites.md",
+      "bytes": 2978,
+      "sha256": "2b7d9cfd4c2ecf436683d38a73ba5dd7b28dc6bb9a6135f3df29d8aa90510eb6"
+    },
+    {
+      "path": "framework/user/en/guides/basics/apps.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/basics/apps.md",
+      "bytes": 2994,
+      "sha256": "3859e1d023cccc584df8c0762aeeb515e2f59c5446ff01a0ec202ac9b6e5cbc0"
+    },
+    {
+      "path": "framework/user/en/guides/data/import-large-csv-file.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/data/import-large-csv-file.md",
+      "bytes": 1283,
+      "sha256": "8ad0eb9a59f78015b139745695b00fac640e0985ecd29ce5afceed0c7cacade7"
+    },
+    {
+      "path": "framework/user/en/guides/data/using-data-migration-tool.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/data/using-data-migration-tool.md",
+      "bytes": 5694,
+      "sha256": "ced8ed9a71594dfe1516ebacccb2590a78792e96dad4808b92f5fae05fbb5287"
+    },
+    {
+      "path": "framework/user/en/guides/automated-testing/integration-testing.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/automated-testing/integration-testing.md",
+      "bytes": 1432,
+      "sha256": "408da90840c5dea7274f0b397390bc9174090dd141956748d93c7cb4974c7fde"
+    },
+    {
+      "path": "framework/user/en/guides/automated-testing/unit-testing.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/automated-testing/unit-testing.md",
+      "bytes": 8268,
+      "sha256": "54c3b8af6d810092f9a52e1fb2275605aafbdef13fc9b23af85fadf22a883e16"
+    },
+    {
+      "path": "framework/user/en/guides/automated-testing/qunit-testing.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/automated-testing/qunit-testing.md",
+      "bytes": 2859,
+      "sha256": "d47d622cf1dd96f1a8462919191ee3540529e15957c2f5f03b660a3947129de5"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/adding-social-login-provider.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/adding-social-login-provider.md",
+      "bytes": 1861,
+      "sha256": "af04060b785fabe36f006912274cc2706ef3e3396645b6ac959e14deb05283b9"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/connected-app.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/connected-app.md",
+      "bytes": 3432,
+      "sha256": "a77c1e090cebc2a1970b399500fbe0093497cd55edf7329b87be09d0d8464fee"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/fetch-custom-field-value-from-master-to-all-related-transactions.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/fetch-custom-field-value-from-master-to-all-related-transactions.md",
+      "bytes": 2261,
+      "sha256": "9c3bab857c7b8c625ca65f5752a856b6fd3ec72d10c1c2435e8e417a8c4af97a"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/adding-custom-button-to-form.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/adding-custom-button-to-form.md",
+      "bytes": 1134,
+      "sha256": "6be4d45cd12cb42bde6464840775f513ec13dbc2a46d9fa3d21df002653f658b"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/how-to-create-custom-fields-during-app-installation.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/how-to-create-custom-fields-during-app-installation.md",
+      "bytes": 983,
+      "sha256": "60f3bd797c91791b3799269068a48c974701794564bad54ceda210b113b86f46"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/dialogs-types.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/dialogs-types.md",
+      "bytes": 2423,
+      "sha256": "bf746a05ef2c571021bbc055af38f3a2ea4428aecf8611c66c50f7c06bb2f848"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/insert-a-document-via-api.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/insert-a-document-via-api.md",
+      "bytes": 1278,
+      "sha256": "f94ec701202c3becd5cc75806717750c0974b34a1762157294cd3c5f9faa6d93"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/adding-module-icons-on-desktop.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/adding-module-icons-on-desktop.md",
+      "bytes": 1525,
+      "sha256": "cc2ae9a7cb7395f3220bdc74a1a65ec9d0cecb18049a4aa811d8c7221061b34b"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/custom-module-icon.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/custom-module-icon.md",
+      "bytes": 765,
+      "sha256": "1ec56ba3835addddc641010bd44d911924503d488c538f9f479cd9d0c26a243b"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/how-to-improve-a-standard-control.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/how-to-improve-a-standard-control.md",
+      "bytes": 4102,
+      "sha256": "2a10e2b171aeed3b05bdabd968517aff5df71af6523f56b60e32333db9dfebfb"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/generic-oauth-client.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/generic-oauth-client.md",
+      "bytes": 1881,
+      "sha256": "0942f8c18ab4e4fa07c04ebe6dd4fe730d6271ac2b6a95302eb390b195853b66"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/overriding-link-query-by-custom-script.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/overriding-link-query-by-custom-script.md",
+      "bytes": 3042,
+      "sha256": "08758ed2c29da896be65675cb8bee6b30a9e26c8718c2116737f17dbdea30e36"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/single-type-doctype.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/single-type-doctype.md",
+      "bytes": 795,
+      "sha256": "c5a05baabf88ffa482e151761d66ea459bd0dda795365101c2f132b07821b5ea"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/executing-code-on-doctype-events.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/executing-code-on-doctype-events.md",
+      "bytes": 1586,
+      "sha256": "9fde71ddcea351789b478046eb8f8917f53a3b94ac08a173c2046cf59a3507e4"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/using-html-templates-in-javascript.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/using-html-templates-in-javascript.md",
+      "bytes": 1477,
+      "sha256": "857dd8ac5b21cc037142ff197bec68baf1f0b13834b5ed2386c612e716686423"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/trigger-event-on-deletion-of-grid-row.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/trigger-event-on-deletion-of-grid-row.md",
+      "bytes": 1538,
+      "sha256": "b7ae52f0def8800c067991acb8b20d210a640dbe4b4ba2889295b1e66abed3bf"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/custom_action_link_field.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/custom_action_link_field.md",
+      "bytes": 956,
+      "sha256": "e0ace907d6adb129943e0e9c79e51c5637583540087c2b9304614808692b6273"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/running-background-jobs.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/running-background-jobs.md",
+      "bytes": 1958,
+      "sha256": "31035ae690b7c40f25972a711f59cfae762b30f325c1306601d737e1ad58a37d"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/exporting-customizations.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/exporting-customizations.md",
+      "bytes": 1094,
+      "sha256": "2489855acf3d21f763fdb37995cbcc1474868ec86b1e7dc365f27f2541352be3"
+    },
+    {
+      "path": "framework/user/en/guides/app-development/how-enable-developer-mode-in-frappe.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/app-development/how-enable-developer-mode-in-frappe.md",
+      "bytes": 979,
+      "sha256": "add7673e30941451a7f833d21a189c09486c54a3ef92e2eb7ab39781e01ef8b2"
+    },
+    {
+      "path": "framework/user/en/guides/database-settings/postgres-database-setup.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/database-settings/postgres-database-setup.md",
+      "bytes": 391,
+      "sha256": "ca8512e7fedc7a88720313e13a74cc6248b2181b9b3f94e123cf58f5df28de04"
+    },
+    {
+      "path": "framework/user/en/guides/database-settings/setup-read-from-secondary-db.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/database-settings/setup-read-from-secondary-db.md",
+      "bytes": 4316,
+      "sha256": "b21db94b6492fcddd1b4e7d6d9b1c30190c9f90cb8478732119ac9ae3e7313ac"
+    },
+    {
+      "path": "framework/user/en/guides/reports-and-printing/getting-information-from-another-document-in-print-format.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/reports-and-printing/getting-information-from-another-document-in-print-format.md",
+      "bytes": 560,
+      "sha256": "c0d0a2341dcbec4d0ff6af85f0616b50104d7afcf9d559d86c9327d30ca1c519"
+    },
+    {
+      "path": "framework/user/en/guides/reports-and-printing/how-to-make-script-reports.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/reports-and-printing/how-to-make-script-reports.md",
+      "bytes": 3716,
+      "sha256": "3ee6eeb83487fefb53d96fc2487af74f176828b4221035ba7a6d7ea34b6bd7f2"
+    },
+    {
+      "path": "framework/user/en/guides/reports-and-printing/where-do-i-find-standard-print-formats.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/reports-and-printing/where-do-i-find-standard-print-formats.md",
+      "bytes": 1464,
+      "sha256": "b21618cff093cdcb60f0b660fc04689a4c3bb9222f38d0e79b29c8a3f00b8937"
+    },
+    {
+      "path": "framework/user/en/guides/reports-and-printing/print-format-for-reports.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/reports-and-printing/print-format-for-reports.md",
+      "bytes": 2482,
+      "sha256": "67e17b16c8acef21e6808938509c3d58361998851bee776c4a0554e7951ecceb"
+    },
+    {
+      "path": "framework/user/en/guides/reports-and-printing/how-to-make-query-report.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/reports-and-printing/how-to-make-query-report.md",
+      "bytes": 2159,
+      "sha256": "4a05a6bb42c82e7c8e17d2828c638a1bd0e908e0167a074cafbee64d47e42739"
+    },
+    {
+      "path": "framework/user/en/guides/integration/webhooks.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/webhooks.md",
+      "bytes": 5547,
+      "sha256": "482682a72965b4bbaf63eb55161a78ec28fa8d167b6c43c57a74f575e56538c9"
+    },
+    {
+      "path": "framework/user/en/guides/integration/social_login_key.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/social_login_key.md",
+      "bytes": 1624,
+      "sha256": "091baff6435d6ed94702c8c00ea85efb1cf81f085a62b2dfaad76544f5b079e4"
+    },
+    {
+      "path": "framework/user/en/guides/integration/how_to_set_up_token_based_auth.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/how_to_set_up_token_based_auth.md",
+      "bytes": 2205,
+      "sha256": "6763a3704619ceddb64ca87799c5c0f8afc77389628676688a04ce0702c1b6d3"
+    },
+    {
+      "path": "framework/user/en/guides/integration/google_gsuite.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/google_gsuite.md",
+      "bytes": 4384,
+      "sha256": "950af7a19b4c0466850cc310d8224e394052ce0449247238d804250adaff8833"
+    },
+    {
+      "path": "framework/user/en/guides/integration/google_calendar.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/google_calendar.md",
+      "bytes": 2202,
+      "sha256": "e932514cafdbcb73f564b03159429bf0ef0a304239b23564e5e7e3c2eb878d36"
+    },
+    {
+      "path": "framework/user/en/guides/integration/rest_api.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/rest_api.md",
+      "bytes": 3973,
+      "sha256": "36308b347eb90699cd073ba97a91c5656f460ba057322d8001a594c9adee7296"
+    },
+    {
+      "path": "framework/user/en/guides/integration/openid_connect_and_frappe_social_login.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/openid_connect_and_frappe_social_login.md",
+      "bytes": 3369,
+      "sha256": "3b17f0466ff1c90f06c1d32973768c310a1261878797165b55987d4f654bee7c"
+    },
+    {
+      "path": "framework/user/en/guides/integration/how_to_set_up_oauth.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/how_to_set_up_oauth.md",
+      "bytes": 3012,
+      "sha256": "1f9e1b88de68c949fa21b0656f4f480b43226b1177addcbcddf885310046f75c"
+    },
+    {
+      "path": "framework/user/en/guides/integration/how_to_setup_token_based_auth.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/how_to_setup_token_based_auth.md",
+      "bytes": 2174,
+      "sha256": "ea4c0a1ae1d9cc7514f8c281c7cd60a9112150be6e443364cbdfe1ea0cbd8a3e"
+    },
+    {
+      "path": "framework/user/en/guides/integration/rest_api/manipulating_documents.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/rest_api/manipulating_documents.md",
+      "bytes": 4140,
+      "sha256": "c46570d3822f3b55bfb4f8d672b572bf86eaf88cdde5351a0c59963b5716a300"
+    },
+    {
+      "path": "framework/user/en/guides/integration/rest_api/listing_documents.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/rest_api/listing_documents.md",
+      "bytes": 1583,
+      "sha256": "f49fda315f95018e478da742e0012973cb328d973ed1bbe36b86cd604903b1cb"
+    },
+    {
+      "path": "framework/user/en/guides/integration/rest_api/simple_authentication.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/rest_api/simple_authentication.md",
+      "bytes": 1588,
+      "sha256": "85b3aaf0dd13d6ae6a06b9b83a874de43fe3473497a08350a4114133c362d824"
+    },
+    {
+      "path": "framework/user/en/guides/integration/rest_api/oauth-2.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/rest_api/oauth-2.md",
+      "bytes": 9740,
+      "sha256": "8646480c1dbb8dd42b8a42b365d628c90a8ac51fc93c6410580167f09642118e"
+    },
+    {
+      "path": "framework/user/en/guides/integration/rest_api/token_based_authentication.md",
+      "url": "https://docs.frappe.io/framework/user/en/guides/integration/rest_api/token_based_authentication.md",
+      "bytes": 2906,
+      "sha256": "490c4137f207d8526a4f0ae73f834bee50f3f204d147b360903d030e00719b51"
+    },
+    {
+      "path": "framework/user/en/desk/reports/report-builder.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/reports/report-builder.md",
+      "bytes": 1372,
+      "sha256": "275c7686555669ef8d8306e5eecea937a64810cefec865e62b3ba8f5df10f9d1"
+    },
+    {
+      "path": "framework/user/en/desk/reports/script-report.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/reports/script-report.md",
+      "bytes": 6911,
+      "sha256": "69b791aeecbebbee6556641b0c350c3a5ae9070341333df2b3037724ff1fc5a4"
+    },
+    {
+      "path": "framework/user/en/desk/reports/query-report.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/reports/query-report.md",
+      "bytes": 2931,
+      "sha256": "ac9f0e1bc195c6c78f05b752343585825293fec01790467b7e9cd556ef48b3da"
+    },
+    {
+      "path": "framework/user/en/desk/scripting/system-console.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/scripting/system-console.md",
+      "bytes": 659,
+      "sha256": "d4cb3e4bfd2cfeca7a6448f62d5ac6ee9f366c92fa8bac6859374bfe01942de1"
+    },
+    {
+      "path": "framework/user/en/desk/scripting/client-script.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/scripting/client-script.md",
+      "bytes": 5371,
+      "sha256": "52b13e81e145621f9bb85047e7b2b6195e9a5694339c573f5063d3c2d23b2443"
+    },
+    {
+      "path": "framework/user/en/desk/scripting/server-script.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/scripting/server-script.md",
+      "bytes": 4250,
+      "sha256": "fbc5c8a9184995b0e1042046009b51eafba6e2ec25802585f61e6d9203311608"
+    },
+    {
+      "path": "framework/user/en/desk/scripting/script-api.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/scripting/script-api.md",
+      "bytes": 5042,
+      "sha256": "7d92ba7044d1c54da8385666001cba8f0482762919978ec3ef886ff777e49ea8"
+    },
+    {
+      "path": "framework/user/en/desk/workspace/access.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/workspace/access.md",
+      "bytes": 1665,
+      "sha256": "eb345d1b70f234c1374243ed727298d7a79372030e355dd10fa22422afdce6f4"
+    },
+    {
+      "path": "framework/user/en/desk/workspace/customization.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/workspace/customization.md",
+      "bytes": 2091,
+      "sha256": "d2a17237b8c41f139855dc933cbe1ff945a5506b94171e99b15740632dc9b396"
+    },
+    {
+      "path": "framework/user/en/desk/workspace/blocks.md",
+      "url": "https://docs.frappe.io/framework/user/en/desk/workspace/blocks.md",
+      "bytes": 2793,
+      "sha256": "811c8181756a6b10d891bc53cd6f8a3a31b2160f8af913c827a19eda6829fec8"
+    }
+  ]
+}

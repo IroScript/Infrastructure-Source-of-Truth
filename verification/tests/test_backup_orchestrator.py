@@ -741,3 +741,85 @@ def test_git_isolation_invariant(test_env):
     # But without filesystem generation increment, dirty_gen=5 == last_good=5, so it is CLEAN in backup domain!
     res2 = orchestrator.run_cycle_for_project(project_id, force=False, agent_state_override=AgentState.IDLE)
     assert res2.action_taken == "SKIPPED_CLEAN", "Backup decision erroneously inspected Git dirty state!"
+
+
+def test_submit_prompt_isolated_no_crash_recovery(test_env):
+    """
+    Codex A1: submit-prompt must NOT trigger crash recovery or unlock active backups.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    proj_dir = test_env["projects_root"] / "proj_a1"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    project_id = "proj_a1"
+
+    db = Database(cfg.db_path)
+    gate = PromptGateCoordinator(db)
+    gate.register_or_update_project(project_id, "proj_a1", str(proj_dir), initial_generation=1)
+
+    # Put project into CLOSED state with active CAPTURING lock
+    assert gate.close_gate(project_id) is True
+    with db.transaction() as cur:
+        cur.execute(
+            "UPDATE projects_state SET lifecycle_lock = 'LOCKED', active_backup_id = 'active_backup_123' WHERE project_id = ?;",
+            (project_id,),
+        )
+
+    # Call submit_prompt via bridge adapter
+    bridge = BridgeAdapter(gate_coordinator=gate, sot_root=cfg.sot_root)
+    res = bridge.handle_incoming_message(
+        route_spec=project_id,
+        message_id="msg_a1",
+        payload="adversarial prompt during backup",
+    )
+
+    assert res.status == "HELD"
+    assert res.delivered is False
+    with db.transaction() as cur:
+        cur.execute("SELECT prompt_gate, lifecycle_lock, active_backup_id FROM projects_state WHERE project_id = ?;", (project_id,))
+        row = cur.fetchone()
+        assert row["prompt_gate"] == "CLOSED"
+        assert row["lifecycle_lock"] == "LOCKED"
+        assert row["active_backup_id"] == "active_backup_123"
+
+
+def test_gate_drain_fifo_delivery(test_env):
+    """
+    Codex A2: HELD prompts in FIFO queue are auto-drained when gate opens.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    proj_dir = test_env["projects_root"] / "proj_a2"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    project_id = "proj_a2"
+
+    db = Database(cfg.db_path)
+    gate = PromptGateCoordinator(db)
+    gate.register_or_update_project(project_id, "proj_a2", str(proj_dir), initial_generation=1)
+    assert gate.close_gate(project_id) is True
+
+    delivered_prompts = []
+    def mock_dispatch(prompt):
+        delivered_prompts.append((prompt["project_id"], prompt["payload"]))
+        return True
+
+    gate.register_dispatch_handler(project_id, mock_dispatch)
+
+    # Queue 3 prompts while gate is closed
+    d1 = gate.dispatch_or_hold_message(project_id, "msg1", "terminal", "prompt 1")
+    d2 = gate.dispatch_or_hold_message(project_id, "msg2", "terminal", "prompt 2")
+    d3 = gate.dispatch_or_hold_message(project_id, "msg3", "terminal", "prompt 3")
+
+    assert d1.status == "HELD"
+    assert d2.status == "HELD"
+    assert d3.status == "HELD"
+    assert len(delivered_prompts) == 0
+
+    # Open gate
+    drained_count = gate.open_gate(project_id)
+    assert drained_count == 3
+
+    # Verify all 3 were drained in strict FIFO order
+    assert len(delivered_prompts) == 3
+    assert delivered_prompts[0] == (project_id, "prompt 1")
+    assert delivered_prompts[1] == (project_id, "prompt 2")
+    assert delivered_prompts[2] == (project_id, "prompt 3")
+

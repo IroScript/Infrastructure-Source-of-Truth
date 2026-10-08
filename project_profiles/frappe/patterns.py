@@ -60,6 +60,48 @@ class FrappePatternChecker:
                     "verdict": "OUTDATED_FRAPPE_PATTERN",
                 })
 
+        # Fabricated / unknown Frappe API detection (Section B & Codex B1)
+        official_attrs = {
+            "_", "_dict", "as_json", "as_unicode", "attach_print", "auth", "boot", "build",
+            "cache", "cache_manager", "call", "cint", "clear_cache", "clear_document_cache",
+            "clear_messages", "client_cache", "conf", "config", "connect", "controllers",
+            "copy_doc", "core", "create_folder", "cstr", "database", "db", "debug_log",
+            "defaults", "delete_doc", "delete_doc_if_exists", "desk", "destroy", "email",
+            "enqueue", "enqueue_doc", "error_log", "errprint", "exceptions", "flags",
+            "form_dict", "format", "format_value", "frappe", "generate_hash", "get_all",
+            "get_all_apps", "get_app_path", "get_attr", "get_cached_doc", "get_cached_value",
+            "get_conf", "get_desk_link", "get_doc", "get_doc_hooks", "get_doctype_app",
+            "get_hooks", "get_installed_apps", "get_last_doc", "get_list", "get_meta",
+            "get_module", "get_roles", "get_single", "get_single_value", "get_site_config",
+            "get_site_path", "get_system_settings", "get_template", "get_test_records",
+            "get_traceback", "get_user", "get_value", "get_website_settings", "guest_methods",
+            "has_permission", "has_website_permission", "import_doc", "init", "init_site",
+            "integrations", "is_table", "is_whitelisted", "local", "local_cache", "log_error",
+            "logger", "loggers", "model", "msgprint", "new_doc", "only_for", "parse_json",
+            "ping", "publish_progress", "publish_realtime", "qb", "query_builder", "read_file",
+            "read_only", "realtime", "redirect", "reload_doc", "reload_doctype", "rename_doc",
+            "render_template", "request", "respond_as_web_page", "response", "safe_decode",
+            "safe_encode", "safe_eval", "sendmail", "session", "set_user", "set_value",
+            "share", "throw", "throw_permission_error", "toast", "user", "utils", "whitelist",
+            "whitelisted", "write_only"
+        }
+        api_pattern = r"(?<![\.\w/:\-])frappe\.([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\.[a-zA-Z])"
+        for m in re.finditer(api_pattern, code_content):
+            attr = m.group(1)
+            if attr.startswith("this_api_does_not_exist") or (attr not in official_attrs and not attr.startswith("_")):
+                line_no = code_content[: m.start()].count("\n") + 1
+                findings.append({
+                    "pattern_id": "UNKNOWN_FRAPPE_API",
+                    "severity": "CRITICAL",
+                    "file": filename,
+                    "line": line_no,
+                    "matched_snippet": f"frappe.{attr}",
+                    "description": f"Method or attribute 'frappe.{attr}' is not a recognized official Frappe API.",
+                    "alternative": "Use official Frappe v16 API documented at docs.frappe.io",
+                    "official_reference": "https://docs.frappe.io",
+                    "verdict": "OUTDATED_FRAPPE_PATTERN",
+                })
+
         return findings
 
     def scan_file(self, file_path: Path, target_major: int = 16) -> List[Dict[str, Any]]:

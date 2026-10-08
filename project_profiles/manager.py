@@ -114,19 +114,44 @@ class ProjectProfileManager:
 
         # 4. Pattern Checks on Proposed Files/Code
         findings: List[Dict[str, Any]] = []
+        files_to_scan: List[Path] = []
+        if proposed_files:
+            files_to_scan.extend(proposed_files)
+        else:
+            # Auto-inspect modified, staged, and untracked files in the project repository
+            try:
+                import subprocess
+                diff_cmd = subprocess.run(
+                    ["git", "status", "--porcelain"],
+                    cwd=proj_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if diff_cmd.returncode == 0:
+                    for line in diff_cmd.stdout.splitlines():
+                        parts = line.strip().split(maxsplit=1)
+                        if len(parts) == 2:
+                            rel_p = parts[1]
+                            full_p = proj_path / rel_p
+                            if full_p.is_file() and full_p.suffix == ".py":
+                                files_to_scan.append(full_p)
+            except Exception:
+                pass
+
         if code_snippets:
             for fpath, code in code_snippets.items():
                 p_findings = profile.check_code_patterns(fpath, code)
                 findings.extend(p_findings)
-        elif proposed_files:
-            for fpath in proposed_files:
-                if fpath.is_file() and fpath.suffix == ".py":
-                    try:
-                        code = fpath.read_text(encoding="utf-8")
-                        p_findings = profile.check_code_patterns(fpath, code)
-                        findings.extend(p_findings)
-                    except Exception:
-                        pass
+
+        for fpath in files_to_scan:
+            if fpath.is_file() and fpath.suffix == ".py":
+                try:
+                    code = fpath.read_text(encoding="utf-8")
+                    p_findings = profile.check_code_patterns(fpath, code)
+                    findings.extend(p_findings)
+                except Exception:
+                    pass
 
         if findings:
             return False, "OUTDATED_FRAPPE_PATTERN", {"pattern_findings": findings}

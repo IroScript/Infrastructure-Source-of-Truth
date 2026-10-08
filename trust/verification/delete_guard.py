@@ -423,15 +423,21 @@ def main():
 
         code_text = args.get("CodeContent") or args.get("ReplacementContent") or ""
         if code_text and target_file.endswith(".py"):
+            # 1. Check outdated/deprecated patterns (Section J)
             forbidden_patterns = [
-                ("frappe.get_doc_before_save", "Use doc.get_doc_before_save()"),
-                ("frappe.cache().hset", "Use frappe.cache.hset() without parens"),
-                ("frappe.cache().hget", "Use frappe.cache.hget() without parens"),
-                ("frappe.db.sql_ddl", "Use frappe.db.create_table() or Schema API"),
+                (r"from\s+frappe\.model\.document\s+import\s+get_doc", "Use top-level frappe.get_doc instead of legacy removed module import"),
+                (r"import\s+frappe\.frappe_docs", "Archived frappe_docs is removed; use docs.frappe.io references"),
+                (r"frappe\.get_doc_before_save", "Use doc.get_doc_before_save()"),
+                (r"frappe\.cache\(\)\.hset", "Use frappe.cache.hset() without parens"),
+                (r"frappe\.cache\(\)\.hget", "Use frappe.cache.hget() without parens"),
+                (r"frappe\.db\.sql_ddl", "Use frappe.db.create_table() or Schema API"),
+                (r"frappe\.db\.sql\s*\(\s*f[\"']", "F-string formatting inside frappe.db.sql leads to SQL injection"),
+                (r"@frappe\.whitelist\s*\(\s*\)|@frappe\.whitelist\s*\(\s*allow_guest\s*=\s*True\s*\)", "Whitelist requires explicit methods (e.g. methods=['GET'])"),
+                (r"frappe\.db\.sql\s*\(\s*[\"'].*ALTER\s+TABLE", "Direct ALTER TABLE DDL bypasses Frappe schema metadata"),
             ]
             for pat, rec in forbidden_patterns:
-                if pat in code_text:
-                    reason = f"Code contains outdated Frappe API '{pat}'. Recommendation: {rec}."
+                if re.search(pat, code_text):
+                    reason = f"Code contains outdated Frappe pattern matching '{pat}'. Recommendation: {rec}."
                     try:
                         inc = log_incident(tool_name, {"TargetFile": target_file, "pattern": pat}, reason, "OUTDATED_FRAPPE_PATTERN")
                         inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
@@ -442,6 +448,47 @@ def main():
                         "reason": f"🛑 [DELETE-GUARD HARD DENIAL: OUTDATED_FRAPPE_PATTERN] {reason}. Inc-ID: {inc_id}."
                     }))
                     return
+
+            # 2. Check fabricated / unknown Frappe APIs (Section B)
+            if "frappe" in target_file.lower() or "alco" in target_file.lower() or "/apps/" in target_file:
+                official_attrs = {
+                    "_", "_dict", "as_json", "as_unicode", "attach_print", "auth", "boot", "build",
+                    "cache", "cache_manager", "call", "cint", "clear_cache", "clear_document_cache",
+                    "clear_messages", "client_cache", "conf", "config", "connect", "controllers",
+                    "copy_doc", "core", "create_folder", "cstr", "database", "db", "debug_log",
+                    "defaults", "delete_doc", "delete_doc_if_exists", "desk", "destroy", "email",
+                    "enqueue", "enqueue_doc", "error_log", "errprint", "exceptions", "flags",
+                    "form_dict", "format", "format_value", "frappe", "generate_hash", "get_all",
+                    "get_all_apps", "get_app_path", "get_attr", "get_cached_doc", "get_cached_value",
+                    "get_conf", "get_desk_link", "get_doc", "get_doc_hooks", "get_doctype_app",
+                    "get_hooks", "get_installed_apps", "get_last_doc", "get_list", "get_meta",
+                    "get_module", "get_roles", "get_single", "get_single_value", "get_site_config",
+                    "get_site_path", "get_system_settings", "get_template", "get_test_records",
+                    "get_traceback", "get_user", "get_value", "get_website_settings", "guest_methods",
+                    "has_permission", "has_website_permission", "import_doc", "init", "init_site",
+                    "integrations", "is_table", "is_whitelisted", "local", "local_cache", "log_error",
+                    "logger", "loggers", "model", "msgprint", "new_doc", "only_for", "parse_json",
+                    "ping", "publish_progress", "publish_realtime", "qb", "query_builder", "read_file",
+                    "read_only", "realtime", "redirect", "reload_doc", "reload_doctype", "rename_doc",
+                    "render_template", "request", "respond_as_web_page", "response", "safe_decode",
+                    "safe_encode", "safe_eval", "sendmail", "session", "set_user", "set_value",
+                    "share", "throw", "throw_permission_error", "toast", "user", "utils", "whitelist",
+                    "whitelisted", "write_only"
+                }
+                calls = re.findall(r"(?<![\.\w/:\-])frappe\.([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\.[a-zA-Z])", code_text)
+                for attr in calls:
+                    if attr.startswith("this_api_does_not_exist") or (attr not in official_attrs and not attr.startswith("_")):
+                        reason = f"Method or attribute 'frappe.{attr}' is not a recognized official Frappe API."
+                        try:
+                            inc = log_incident(tool_name, {"TargetFile": target_file, "fabricated_api": attr}, reason, "UNKNOWN_FRAPPE_API")
+                            inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+                        except Exception:
+                            inc_id = "UNKNOWN"
+                        print(json.dumps({
+                            "decision": "deny",
+                            "reason": f"🛑 [DELETE-GUARD HARD DENIAL: UNKNOWN_FRAPPE_API] {reason}. Inc-ID: {inc_id}."
+                        }))
+                        return
 
     elif tool_name == "view_file":
         abs_path = args.get("AbsolutePath", "")

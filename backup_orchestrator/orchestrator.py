@@ -677,6 +677,15 @@ class BackupOrchestrator:
         - Retries failed uploads
         - Handles termination signals gracefully
         """
+        # On daemon startup, drain any existing HELD prompts for OPEN projects
+        for p_id in list(self.watchers.keys()):
+            try:
+                row = self.gate_coordinator.get_gate_state(p_id)
+                if row.get("prompt_gate") == "OPEN":
+                    self.gate_coordinator.open_gate(p_id)
+            except Exception:
+                pass
+
         while not (stop_event and stop_event.is_set()):
             for project_id in list(self.watchers.keys()):
                 try:

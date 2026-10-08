@@ -84,6 +84,11 @@ class BridgeAdapter:
         self.terminal_receiver = terminal_receiver or BridgeTerminalReceiver()
         self.whatsapp_map: Dict[str, str] = {}  # group_id / agent_name -> project_id
         self._load_connection_mappings()
+        self.gate_coordinator.set_default_dispatch_handler(self._dispatch_to_terminal)
+
+    def _dispatch_to_terminal(self, item: Dict[str, Any]) -> bool:
+        ack = self.terminal_receiver.receive_message(item, is_arbitrary_cli=False)
+        return ack.delivered
 
     def _load_connection_mappings(self) -> None:
         wa_file = self.sot_root / "connections" / "WHATSAPP_CONNECTIONS.json"
@@ -137,7 +142,25 @@ class BridgeAdapter:
             payload=payload,
         )
 
-        if decision.status == "HELD":
+        # Check if message was already delivered via auto-drain
+        conn = self.gate_coordinator.db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT status FROM held_prompt_queue WHERE message_id = ?;", (message_id,))
+            row = cur.fetchone()
+            current_status = row["status"] if row else decision.status
+        finally:
+            conn.close()
+
+        if current_status == "DELIVERED":
+            return TerminalAck(
+                message_id=message_id,
+                delivered=True,
+                exactly_once_provable=True,
+                status="DELIVERED",
+            )
+
+        if current_status == "HELD":
             return TerminalAck(
                 message_id=message_id,
                 delivered=False,

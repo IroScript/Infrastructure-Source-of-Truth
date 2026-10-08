@@ -225,7 +225,7 @@ class PromptGateCoordinator:
                 cur = conn.cursor()
                 cur.execute(
                     """
-                    SELECT id, message_id, routing_target, payload, sequence_num
+                    SELECT id, project_id, message_id, routing_target, payload, sequence_num
                     FROM held_prompt_queue
                     WHERE project_id = ? AND status = 'HELD'
                     ORDER BY sequence_num ASC;
@@ -239,6 +239,7 @@ class PromptGateCoordinator:
             for row in rows:
                 item = {
                     "id": row["id"],
+                    "project_id": row["project_id"],
                     "message_id": row["message_id"],
                     "routing_target": row["routing_target"],
                     "payload": row["payload"],
