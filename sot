@@ -219,6 +219,11 @@ def cmd_watcher(args):
     return handle_watcher_cli(args, ROOT)
 
 
+def cmd_backup_orchestrator(args):
+    from backup_orchestrator.cli import handle_backup_orchestrator_cli
+    return handle_backup_orchestrator_cli(args, ROOT)
+
+
 def main():
     parser = argparse.ArgumentParser(prog="sot", description="Infrastructure Source of Truth CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -236,6 +241,14 @@ def main():
     w_sync = ws.add_parser("sync-once"); w_sync.add_argument("--message", default=""); w_sync.set_defaults(func=cmd_watcher)
     ws.add_parser("run-daemon").set_defaults(func=cmd_watcher)
     ws.add_parser("cloud-parity").set_defaults(func=cmd_watcher)
+    bo = sub.add_parser("backup-orchestrator")
+    bos = bo.add_subparsers(dest="orchestrator_action", required=True)
+    bo_status = bos.add_parser("status"); bo_status.add_argument("--home"); bo_status.set_defaults(func=cmd_backup_orchestrator)
+    bo_run = bos.add_parser("run-cycle"); bo_run.add_argument("--project-id", required=True); bo_run.add_argument("--force", action="store_true"); bo_run.add_argument("--strict", action="store_true"); bo_run.add_argument("--home"); bo_run.set_defaults(func=cmd_backup_orchestrator)
+    bo_ret = bos.add_parser("retry-uploads"); bo_ret.add_argument("--strict", action="store_true"); bo_ret.add_argument("--home"); bo_ret.set_defaults(func=cmd_backup_orchestrator)
+    bo_cid = bos.add_parser("client-id-check"); bo_cid.add_argument("--remote"); bo_cid.add_argument("--home"); bo_cid.set_defaults(func=cmd_backup_orchestrator)
+    bo_exp = bos.add_parser("export-state"); bo_exp.add_argument("output_file"); bo_exp.add_argument("--key"); bo_exp.add_argument("--home"); bo_exp.set_defaults(func=cmd_backup_orchestrator)
+    bo_imp = bos.add_parser("import-state"); bo_imp.add_argument("input_file"); bo_imp.add_argument("--key"); bo_imp.add_argument("--home"); bo_imp.set_defaults(func=cmd_backup_orchestrator)
     arts = sub.add_parser("artifacts"); arts.add_argument("action", choices=["verify","install","rollback"]); arts.add_argument("--profile",default="portable-linux"); arts.add_argument("--home"); arts.add_argument("--dry-run",action="store_true"); arts.set_defaults(func=cmd_artifacts)
     verify = sub.add_parser("verify"); verify.add_argument("--help-suite", action="store_true"); verify.set_defaults(func=cmd_verify)
     project = sub.add_parser("project"); project.add_argument("action", choices=["discover", "audit", "register", "finalize"]); project.add_argument("--path"); project.add_argument("--name", default=""); project.add_argument("--project-id", default=""); project.add_argument("--remote",default=""); project.add_argument("--branch",default="main"); project.add_argument("--local-only",action="store_true"); project.add_argument("--type",default="application"); project.add_argument("--data-files",default=""); project.add_argument("--data-classification",choices=["unknown","source_only","persistent_data","mixed"],default="unknown"); project.add_argument("--verification-profile",default="deterministic"); project.add_argument("--tmux",default=""); project.add_argument("--whatsapp-group",default=""); project.add_argument("--whatsapp-route",default=""); project.add_argument("--push",action="store_true"); project.set_defaults(func=cmd_project)
@@ -495,9 +508,23 @@ def cmd_bootstrap(args):
         else:
             service_installed = True
 
+    bo_service_src = ROOT / "backup_orchestrator/backup-orchestrator.service"
+    bo_service_installed = False
+    if bo_service_src.is_file():
+        systemd_user_dir = Path(roots["HOME"]) / ".config/systemd/user"
+        bo_dest = systemd_user_dir / "backup-orchestrator.service"
+        if not args.dry_run:
+            systemd_user_dir.mkdir(parents=True, exist_ok=True)
+            bo_content = bo_service_src.read_text(encoding="utf-8").replace("%h/IroScript_Projects/Infrastructure-Source-of-Truth", str(ROOT))
+            bo_dest.write_text(bo_content, encoding="utf-8")
+            bo_service_installed = bo_dest.is_file()
+            (Path(roots["STATE_ROOT"]) / "backup_orchestrator").mkdir(parents=True, exist_ok=True)
+        else:
+            bo_service_installed = True
+
     if args.dry_run:
         emit({"status": "DRY_RUN", "rules": len(installed), "external_artifacts": len(external),
-              "symlinks_recreated": len(recreated_symlinks), "systemd_service_installed": service_installed})
+              "symlinks_recreated": len(recreated_symlinks), "systemd_service_installed": service_installed and bo_service_installed})
         return 0
     result = artifacts.verify(ROOT, profile)
     if result["ok"]:

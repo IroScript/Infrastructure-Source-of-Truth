@@ -1,0 +1,15 @@
+[Unit]
+Description=Infrastructure Source of Truth Backup Orchestrator Daemon
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/IroScript_Projects/Infrastructure-Source-of-Truth
+ExecStart=/usr/bin/python3 %h/IroScript_Projects/Infrastructure-Source-of-Truth/sot backup orchestrator run-daemon
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+Environment=GIT_TERMINAL_PROMPT=0
+
+[Install]
+WantedBy=default.target

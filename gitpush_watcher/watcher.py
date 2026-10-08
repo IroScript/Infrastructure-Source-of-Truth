@@ -291,9 +291,10 @@ class GitPushWatcher:
         last_reconcile = time.time()
         try:
             while self.running and (not stop_event or not stop_event.is_set()):
-                now = time.time()
+                select_timeout = min(0.2, self.config.debounce_seconds) if self.project_queues else 0.5
                 if inotify_fd >= 0 and self.event_source == 'inotify':
-                    r, _, _ = select.select([inotify_fd], [], [], 0.5)
+                    r, _, _ = select.select([inotify_fd], [], [], select_timeout)
+                    now = time.time()
                     if r:
                         try:
                             event_data = os.read(inotify_fd, 4096)
@@ -307,6 +308,10 @@ class GitPushWatcher:
                                         self.project_queues[pid] = now
                         except OSError:
                             pass
+                else:
+                    time.sleep(select_timeout)
+                    now = time.time()
+
                 if now - last_reconcile >= self.config.reconciliation_interval_seconds:
                     _update_watches()
                     for p in self.load_registered_projects():
@@ -318,7 +323,6 @@ class GitPushWatcher:
                                     self.project_queues[p.get('project_id')] = now
                     last_reconcile = now
                 self.run_reconciliation_cycle()
-                time.sleep(0.5)
         finally:
             if inotify_fd >= 0:
                 try:

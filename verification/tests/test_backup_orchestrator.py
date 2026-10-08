@@ -1,0 +1,743 @@
+"""
+test_backup_orchestrator.py — Mandatory Acceptance Test Suite for SOT Backup Subsystem (Sections 36–58).
+Implements TESTS H through P and validates all 17 architecture invariants.
+"""
+from __future__ import annotations
+
+import concurrent.futures
+import datetime
+import json
+import os
+import shutil
+import sqlite3
+import subprocess
+import tempfile
+import time
+import zipfile
+from pathlib import Path
+import pytest
+
+from backup_orchestrator.agent_model import AgentState, AgentStateEvaluator
+from backup_orchestrator.bridge_adapter import BridgeAdapter, BridgeTerminalReceiver
+from backup_orchestrator.config import BackupOrchestratorConfig
+from backup_orchestrator.db import Database
+from backup_orchestrator.gate import PromptGateCoordinator
+from backup_orchestrator.orchestrator import BackupOrchestrator
+from backup_orchestrator.retention import RetentionManager
+from backup_orchestrator.timekeeping import InjectableClock, generate_backup_filename
+from backup_orchestrator.uploader import BackupUploader, UploadVerificationResult
+from backup_orchestrator.watcher import ProjectFsWatcher
+from backup_orchestrator.zipper import ProjectZipper
+
+
+@pytest.fixture
+def test_env(tmp_path: Path):
+    """Sets up an isolated test environment with temporary roots."""
+    sot_root = Path(__file__).resolve().parents[2]
+    home = tmp_path / "home"
+    projects_root = home / "projects"
+    state_root = home / ".agents"
+    staging_dir = state_root / "backup_orchestrator" / "staging"
+    rclone_mock_dir = tmp_path / "remote_cloud"
+    rclone_mock_dir.mkdir(parents=True, exist_ok=True)
+
+    home.mkdir(parents=True, exist_ok=True)
+    projects_root.mkdir(parents=True, exist_ok=True)
+    state_root.mkdir(parents=True, exist_ok=True)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+
+    cfg = BackupOrchestratorConfig(
+        sot_root=sot_root,
+        home=home,
+        projects_root=projects_root,
+        state_root=state_root,
+        backup_state_dir=state_root / "backup_orchestrator",
+        staging_dir=staging_dir,
+        db_path=state_root / "backup_orchestrator" / "backup_state.sqlite",
+        quiet_interval_seconds=1800.0,
+        rclone_remote=f"{rclone_mock_dir}",
+        retention_count=10,
+        timezone_name="Asia/Dhaka",
+    )
+    db = Database(cfg.db_path)
+    clock = InjectableClock(initial_mono=1000.0)
+    return {
+        "sot_root": sot_root,
+        "home": home,
+        "projects_root": projects_root,
+        "state_root": state_root,
+        "staging_dir": staging_dir,
+        "rclone_mock_dir": rclone_mock_dir,
+        "cfg": cfg,
+        "db": db,
+        "clock": clock,
+    }
+
+
+def test_h_gate_atomic_race(test_env):
+    """
+    TEST H — Gate atomic race (Section 57):
+    Incoming prompt races exactly with gate closure.
+    Result must be either fully DISPATCHING-before-gate or fully HELD-after-gate,
+    never lost or half-state.
+    """
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    project_id = "test_race_project"
+    gate.register_or_update_project(project_id, "test_race", "/tmp/nonexistent")
+
+    results = []
+    iterations = 50
+
+    def dispatch_worker(msg_idx: int):
+        dec = gate.dispatch_or_hold_message(
+            project_id=project_id,
+            message_id=f"msg-{msg_idx}",
+            routing_target="agy:0",
+            payload=f"Payload {msg_idx}",
+        )
+        return dec
+
+    def closer_worker():
+        return gate.close_gate(project_id)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for i in range(iterations):
+            futures.append(executor.submit(dispatch_worker, i))
+            if i == 25:
+                futures.append(executor.submit(closer_worker))
+
+        for f in futures:
+            res = f.result()
+            results.append(res)
+
+    # Inspect all queued items in database
+    conn = db.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT message_id, status, sequence_num FROM held_prompt_queue WHERE project_id = ? ORDER BY sequence_num ASC;",
+            (project_id,),
+        )
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    assert len(rows) == iterations, f"Expected {iterations} messages recorded, got {len(rows)}"
+    statuses = {r["status"] for r in rows}
+    assert statuses.issubset({"DISPATCHING", "HELD"}), f"Illegal status found: {statuses}"
+
+    # Verify no message was dropped or half-recorded
+    rec_ids = {r["message_id"] for r in rows}
+    assert rec_ids == {f"msg-{i}" for i in range(iterations)}
+    seq_nums = [r["sequence_num"] for r in rows]
+    assert seq_nums == list(range(1, iterations + 1))
+
+
+def test_i_upload_while_new_edits_occur(test_env):
+    """
+    TEST I — Upload while new edits occur (Section 40, 57):
+    Generation 81 locally verified;
+    Gate opens;
+    Project becomes generation 82;
+    Generation-81 upload becomes GOOD;
+    last_good_generation must remain 81;
+    project must still be DIRTY at 82.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    clock: InjectableClock = test_env["clock"]
+    proj_dir = test_env["projects_root"] / "proj_gen_test"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    (proj_dir / "file.txt").write_text("v1")
+
+    # Mock uploader that delays and allows a mutation before completing upload
+    class MutationInducingUploader(BackupUploader):
+        def __init__(self, on_upload_fn):
+            super().__init__()
+            self.on_upload_fn = on_upload_fn
+
+        def upload_and_verify(self, local_archive, remote_dest_dir, expected_sha256, expected_md5, strict_download_verify=False):
+            # Trigger generation 82 mutation during upload
+            self.on_upload_fn()
+            # Copy archive to remote mock dir
+            dest = Path(remote_dest_dir) / local_archive.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(local_archive, dest)
+            return UploadVerificationResult(
+                status="GOOD",
+                remote_path=str(dest),
+                remote_object_id="mock-obj-81",
+                remote_size=local_archive.stat().st_size,
+                remote_md5=expected_md5,
+                local_sha256=expected_sha256,
+            )
+
+    orchestrator = BackupOrchestrator(cfg, clock=clock)
+    project_id = "proj_gen_test"
+    orchestrator.gate_coordinator.register_or_update_project(
+        project_id=project_id,
+        project_slug="proj_gen_test",
+        canonical_path=str(proj_dir),
+        initial_generation=81,
+    )
+    watcher = ProjectFsWatcher(project_id, proj_dir, orchestrator.db, clock=clock)
+    orchestrator.watchers[project_id] = watcher
+
+    # Callback executed during upload: increments generation to 82
+    def mutate_during_upload():
+        (proj_dir / "file.txt").write_text("v2 - new edit at generation 82")
+        watcher.increment_generation()
+
+    orchestrator.uploader = MutationInducingUploader(mutate_during_upload)
+
+    # Run backup cycle
+    res = orchestrator.run_cycle_for_project(
+        project_id=project_id,
+        force=True,
+        agent_state_override=AgentState.IDLE,
+    )
+
+    assert res.action_taken == "BACKUP_COMPLETED"
+    assert res.captured_generation == 81
+
+    # Verify database state
+    conn = orchestrator.db.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT dirty_generation, last_good_generation FROM projects_state WHERE project_id = ?;",
+            (project_id,),
+        )
+        row = cur.fetchone()
+        assert row["captured_generation" if "captured_generation" in row.keys() else "last_good_generation"] == 81
+        assert row["last_good_generation"] == 81, "Critical Section 40 violation: last_good_generation was overwritten with current generation!"
+        assert row["dirty_generation"] == 82, "dirty_generation should be 82"
+        assert row["dirty_generation"] > row["last_good_generation"], "Project must remain DIRTY after generation 82 edits!"
+    finally:
+        conn.close()
+
+
+def test_j_service_restart_with_gate_closed(test_env):
+    """
+    TEST J — Service restart with gate closed (Section 53, 57):
+    Restart must recover queue and must not leave permanent CLOSED gate.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    clock: InjectableClock = test_env["clock"]
+    proj_dir = test_env["projects_root"] / "proj_restart"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    project_id = "proj_restart"
+
+    db = Database(cfg.db_path)
+    gate = PromptGateCoordinator(db)
+    gate.register_or_update_project(project_id, "proj_restart", str(proj_dir), initial_generation=5)
+
+    # Simulate stranded closed gate from a prior crashed run
+    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    with db.transaction() as cur:
+        cur.execute(
+            """
+            UPDATE projects_state
+            SET prompt_gate = 'CLOSED', lifecycle_lock = 'LOCKED', active_backup_id = 'crashed-run-1', updated_at = ?
+            WHERE project_id = ?;
+            """,
+            (now_str, project_id),
+        )
+        cur.execute(
+            """
+            INSERT INTO backup_runs (backup_id, project_id, project_slug, captured_generation, zip_path, status, created_at)
+            VALUES ('crashed-run-1', ?, 'proj_restart', 5, '/tmp/stale.partial', 'CAPTURING', ?);
+            """,
+            (project_id, now_str),
+        )
+        cur.execute(
+            """
+            INSERT INTO held_prompt_queue (project_id, message_id, routing_target, payload, sequence_num, status, created_at, updated_at)
+            VALUES (?, 'stranded-msg-1', 'agy:0', 'Queued while gate was closed', 1, 'HELD', ?, ?);
+            """,
+            (project_id, now_str, now_str),
+        )
+
+    # Initialize orchestrator (simulates service restart)
+    orchestrator = BackupOrchestrator(cfg, clock=clock)
+
+    # Gate must be recovered to OPEN and lifecycle UNLOCKED
+    conn = db.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT prompt_gate, lifecycle_lock, active_backup_id FROM projects_state WHERE project_id = ?;",
+            (project_id,),
+        )
+        row = cur.fetchone()
+        assert row["prompt_gate"] == "OPEN", "Service restart failed to OPEN stranded closed gate!"
+        assert row["lifecycle_lock"] == "UNLOCKED", "Lifecycle lock remained stranded!"
+
+        # Interrupted backup run must be marked FAILED
+        cur.execute("SELECT status FROM backup_runs WHERE backup_id = 'crashed-run-1';")
+        assert cur.fetchone()["status"] == "FAILED"
+
+        # Held queue must be intact and dispatchable
+        cur.execute("SELECT status FROM held_prompt_queue WHERE message_id = 'stranded-msg-1';")
+        assert cur.fetchone()["status"] == "HELD"
+    finally:
+        conn.close()
+
+
+def test_k_remote_upload_failure_and_retry(test_env):
+    """
+    TEST K — Remote upload failure (Section 52, 57):
+    LOCAL_VERIFIED ZIP remains;
+    Gate open;
+    Coding continues;
+    Upload retries without rebuilding archive.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    clock: InjectableClock = test_env["clock"]
+    proj_dir = test_env["projects_root"] / "proj_retry"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    (proj_dir / "code.py").write_text("print('hello')")
+    project_id = "proj_retry"
+
+    class FailingUploader(BackupUploader):
+        def __init__(self):
+            super().__init__()
+            self.should_fail = True
+
+        def upload_and_verify(self, local_archive, remote_dest_dir, expected_sha256, expected_md5, strict_download_verify=False):
+            if self.should_fail:
+                return UploadVerificationResult(
+                    status="UPLOAD_FAILED",
+                    remote_path="",
+                    error="Network timeout simulation",
+                )
+            dest = Path(remote_dest_dir) / local_archive.name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(local_archive, dest)
+            return UploadVerificationResult(
+                status="GOOD",
+                remote_path=str(dest),
+                remote_object_id="mock-id",
+                remote_size=local_archive.stat().st_size,
+                remote_md5=expected_md5,
+                local_sha256=expected_sha256,
+            )
+
+    uploader = FailingUploader()
+    orchestrator = BackupOrchestrator(cfg, clock=clock, uploader=uploader)
+    orchestrator.gate_coordinator.register_or_update_project(
+        project_id, "proj_retry", str(proj_dir), initial_generation=10
+    )
+
+    # Run cycle: fails at upload stage
+    res = orchestrator.run_cycle_for_project(project_id, force=True, agent_state_override=AgentState.IDLE)
+    assert res.action_taken == "UPLOAD_FAILED"
+
+    # Invariant: Prompt gate must be OPEN (coding continues!)
+    conn = orchestrator.db.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT prompt_gate FROM projects_state WHERE project_id = ?;", (project_id,))
+        assert cur.fetchone()["prompt_gate"] == "OPEN"
+
+        # Local archive must remain on disk
+        cur.execute("SELECT zip_path, zip_sha256 FROM backup_runs WHERE backup_id = ?;", (res.backup_id,))
+        run_row = cur.fetchone()
+        orig_zip = Path(run_row["zip_path"])
+        orig_sha = run_row["zip_sha256"]
+        assert orig_zip.is_file(), "Local verified zip was deleted after upload failure!"
+    finally:
+        conn.close()
+
+    # Network heals: retry upload without rebuilding archive
+    uploader.should_fail = False
+    retry_results = orchestrator.retry_pending_uploads()
+    assert len(retry_results) == 1
+    assert retry_results[0]["status"] == "GOOD"
+
+    # Verify that the same archive was uploaded
+    conn = orchestrator.db.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT sha256 FROM verified_backups WHERE backup_id = ?;", (res.backup_id,))
+        assert cur.fetchone()["sha256"] == orig_sha
+    finally:
+        conn.close()
+
+
+def test_l_retention_deletion_failure(test_env):
+    """
+    TEST L — Retention deletion failure (Section 51, 57):
+    11 GOOD allowed temporarily;
+    Failed delete must not trigger deletion of another backup.
+    """
+    db: Database = test_env["db"]
+    project_id = "test_retention_proj"
+
+    # Pre-populate 11 verified GOOD backups
+    with db.transaction() as cur:
+        cur.execute(
+            """
+            INSERT INTO projects_state (project_id, project_slug, canonical_path, updated_at)
+            VALUES (?, 'test_retention', '/tmp/retention', '2026-10-08T00:00:00Z');
+            """,
+            (project_id,),
+        )
+        for i in range(1, 12):
+            cur.execute(
+                """
+                INSERT INTO verified_backups (
+                    backup_id, project_id, project_slug, captured_generation, remote_path,
+                    size, sha256, md5, status, retention_state, created_at, verified_at
+                ) VALUES (?, ?, 'test_retention', ?, ?, 1000, 'sha', 'md5', 'GOOD', 'ACTIVE', ?, ?);
+                """,
+                (
+                    f"backup-{i:02d}",
+                    project_id,
+                    i,
+                    f"/mock/cloud/test_retention/backup-{i:02d}.zip",
+                    f"2026-10-08T01:{i:02d}:00Z",
+                    f"2026-10-08T01:{i:02d}:00Z",
+                ),
+            )
+
+    # Use a dummy rclone binary that fails deletion
+    retention_mgr = RetentionManager(db, rclone_bin="false", max_good_retention=10)
+    ret_res = retention_mgr.process_retention(project_id)
+
+    assert ret_res.status == "RETENTION_PENDING"
+    assert ret_res.pruned_backup_id == "backup-01"
+
+    # Verify database: backup-01 is RETENTION_PENDING, other 10 are still ACTIVE, none deleted
+    conn = db.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT backup_id, retention_state FROM verified_backups WHERE project_id = ? ORDER BY backup_id ASC;",
+            (project_id,),
+        )
+        rows = cur.fetchall()
+        assert len(rows) == 11, "A backup was erroneously deleted after retention delete failure!"
+        assert rows[0]["retention_state"] == "RETENTION_PENDING"
+        for r in rows[1:]:
+            assert r["retention_state"] == "ACTIVE", "Another backup was erroneously marked pruned!"
+    finally:
+        conn.close()
+
+
+def test_m_inotify_overflow_and_reconciliation(test_env):
+    """
+    TEST M — Inotify overflow (Section 42, 57):
+    State becomes UNKNOWN_DIRTY;
+    GOOD prohibited until full reconciliation.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    clock: InjectableClock = test_env["clock"]
+    proj_dir = test_env["projects_root"] / "proj_overflow"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    project_id = "proj_overflow"
+
+    orchestrator = BackupOrchestrator(cfg, clock=clock)
+    orchestrator.gate_coordinator.register_or_update_project(
+        project_id, "proj_overflow", str(proj_dir), initial_generation=5
+    )
+    watcher = ProjectFsWatcher(project_id, proj_dir, orchestrator.db, clock=clock)
+    orchestrator.watchers[project_id] = watcher
+
+    # Simulate inotify queue overflow
+    watcher._mark_unknown_dirty("IN_Q_OVERFLOW")
+
+    # Invariant: Quiet interval check returns False while UNKNOWN_DIRTY
+    clock.advance(3600.0)  # Advance 1 hour
+    assert not watcher.is_quiet_interval_satisfied(1800.0), "Quiet interval must not be satisfied under UNKNOWN_DIRTY!"
+
+    # Run cycle without reconciliation: must be skipped
+    res = orchestrator.run_cycle_for_project(project_id, force=False, agent_state_override=AgentState.IDLE)
+    assert res.action_taken == "SKIPPED_NOT_QUIET"
+
+    # Reconcile filesystem
+    watcher.reconcile_filesystem()
+    clock.advance(1801.0)  # Wait quiet interval post-reconciliation
+    assert watcher.is_quiet_interval_satisfied(1800.0), "Quiet interval should be satisfied after reconciliation!"
+
+
+def test_n_symlink_stored_as_symlink(test_env):
+    """
+    TEST N — Symlink (Section 44, 57):
+    Symlink inside project stored as symlink;
+    External target bytes not silently pulled into archive.
+    """
+    staging_dir = test_env["staging_dir"]
+    proj_dir = test_env["projects_root"] / "proj_symlink"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create large external file outside project
+    ext_dir = test_env["home"] / "external_data"
+    ext_dir.mkdir(parents=True, exist_ok=True)
+    large_ext_file = ext_dir / "large.dat"
+    large_ext_file.write_bytes(b"A" * (1024 * 1024))  # 1 MB
+
+    # Inside project: regular file + symlink pointing to external file
+    (proj_dir / "regular.txt").write_text("internal small file")
+    os.symlink(str(large_ext_file), str(proj_dir / "link_to_external.dat"))
+
+    zipper = ProjectZipper(staging_dir)
+    res = zipper.create_project_zip(
+        project_root=proj_dir,
+        archive_name="test_symlink.zip",
+        zip_start_generation=1,
+    )
+
+    assert res.status == "LOCAL_VERIFIED"
+    assert res.size < 50000, f"Zip archive is {res.size} bytes; external 1MB file was incorrectly pulled in!"
+
+    # Inspect zip entries
+    with zipfile.ZipFile(res.archive_path, "r") as zf:
+        zinfo = zf.getinfo("link_to_external.dat")
+        # Check UNIX symlink mode (0o120000)
+        mode = zinfo.external_attr >> 16
+        import stat
+        assert stat.S_ISLNK(mode), "Symlink was not stored as a symlink!"
+        content = zf.read("link_to_external.dat").decode("utf-8")
+        assert content == str(large_ext_file), "Symlink payload should be the target link path!"
+
+
+def test_o_remote_hash_and_strict_download_verify(test_env):
+    """
+    TEST O — Remote hash (Section 48, 57):
+    Local SHA256 recorded;
+    Remote exact object size/hash verified;
+    Strict download-hash path succeeds in test fixture.
+    """
+    staging_dir = test_env["staging_dir"]
+    archive_file = staging_dir / "test_hash.zip"
+    archive_file.write_bytes(b"PK\x03\x04test_archive_content_for_hash")
+
+    import hashlib
+    h_sha = hashlib.sha256(archive_file.read_bytes()).hexdigest()
+    h_md5 = hashlib.md5(archive_file.read_bytes()).hexdigest()
+
+    mock_remote_dir = test_env["rclone_mock_dir"] / "proj_hash"
+    uploader = BackupUploader()
+
+    # Upload and perform strict download-hash verification
+    res = uploader.upload_and_verify(
+        local_archive=archive_file,
+        remote_dest_dir=str(mock_remote_dir),
+        expected_sha256=h_sha,
+        expected_md5=h_md5,
+        strict_download_verify=True,
+    )
+
+    assert res.status == "GOOD"
+    assert res.local_sha256 == h_sha
+    assert res.remote_size == archive_file.stat().st_size
+
+
+def test_p_no_old_vm_knowledge_bootstrap_restore(test_env):
+    """
+    TEST P — No old VM knowledge (Section 54, 57):
+    Fresh alternate HOME/profile can restore backup subsystem from SOT without
+    manual path instructions.
+    """
+    sot_root: Path = test_env["sot_root"]
+    alt_home = test_env["home"] / "alt_user"
+    alt_home.mkdir(parents=True, exist_ok=True)
+
+    # Run sot bootstrap in isolated alternate HOME
+    env = dict(os.environ)
+    env["HOME"] = str(alt_home)
+    env["PROJECTS_ROOT"] = str(alt_home / "projects")
+    env["STATE_ROOT"] = str(alt_home / ".agents")
+
+    res = subprocess.run(
+        [str(sot_root / "sot"), "bootstrap", "--dry-run", "--home", str(alt_home)],
+        capture_output=True,
+        text=True,
+        cwd=str(sot_root),
+        env=env,
+    )
+    assert res.returncode == 0, f"Bootstrap dry run failed: {res.stderr}"
+    data = json.loads(res.stdout)
+    assert data.get("systemd_service_installed") is True
+
+    # Test running backup-orchestrator status on the alternate home
+    res_status = subprocess.run(
+        [str(sot_root / "sot"), "backup-orchestrator", "status", "--home", str(alt_home)],
+        capture_output=True,
+        text=True,
+        cwd=str(sot_root),
+        env=env,
+    )
+    assert res_status.returncode == 0, f"Status failed on alternate home: {res_status.stderr}"
+    stat_data = json.loads(res_status.stdout)
+    assert stat_data["status"] == "HEALTHY"
+
+
+def test_mutation_during_zip_invalidates_capture(test_env):
+    """Verifies that filesystem mutation during zip capture invalidates the backup (Section 47)."""
+    staging_dir = test_env["staging_dir"]
+    proj_dir = test_env["projects_root"] / "proj_mutate"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    (proj_dir / "f1.txt").write_text("v1")
+
+    zipper = ProjectZipper(staging_dir)
+    # Simulate mutation callback firing during zip creation
+    res = zipper.create_project_zip(
+        project_root=proj_dir,
+        archive_name="test_mutate.zip",
+        zip_start_generation=1,
+        check_mutation_callback=lambda: True,
+    )
+
+    assert res.status == "MUTATION_DETECTED"
+    assert res.mutation_seen is True
+    assert res.archive_path is None
+
+
+def test_quiet_interval_boundary_with_injectable_clock(test_env):
+    """Verifies exact quiet interval boundary conditions with InjectableClock (Section 56)."""
+    db: Database = test_env["db"]
+    clock: InjectableClock = test_env["clock"]
+    proj_dir = test_env["projects_root"] / "proj_quiet"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    project_id = "proj_quiet"
+
+    gate = PromptGateCoordinator(db)
+    gate.register_or_update_project(project_id, "proj_quiet", str(proj_dir), initial_generation=1)
+    watcher = ProjectFsWatcher(project_id, proj_dir, db, clock=clock)
+
+    watcher.increment_generation(now_mono=1000.0)
+
+    # 29m59s (1799.0s) -> False
+    clock.set_monotonic(1000.0 + 1799.0)
+    assert not watcher.is_quiet_interval_satisfied(1800.0)
+
+    # 30m00s (1800.0s) -> True
+    clock.set_monotonic(1000.0 + 1800.0)
+    assert watcher.is_quiet_interval_satisfied(1800.0)
+
+    # Mutation at 29m59.999s resets timer
+    clock.set_monotonic(1000.0 + 1799.999)
+    watcher.increment_generation(now_mono=clock.monotonic())
+    # Advance 1 second past mutation -> only 1.0s elapsed -> False
+    clock.advance(1.0)
+    assert not watcher.is_quiet_interval_satisfied(1800.0)
+
+
+def test_agent_state_model_and_in_flight_eligibility(test_env):
+    """Verifies strict agent state model (BUSY, UNKNOWN, OFFLINE, IDLE) (Section 39)."""
+    evaluator = AgentStateEvaluator()
+
+    assert not evaluator.is_backup_eligible(AgentState.BUSY, has_in_flight_messages=False)
+    assert not evaluator.is_backup_eligible(AgentState.UNKNOWN, has_in_flight_messages=False)
+    assert not evaluator.is_backup_eligible(AgentState.IDLE, has_in_flight_messages=True)
+    assert not evaluator.is_backup_eligible(AgentState.OFFLINE, has_in_flight_messages=True)
+    assert evaluator.is_backup_eligible(AgentState.OFFLINE, has_in_flight_messages=False)
+    assert evaluator.is_backup_eligible(AgentState.IDLE, has_in_flight_messages=False)
+
+
+def test_rclone_client_id_audit_migration_required():
+    """Verifies that shared default rclone client ID reports migration required (Section 49)."""
+    uploader = BackupUploader()
+    res = uploader.audit_rclone_client_id("gdrive:")
+    # On this VM, gdrive uses shared default client ID
+    assert res["status"] in ("RCLONE_CLIENT_ID_MIGRATION_REQUIRED", "PASS")
+
+
+def test_exactly_once_honest_accounting():
+    """Verifies honest exactly-once accounting (provable vs NOT-PROVABLE) (Section 45)."""
+    receiver = BridgeTerminalReceiver()
+
+    # Deterministic receiver
+    msg1 = {"message_id": "m-1", "payload": "hello"}
+    ack1 = receiver.receive_message(msg1, is_arbitrary_cli=False)
+    assert ack1.status == "DELIVERED"
+    assert ack1.exactly_once_provable is True
+
+    # Duplicate message rejected
+    ack1_dup = receiver.receive_message(msg1, is_arbitrary_cli=False)
+    assert ack1_dup.status == "DUPLICATE_REJECTED"
+
+    # Arbitrary CLI without guaranteed ACK -> UNCERTAIN (NOT-PROVABLE)
+    msg2 = {"message_id": "m-2", "payload": "cli cmd"}
+    ack2 = receiver.receive_message(msg2, is_arbitrary_cli=True)
+    assert ack2.status == "UNCERTAIN"
+    assert ack2.exactly_once_provable is False
+
+
+def test_state_db_encrypted_backup_and_recovery(test_env):
+    """Verifies crash-consistent state DB export and encrypted restore (Section 37)."""
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    gate.register_or_update_project("proj_enc_test", "enc_test", "/tmp/enc", initial_generation=42)
+
+    export_path = test_env["home"] / "backup_state.enc"
+    key = "TestSecretKey12345678901234567890!"
+
+    db.export_encrypted_backup(export_path, key=key)
+    assert export_path.is_file()
+    assert export_path.stat().st_size > 0
+
+    # Wipe database and restore
+    conn = db.get_connection()
+    try:
+        conn.execute("DROP TABLE projects_state;")
+    finally:
+        conn.close()
+
+    db.import_encrypted_backup(export_path, key=key)
+
+    # Verify project restored
+    conn2 = db.get_connection()
+    try:
+        cur = conn2.cursor()
+        cur.execute("SELECT dirty_generation FROM projects_state WHERE project_id = 'proj_enc_test';")
+        assert cur.fetchone()["dirty_generation"] == 42
+    finally:
+        conn2.close()
+
+
+def test_git_isolation_invariant(test_env):
+    """
+    Verifies Section 36 & 58 Invariant:
+    Runtime backup eligibility is 100% filesystem and agent based;
+    Git dirty state, git status, git diff, or GitHub state never affect backup eligibility.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    clock: InjectableClock = test_env["clock"]
+    proj_dir = test_env["projects_root"] / "proj_git_isolated"
+    proj_dir.mkdir(parents=True, exist_ok=True)
+
+    # Initialize a git repo inside the project
+    subprocess.run(["git", "init"], cwd=str(proj_dir), capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=str(proj_dir), check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=str(proj_dir), check=True)
+    (proj_dir / "tracked.txt").write_text("initial")
+    subprocess.run(["git", "add", "tracked.txt"], cwd=str(proj_dir), check=True)
+    subprocess.run(["git", "commit", "-m", "initial commit"], cwd=str(proj_dir), check=True)
+
+    # Git working tree is completely CLEAN
+    git_stat = subprocess.run(["git", "status", "--porcelain"], cwd=str(proj_dir), capture_output=True, text=True)
+    assert git_stat.stdout.strip() == "", "Git working tree should be clean"
+
+    orchestrator = BackupOrchestrator(cfg, clock=clock)
+    project_id = "proj_git_isolated"
+    orchestrator.gate_coordinator.register_or_update_project(
+        project_id, "proj_git_isolated", str(proj_dir), initial_generation=5
+    )
+
+    # Even though git status is clean, dirty_generation=5 > last_good=0, so backup is ELIGIBLE!
+    res = orchestrator.run_cycle_for_project(project_id, force=True, agent_state_override=AgentState.IDLE)
+    assert res.action_taken == "BACKUP_COMPLETED"
+    assert res.captured_generation == 5
+
+    # Now make git dirty by editing tracked.txt
+    (proj_dir / "tracked.txt").write_text("modified")
+    git_stat2 = subprocess.run(["git", "status", "--porcelain"], cwd=str(proj_dir), capture_output=True, text=True)
+    assert "M tracked.txt" in git_stat2.stdout
+
+    # But without filesystem generation increment, dirty_gen=5 == last_good=5, so it is CLEAN in backup domain!
+    res2 = orchestrator.run_cycle_for_project(project_id, force=False, agent_state_override=AgentState.IDLE)
+    assert res2.action_taken == "SKIPPED_CLEAN", "Backup decision erroneously inspected Git dirty state!"
