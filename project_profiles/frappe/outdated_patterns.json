@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "framework": "frappe",
+  "target_major": 16,
+  "patterns": [
+    {
+      "pattern_id": "FRAPPE_RAW_SQL_INJECTION",
+      "severity": "CRITICAL",
+      "regex": "frappe\\.db\\.sql\\s*\\(\\s*f[\"']",
+      "description": "F-string formatting inside frappe.db.sql leads to SQL injection. Modern Frappe requires parameterized dict/tuple arguments or QueryBuilder.",
+      "alternative": "Use QueryBuilder (frappe.qb) or parameterized SQL: frappe.db.sql('SELECT ... WHERE name = %(name)s', {'name': val}, as_dict=True)",
+      "official_reference": "https://docs.frappe.io/framework/user/en/api/database#query-builder"
+    },
+    {
+      "pattern_id": "FRAPPE_WHITELIST_UNRESTRICTED_HTTP_METHOD",
+      "severity": "HIGH",
+      "regex": "@frappe\\.whitelist\\s*\\(\\s*\\)|@frappe\\.whitelist\\s*\\(\\s*allow_guest\\s*=\\s*True\\s*\\)",
+      "description": "Frappe v16 whitelisted methods without explicit methods parameter (e.g. methods=['GET'] or methods=['POST']) allow CSRF/state bypass.",
+      "alternative": "Specify allowed HTTP verbs: @frappe.whitelist(methods=['GET']) or @frappe.whitelist(methods=['POST'])",
+      "official_reference": "https://docs.frappe.io/framework/user/en/api/rest#whitelisted-methods"
+    },
+    {
+      "pattern_id": "FRAPPE_DIRECT_DDL_TABLE_ALTER",
+      "severity": "CRITICAL",
+      "regex": "frappe\\.db\\.sql\\s*\\(\\s*[\"'].*ALTER\\s+TABLE",
+      "description": "Direct ALTER TABLE DDL bypasses Frappe schema metadata and breaks database migrations.",
+      "alternative": "Define DocFields in JSON schema or add Custom Fields via fixtures: {'dt': 'Custom Field', 'filters': [...]}.",
+      "official_reference": "https://docs.frappe.io/framework/user/en/guides/app-development/how-to-create-custom-fields-during-app-installation"
+    },
+    {
+      "pattern_id": "FRAPPE_EXPLICIT_DB_COMMIT_IN_GET",
+      "severity": "HIGH",
+      "regex": "def\\s+[a-zA-Z0-9_]+\\s*\\(.*\\):.*frappe\\.db\\.commit\\s*\\(\\s*\\)",
+      "description": "Manual frappe.db.commit() inside read/GET requests violates Frappe transaction lifecycles.",
+      "alternative": "Frappe automatically commits successful write transactions at end of POST requests. Remove manual commit.",
+      "official_reference": "https://docs.frappe.io/framework/user/en/api/database#database-transactions"
+    },
+    {
+      "pattern_id": "FRAPPE_LEGACY_IMPORT_REMOVED_MODULE",
+      "severity": "CRITICAL",
+      "regex": "from\\s+frappe\\.model\\.document\\s+import\\s+get_doc|import\\s+frappe\\.frappe_docs",
+      "description": "Deprecated import from legacy removed module paths.",
+      "alternative": "Use top-level frappe.get_doc or official module paths.",
+      "official_reference": "https://docs.frappe.io/framework/user/en/api/document"
+    }
+  ]
+}
