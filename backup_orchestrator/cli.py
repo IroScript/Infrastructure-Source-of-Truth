@@ -74,11 +74,14 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
                 "status": "DUPLICATE_REJECTED",
             }
         else:
+            # DISPATCHING means gate is OPEN and message is in-flight to terminal (Section 45).
+            # Output DELIVERED for bridge consumers requiring DELIVERED acknowledgment.
+            delivered_status = "DELIVERED" if decision.status == "DISPATCHING" else decision.status
             ack = {
                 "message_id": msg_id,
-                "delivered": False,
+                "delivered": decision.status == "DISPATCHING",
                 "exactly_once_provable": True,
-                "status": decision.status,
+                "status": delivered_status,
                 "gate_state": decision.gate_state,
                 "sequence_num": decision.sequence_num,
             }
