@@ -12,9 +12,15 @@ from typing import Any, Callable, Dict, List, Optional
 from .db import Database
 
 
-def is_pid_alive(pid: Optional[int]) -> bool:
+def is_pid_alive(pid: Optional[Any]) -> bool:
     """Checks whether a given process ID is actively running on the host system."""
-    if pid is None or pid <= 0:
+    if pid is None:
+        return False
+    try:
+        pid = int(pid)
+    except (ValueError, TypeError):
+        return False
+    if pid <= 0:
         return False
     try:
         os.kill(pid, 0)
@@ -297,6 +303,9 @@ class PromptGateCoordinator:
                     """,
                     (project_id, project_id, project_id, now_str),
                 )
+            # Zero terminal delivery ownership in SOT:
+            # TmuxTerminalReceiver is deprecated and contains zero tmux send-keys calls.
+            # If a test or adapter registered an in-memory dispatch handler, drain with it.
             fn = dispatch_func or self._dispatch_handlers.get(project_id) or self._default_dispatch_handler
             if fn:
                 return self.release_held_prompts(project_id, fn)

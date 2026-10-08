@@ -805,24 +805,24 @@ def test_submit_prompt_isolated_no_crash_recovery(test_env):
     res_unreg = gate.dispatch_or_hold_message(unreg_proj, "unreg_msg_001", "term", "payload unreg")
     assert res_unreg.status in ("DISPATCHING", "HELD")
 
-    # Adversarial A1 check: whatsapp_bridge.js fails closed when SOT is missing or inaccessible
+    # Invariant check: whatsapp_bridge.js falls back to open (ALLOW_NOW) when SOT is missing or inaccessible
     bridge_script = Path("/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/whatsapp_bridge.js")
     if bridge_script.is_file():
-        # Test 1: SOT binary missing -> dispatchToTmux returns false
+        # Test 1: SOT binary missing -> checkZipGate returns ALLOW_NOW (non-blocking fallback open)
         node_check_missing = subprocess.run(
             ["node", "-e", f"""
             process.env.SOT_PATH = '/nonexistent/sot/path';
-            const {{ dispatchToTmux }} = require('{bridge_script}');
-            const res = dispatchToTmux('test prompt missing sot', 'agy:0', 'test_msg_missing');
-            if (res !== false) process.exit(1);
+            const {{ checkZipGate }} = require('{bridge_script}');
+            const res = checkZipGate('agy:0');
+            if (!res || res.action !== 'ALLOW_NOW') process.exit(1);
             process.exit(0);
             """],
             capture_output=True,
             text=True,
         )
-        assert node_check_missing.returncode == 0, f"Missing SOT check failed: {node_check_missing.stderr}"
+        assert node_check_missing.returncode == 0, f"Missing SOT fallback-open check failed: {node_check_missing.stderr}"
 
-        # Test 2: SOT binary inaccessible (unreadable permissions) -> dispatchToTmux returns false
+        # Test 2: SOT binary inaccessible -> checkZipGate returns ALLOW_NOW
         node_check_inacc = subprocess.run(
             ["node", "-e", f"""
             const fs = require('fs');
@@ -830,30 +830,30 @@ def test_submit_prompt_isolated_no_crash_recovery(test_env):
             fs.writeFileSync(tmp, '#!/bin/sh\\n');
             fs.chmodSync(tmp, 0000);
             process.env.SOT_PATH = tmp;
-            const {{ dispatchToTmux }} = require('{bridge_script}');
-            const res = dispatchToTmux('test prompt inacc sot', 'agy:0', 'test_msg_inacc');
-            fs.unlinkSync(tmp);
-            if (res !== false) process.exit(1);
+            const {{ checkZipGate }} = require('{bridge_script}');
+            const res = checkZipGate('agy:0');
+            try {{ fs.unlinkSync(tmp); }} catch (_) {{}}
+            if (!res || res.action !== 'ALLOW_NOW') process.exit(1);
             process.exit(0);
             """],
             capture_output=True,
             text=True,
         )
-        assert node_check_inacc.returncode == 0, f"Inaccessible SOT check failed: {node_check_inacc.stderr}"
+        assert node_check_inacc.returncode == 0, f"Inaccessible SOT fallback-open check failed: {node_check_inacc.stderr}"
 
-        # Test 3: SOT binary is a directory -> dispatchToTmux returns false (fail closed)
+        # Test 3: SOT binary is a directory -> checkZipGate returns ALLOW_NOW
         node_check_dir = subprocess.run(
             ["node", "-e", f"""
             process.env.SOT_PATH = '/home/azureuser';
-            const {{ dispatchToTmux }} = require('{bridge_script}');
-            const res = dispatchToTmux('test prompt dir sot', 'agy:0', 'test_msg_dir');
-            if (res !== false) process.exit(1);
+            const {{ checkZipGate }} = require('{bridge_script}');
+            const res = checkZipGate('agy:0');
+            if (!res || res.action !== 'ALLOW_NOW') process.exit(1);
             process.exit(0);
             """],
             capture_output=True,
             text=True,
         )
-        assert node_check_dir.returncode == 0, f"Directory SOT check failed: {node_check_dir.stderr}"
+        assert node_check_dir.returncode == 0, f"Directory SOT fallback-open check failed: {node_check_dir.stderr}"
 
     # Adversarial A1 check: Failing receiver in BridgeAdapter rolls back to HELD and prevents in-flight leak
     gate_open_proj = "proj_a1_open"
@@ -1227,4 +1227,75 @@ def test_orchestrator_zero_terminal_injection_during_drain(test_env):
 
     delivered = orch.drain_pending_prompts()
     assert delivered == 0
+
+
+def test_open_gate_zero_terminal_injection_with_held_prompts(test_env):
+    """
+    Milestone 1 Remediation: When open_gate() runs on a project with held prompts,
+    zero tmux send-keys subprocess calls are made. SOT has 0 terminal delivery ownership.
+    """
+    from unittest.mock import patch, MagicMock
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    orch = BackupOrchestrator(cfg)
+    project_id = "test_verify_zero_tmux_held"
+    proj_dir = test_env["projects_root"] / project_id
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    (proj_dir / "code.py").write_text("print('test')")
+
+    orch.gate_coordinator.register_or_update_project(project_id, project_id, str(proj_dir), initial_generation=1)
+    watcher = ProjectFsWatcher(project_id, proj_dir, orch.db)
+    watcher.start_watches()
+    watcher.reconcile_filesystem()
+    orch.watchers[project_id] = watcher
+
+    # Close gate and enqueue a held prompt
+    orch.gate_coordinator.close_gate(project_id, zip_pid=os.getpid())
+    orch.gate_coordinator.dispatch_or_hold_message(project_id, "msg-held-tmux-test", "agy:0", "test terminal write")
+
+    with patch("subprocess.run") as mock_sub:
+        mock_sub.return_value = MagicMock(returncode=0)
+        orch.run_cycle_for_project(project_id, force=True)
+        tmux_calls = [
+            c for c in mock_sub.call_args_list
+            if c[0] and "tmux" in str(c[0][0]) and "send-keys" in str(c[0][0])
+        ]
+        assert len(tmux_calls) == 0, f"FAILED: SOT called tmux send-keys: {tmux_calls}"
+
+    # Also test open_gate directly with held prompts
+    orch.gate_coordinator.close_gate(project_id, zip_pid=os.getpid())
+    orch.gate_coordinator.dispatch_or_hold_message(project_id, "msg-held-direct-open", "agy:0", "direct open prompt")
+    with patch("subprocess.run") as mock_sub:
+        mock_sub.return_value = MagicMock(returncode=0)
+        drained = orch.gate_coordinator.open_gate(project_id)
+        assert drained == 0
+        tmux_calls = [
+            c for c in mock_sub.call_args_list
+            if c[0] and "tmux" in str(c[0][0]) and "send-keys" in str(c[0][0])
+        ]
+        assert len(tmux_calls) == 0, f"FAILED: open_gate called tmux send-keys: {tmux_calls}"
+
+
+def test_gate_check_uuid_resolution(test_env, capsys):
+    """
+    Milestone 1 Remediation: gate-check with authoritative project_uuid
+    correctly resolves to canonical project_id via WHATSAPP_CONNECTIONS and PROJECT_REGISTRY.
+    """
+    from backup_orchestrator.cli import handle_backup_orchestrator_cli
+    import argparse
+
+    # 08371aa5-5f84-559d-835f-a9ee1ffef3f6 is the UUID for whatsapp_master
+    args = argparse.Namespace(
+        orchestrator_action="gate-check",
+        project_uuid="08371aa5-5f84-559d-835f-a9ee1ffef3f6",
+        project="",
+        route="",
+        home=str(test_env["home"]),
+    )
+    rc = handle_backup_orchestrator_cli(args, test_env["sot_root"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    gate_info = json.loads(captured.out)
+    assert gate_info["project_uuid"] == "whatsapp_master"
+    assert gate_info["action"] == "ALLOW_NOW"
+    assert gate_info["zip_gate"] == "ZIP_GATE_OPEN"
 

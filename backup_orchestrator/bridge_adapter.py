@@ -71,98 +71,27 @@ class BridgeTerminalReceiver:
 
 class TmuxTerminalReceiver(BridgeTerminalReceiver):
     """
-    Real terminal transport broker executing via tmux send-keys.
-    Validates target window existence and delivery acknowledgement.
+    DEPRECATED: SOT Backup Orchestrator has 0 terminal delivery ownership.
+    WhatsApp Bridge is the sole terminal delivery owner.
+    Zero tmux send-keys execution in SOT.
     """
 
     def receive_message(self, message: Dict[str, Any], is_arbitrary_cli: bool = False) -> TerminalAck:
-        with self._lock:
-            msg_id = message["message_id"]
-            if msg_id in self.accepted_message_ids:
-                return TerminalAck(
-                    message_id=msg_id,
-                    delivered=False,
-                    exactly_once_provable=True,
-                    status="DUPLICATE_REJECTED",
-                )
-
-            target = message.get("routing_target")
-            payload = message.get("payload", "")
-
-            if target and shutil.which("tmux"):
-                try:
-                    session = target.split(":")[0] if ":" in target else target
-                    probe = subprocess.run(
-                        ["tmux", "has-session", "-t", session],
-                        capture_output=True,
-                    )
-                    if probe.returncode != 0:
-                        return TerminalAck(
-                            message_id=msg_id,
-                            delivered=False,
-                            exactly_once_provable=False,
-                            status="FAILED",
-                            error=f"tmux target not found: {target}",
-                        )
-
-                    p1 = subprocess.run(
-                        ["tmux", "send-keys", "-t", target, "-l", str(payload)],
-                        capture_output=True,
-                        text=True,
-                    )
-                    if p1.returncode != 0:
-                        return TerminalAck(
-                            message_id=msg_id,
-                            delivered=False,
-                            exactly_once_provable=False,
-                            status="FAILED",
-                            error=p1.stderr.strip() or "tmux send-keys failed",
-                        )
-
-                    p2 = subprocess.run(
-                        ["tmux", "send-keys", "-t", target, "Enter"],
-                        capture_output=True,
-                        text=True,
-                    )
-                    if p2.returncode != 0:
-                        return TerminalAck(
-                            message_id=msg_id,
-                            delivered=False,
-                            exactly_once_provable=False,
-                            status="FAILED",
-                            error=p2.stderr.strip() or "tmux Enter failed",
-                        )
-                except Exception as exc:
-                    return TerminalAck(
-                        message_id=msg_id,
-                        delivered=False,
-                        exactly_once_provable=False,
-                        status="FAILED",
-                        error=str(exc),
-                    )
-            elif not target:
-                return TerminalAck(
-                    message_id=msg_id,
-                    delivered=False,
-                    exactly_once_provable=False,
-                    status="FAILED",
-                    error="No routing_target specified for terminal transport",
-                )
-
-            self.accepted_message_ids.add(msg_id)
-            self.received_messages.append(message)
-            return TerminalAck(
-                message_id=msg_id,
-                delivered=True,
-                exactly_once_provable=True,
-                status="DELIVERED",
-            )
+        msg_id = message.get("message_id", "")
+        return TerminalAck(
+            message_id=msg_id,
+            delivered=False,
+            exactly_once_provable=False,
+            status="FAILED",
+            error="TmuxTerminalReceiver in SOT is deprecated. Terminal delivery ownership belongs solely to WhatsApp Bridge.",
+        )
 
 
 class BridgeAdapter:
     """
     Integrates the WhatsApp message router with the PromptGateCoordinator.
-    Resolves incoming messages to projects, enforces prompt gating, and routes to terminal receivers.
+    Resolves incoming messages to projects, enforces prompt gating.
+    Zero terminal injection in SOT.
     """
 
     def __init__(

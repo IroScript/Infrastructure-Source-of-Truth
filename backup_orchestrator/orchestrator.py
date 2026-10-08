@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 from .agent_model import AgentState, AgentStateEvaluator
 from .config import BackupOrchestratorConfig
 from .db import Database
-from .bridge_adapter import BridgeAdapter, BridgeTerminalReceiver, TmuxTerminalReceiver
 from .gate import PromptGateCoordinator
 from .retention import RetentionManager
 from .timekeeping import Clock, RealClock, generate_backup_filename
@@ -49,7 +48,7 @@ class BackupOrchestrator:
         clock: Optional[Clock] = None,
         agent_evaluator: Optional[AgentStateEvaluator] = None,
         uploader: Optional[BackupUploader] = None,
-        terminal_receiver: Optional[BridgeTerminalReceiver] = None,
+        terminal_receiver: Optional[Any] = None,
     ):
         self.config = config
         self.clock = clock or RealClock(config.timezone_name)
@@ -63,12 +62,8 @@ class BackupOrchestrator:
         )
         self.watchers: Dict[str, ProjectFsWatcher] = {}
         self.project_metadata: Dict[str, Dict[str, Any]] = {}
-        self.terminal_receiver = terminal_receiver or TmuxTerminalReceiver()
-        self.bridge_adapter = BridgeAdapter(
-            self.gate_coordinator,
-            self.config.sot_root,
-            terminal_receiver=self.terminal_receiver,
-        )
+        # Zero terminal delivery ownership in BackupOrchestrator (Section 1).
+        # WhatsApp Bridge is the sole terminal delivery owner.
         self.delivery_owner_instance_id = f"daemon-{os.getpid()}-{secrets.token_hex(4)}"
         self._init_projects_and_crash_recovery()
 

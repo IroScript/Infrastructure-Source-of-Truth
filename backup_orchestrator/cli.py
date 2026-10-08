@@ -11,6 +11,73 @@ from .db import Database
 from .orchestrator import BackupOrchestrator
 
 
+def resolve_route_to_project_id(target_str: str, sot_root: Path) -> str:
+    """
+    Resolves route, window, group, project slug, or project_uuid to canonical project_id.
+    Checks WHATSAPP_CONNECTIONS.json, PROJECT_REGISTRY.json, and group window mappings.
+    """
+    target = target_str.strip()
+    if not target:
+        return target
+    target_lower = target.lower()
+
+    # 1. Check WHATSAPP_CONNECTIONS.json (supports group_id, agent_name, agent_route, project_uuid, project_id)
+    wa_file = sot_root / "connections" / "WHATSAPP_CONNECTIONS.json"
+    if wa_file.is_file():
+        try:
+            wa_data = json.loads(wa_file.read_text(encoding="utf-8"))
+            for conn in wa_data.get("connections", []):
+                p_id = conn.get("project_id")
+                if not p_id:
+                    continue
+                if target_lower in (
+                    (conn.get("group_id") or "").strip().lower(),
+                    (conn.get("agent_name") or "").strip().lower(),
+                    (conn.get("agent_route") or "").strip().lower(),
+                    (conn.get("project_uuid") or "").strip().lower(),
+                    p_id.lower(),
+                ):
+                    return p_id
+        except Exception:
+            pass
+
+    # 2. Check PROJECT_REGISTRY.json (supports project_uuid, project_id, display_name, tmux_window)
+    reg_file = sot_root / "projects" / "PROJECT_REGISTRY.json"
+    if reg_file.is_file():
+        try:
+            reg_data = json.loads(reg_file.read_text(encoding="utf-8"))
+            for proj in reg_data.get("projects", []):
+                p_id = proj.get("project_id")
+                if not p_id:
+                    continue
+                p_uuid = (proj.get("project_uuid") or "").strip().lower()
+                p_slug = p_id.strip().lower()
+                p_name = (proj.get("display_name") or "").strip().lower()
+                tmux_win = (proj.get("runtime") or {}).get("tmux_window") or ""
+                windows = [w.strip().lower() for w in tmux_win.split(",") if w.strip()]
+                if target_lower in (p_uuid, p_slug, p_name, *windows):
+                    return p_id
+        except Exception:
+            pass
+
+    # 3. Strip prefix like agy:xyz -> xyz and match against project slugs
+    if ":" in target:
+        clean = target.split(":", 1)[1].strip()
+        if clean:
+            if reg_file.is_file():
+                try:
+                    reg_data = json.loads(reg_file.read_text(encoding="utf-8"))
+                    for proj in reg_data.get("projects", []):
+                        p_id = proj.get("project_id", "")
+                        if clean.lower() == p_id.lower() or p_id.lower().startswith(clean.lower()):
+                            return p_id
+                except Exception:
+                    pass
+            return clean
+
+    return target
+
+
 def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> int:
     config = BackupOrchestratorConfig.resolve(
         sot_root=sot_root,
@@ -29,30 +96,8 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
             print("Error: --project-uuid or --route is required for gate-check", file=sys.stderr)
             return 2
 
-        # Resolve route to project_id via connection mappings
-        wa_file = sot_root / "connections" / "WHATSAPP_CONNECTIONS.json"
-        if wa_file.is_file():
-            try:
-                wa_data = json.loads(wa_file.read_text(encoding="utf-8"))
-                for conn in wa_data.get("connections", []):
-                    p_id = conn.get("project_id")
-                    if not p_id:
-                        continue
-                    if project_uuid.strip().lower() in (
-                        (conn.get("group_id") or "").strip().lower(),
-                        (conn.get("agent_name") or "").strip().lower(),
-                        (conn.get("agent_route") or "").strip().lower(),
-                        p_id.lower(),
-                    ):
-                        project_uuid = p_id
-                        break
-            except Exception:
-                pass
-
-        if ":" in project_uuid:
-            target = project_uuid.split(":", 1)[1].strip()
-            if target:
-                project_uuid = target
+        # Resolve route or UUID to project_id via connection mappings and registry
+        project_uuid = resolve_route_to_project_id(project_uuid, sot_root)
 
         from .gate import PromptGateCoordinator
         db = Database(config.db_path)
@@ -75,31 +120,8 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
         db = Database(config.db_path)
         coordinator = PromptGateCoordinator(db)
 
-        # Resolve route to project_id via connection mappings
-        project_id = route
-        wa_file = sot_root / "connections" / "WHATSAPP_CONNECTIONS.json"
-        if wa_file.is_file():
-            try:
-                wa_data = json.loads(wa_file.read_text(encoding="utf-8"))
-                for conn in wa_data.get("connections", []):
-                    p_id = conn.get("project_id")
-                    if not p_id:
-                        continue
-                    if route.strip().lower() in (
-                        (conn.get("group_id") or "").strip().lower(),
-                        (conn.get("agent_name") or "").strip().lower(),
-                        (conn.get("agent_route") or "").strip().lower(),
-                        p_id.lower(),
-                    ):
-                        project_id = p_id
-                        break
-            except Exception:
-                pass
-
-        if project_id == route and ":" in route:
-            target = route.split(":", 1)[1].strip()
-            if target:
-                project_id = target
+        # Resolve route to project_id via connection mappings and registry
+        project_id = resolve_route_to_project_id(route, sot_root)
 
         # Pure transactional enqueue without in-memory receiver
         decision = coordinator.dispatch_or_hold_message(
