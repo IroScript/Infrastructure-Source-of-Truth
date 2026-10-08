@@ -1,0 +1,70 @@
+{
+  "manifest_version": "1.0.0",
+  "project_id": "frappe_erp_alco",
+  "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
+  "project_type": "frappe_bench",
+  "bench_relative_path": "Frappe-erp-Alco/frappe-bench",
+  "project_relative_path": "Frappe-erp-Alco",
+  "site_name": "alco.localhost",
+  "official_reference": {
+    "source_sot_path": "frappe/docs-reference",
+    "target_state_path": "official-references/frappe"
+  },
+  "repositories": [
+    {
+      "name": "frappe",
+      "url": "https://github.com/frappe/frappe.git",
+      "branch": "version-16",
+      "target_relative_dir": "Frappe-erp-Alco/frappe-bench/apps/frappe",
+      "is_core": true
+    },
+    {
+      "name": "erpnext",
+      "url": "https://github.com/frappe/erpnext.git",
+      "branch": "version-16",
+      "target_relative_dir": "Frappe-erp-Alco/frappe-bench/apps/erpnext",
+      "is_core": true
+    },
+    {
+      "name": "alco_ecommerce",
+      "url": "https://github.com/IroScript/frappe-erp-alco-project",
+      "branch": "main",
+      "target_relative_dir": "Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce",
+      "is_core": false
+    }
+  ],
+  "installed_apps": [
+    "frappe",
+    "erpnext",
+    "alco_ecommerce"
+  ],
+  "site_config": {
+    "db_name": "_b4b30e57a5907bea",
+    "db_type": "mariadb"
+  },
+  "runtime_prerequisites": {
+    "python": ">=3.10",
+    "mariadb": ">=10.6",
+    "redis": ">=6.0"
+  },
+  "external_data_dependencies": [
+    {
+      "asset_id": "alco_localhost_mariadb",
+      "description": "MariaDB database dump for site alco.localhost",
+      "type": "database_dump",
+      "storage": "external_encrypted_backup"
+    },
+    {
+      "asset_id": "alco_site_config_secrets",
+      "description": "Site passwords and encryption keys for site_config.json",
+      "type": "secret_config",
+      "storage": "external_encrypted_backup"
+    },
+    {
+      "asset_id": "alco_site_files",
+      "description": "Public and private uploads in sites/alco.localhost/files",
+      "type": "persistent_media",
+      "storage": "external_cloud_backup"
+    }
+  ]
+}

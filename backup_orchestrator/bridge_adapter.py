@@ -91,8 +91,9 @@ class TmuxTerminalReceiver(BridgeTerminalReceiver):
 
             if target and shutil.which("tmux"):
                 try:
+                    session = target.split(":")[0] if ":" in target else target
                     probe = subprocess.run(
-                        ["tmux", "has-session", "-t", target],
+                        ["tmux", "has-session", "-t", session],
                         capture_output=True,
                     )
                     if probe.returncode != 0:
@@ -209,6 +210,14 @@ class BridgeAdapter:
         for k, v in self.whatsapp_map.items():
             if v.lower() == clean:
                 return v
+        if ":" in clean:
+            target = clean.split(":", 1)[1].strip()
+            if target in self.whatsapp_map:
+                return self.whatsapp_map[target]
+            for k, v in self.whatsapp_map.items():
+                if v.lower() == target:
+                    return v
+            return target
         return None
 
     def handle_incoming_message(

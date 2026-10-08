@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 SCHEMA_MIGRATIONS = [
     # Version 1 Initial Schema
@@ -93,6 +93,21 @@ SCHEMA_MIGRATIONS = [
     CREATE INDEX IF NOT EXISTS idx_held_queue_proj_seq ON held_prompt_queue(project_id, sequence_num);
     CREATE INDEX IF NOT EXISTS idx_verified_backups_proj_date ON verified_backups(project_id, verified_at);
     CREATE INDEX IF NOT EXISTS idx_backup_runs_proj_gen ON backup_runs(project_id, captured_generation);
+    """,
+    # Version 2 Delivery Owner & Transactional Claiming
+    """
+    ALTER TABLE held_prompt_queue ADD COLUMN delivery_owner_instance_id TEXT DEFAULT '';
+    ALTER TABLE held_prompt_queue ADD COLUMN claim_timestamp TEXT DEFAULT '';
+    ALTER TABLE held_prompt_queue ADD COLUMN attempt_id TEXT DEFAULT '';
+    ALTER TABLE held_prompt_queue ADD COLUMN retry_count INTEGER DEFAULT 0;
+
+    CREATE TABLE IF NOT EXISTS delivery_owner_state (
+        owner_instance_id TEXT PRIMARY KEY,
+        daemon_pid INTEGER NOT NULL,
+        started_at TEXT NOT NULL,
+        heartbeat_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'ACTIVE'
+    );
     """
 ]
 

@@ -29,13 +29,61 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
             except Exception:
                 pass
         from .gate import PromptGateCoordinator
-        from .bridge_adapter import BridgeAdapter
         db = Database(config.db_path)
         coordinator = PromptGateCoordinator(db)
-        adapter = BridgeAdapter(coordinator, sot_root)
-        ack = adapter.handle_incoming_message(route_spec=route, message_id=msg_id, payload=payload, is_arbitrary_cli=False)
-        print(json.dumps(ack.__dict__, indent=2))
-        return 0 if ack.status in ("DELIVERED", "HELD", "DUPLICATE_REJECTED") else 1
+
+        # Resolve route to project_id via connection mappings
+        project_id = route
+        wa_file = sot_root / "connections" / "WHATSAPP_CONNECTIONS.json"
+        if wa_file.is_file():
+            try:
+                wa_data = json.loads(wa_file.read_text(encoding="utf-8"))
+                for conn in wa_data.get("connections", []):
+                    p_id = conn.get("project_id")
+                    if not p_id:
+                        continue
+                    if route.strip().lower() in (
+                        (conn.get("group_id") or "").strip().lower(),
+                        (conn.get("agent_name") or "").strip().lower(),
+                        (conn.get("agent_route") or "").strip().lower(),
+                        p_id.lower(),
+                    ):
+                        project_id = p_id
+                        break
+            except Exception:
+                pass
+
+        if project_id == route and ":" in route:
+            target = route.split(":", 1)[1].strip()
+            if target:
+                project_id = target
+
+        # Pure transactional enqueue without in-memory receiver
+        decision = coordinator.dispatch_or_hold_message(
+            project_id=project_id,
+            message_id=msg_id,
+            routing_target=route,
+            payload=payload,
+        )
+
+        if decision.status == "DUPLICATE_REJECTED":
+            ack = {
+                "message_id": msg_id,
+                "delivered": False,
+                "exactly_once_provable": True,
+                "status": "DUPLICATE_REJECTED",
+            }
+        else:
+            ack = {
+                "message_id": msg_id,
+                "delivered": False,
+                "exactly_once_provable": True,
+                "status": decision.status,
+                "gate_state": decision.gate_state,
+                "sequence_num": decision.sequence_num,
+            }
+        print(json.dumps(ack, indent=2))
+        return 0 if ack["status"] in ("DELIVERED", "HELD", "DISPATCHING", "DUPLICATE_REJECTED") else 1
 
     orchestrator = BackupOrchestrator(config)
 

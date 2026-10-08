@@ -134,7 +134,7 @@ def handle_frappe_cli(args, sot_root: Path) -> int:
         dry_run = getattr(args, "dry_run", False)
         res = profile.bootstrap_project(proj_path, profile_roots, auto=auto, dry_run=dry_run)
         print(json.dumps(res, indent=2))
-        return 0
+        return 0 if res.get("status") in ("BOOTSTRAP_COMPLETE", "DRY_RUN") else 1
 
     elif action == "check-code":
         file_arg = getattr(args, "file", None)

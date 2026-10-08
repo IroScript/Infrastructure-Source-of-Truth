@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 import sqlite3
 import threading
 import time
@@ -158,12 +159,6 @@ class PromptGateCoordinator:
                     project_id=project_id,
                 )
 
-            # If gate is OPEN but there were held items, auto-trigger FIFO drain
-            if gate_state == "OPEN" and held_count > 0:
-                fn = self._dispatch_handlers.get(project_id) or self._default_dispatch_handler
-                if fn:
-                    self.release_held_prompts(project_id, fn)
-
             return decision
 
     def mark_message_delivered(self, message_id: str) -> None:
@@ -204,8 +199,16 @@ class PromptGateCoordinator:
 
                 now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                 cur.execute(
-                    "UPDATE projects_state SET prompt_gate = 'CLOSED', updated_at = ? WHERE project_id = ?;",
-                    (now_str, project_id),
+                    """
+                    INSERT INTO projects_state (
+                        project_id, project_slug, canonical_path, dirty_generation,
+                        last_good_generation, prompt_gate, lifecycle_lock, updated_at
+                    ) VALUES (?, ?, ?, 0, 0, 'CLOSED', 'UNLOCKED', ?)
+                    ON CONFLICT(project_id) DO UPDATE SET
+                        prompt_gate = 'CLOSED',
+                        updated_at = excluded.updated_at;
+                    """,
+                    (project_id, project_id, project_id, now_str),
                 )
 
             # Recheck active-agent + filesystem-generation
@@ -228,8 +231,16 @@ class PromptGateCoordinator:
             now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             with self.db.transaction() as cur:
                 cur.execute(
-                    "UPDATE projects_state SET prompt_gate = 'OPEN', updated_at = ? WHERE project_id = ?;",
-                    (now_str, project_id),
+                    """
+                    INSERT INTO projects_state (
+                        project_id, project_slug, canonical_path, dirty_generation,
+                        last_good_generation, prompt_gate, lifecycle_lock, updated_at
+                    ) VALUES (?, ?, ?, 0, 0, 'OPEN', 'UNLOCKED', ?)
+                    ON CONFLICT(project_id) DO UPDATE SET
+                        prompt_gate = 'OPEN',
+                        updated_at = excluded.updated_at;
+                    """,
+                    (project_id, project_id, project_id, now_str),
                 )
             fn = dispatch_func or self._dispatch_handlers.get(project_id) or self._default_dispatch_handler
             if fn:
@@ -326,6 +337,157 @@ class PromptGateCoordinator:
             return cur.fetchone()[0] > 0
         finally:
             conn.close()
+
+    def register_delivery_owner(self, owner_instance_id: str, daemon_pid: int) -> None:
+        """
+        Registers active delivery owner daemon and performs crash ambiguity recovery.
+        Stale in-flight DISPATCHING messages transition to UNCERTAIN (Section A2.6).
+        """
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with self.db.transaction() as cur:
+            # Crash ambiguity resolution: unconfirmed DISPATCHING becomes UNCERTAIN
+            cur.execute(
+                "UPDATE held_prompt_queue SET status = 'UNCERTAIN', updated_at = ? WHERE status = 'DISPATCHING';",
+                (now_str,),
+            )
+            # Mark previous active owners as ABANDONED
+            try:
+                cur.execute(
+                    "UPDATE delivery_owner_state SET status = 'ABANDONED' WHERE status = 'ACTIVE';"
+                )
+                cur.execute(
+                    """
+                    INSERT OR REPLACE INTO delivery_owner_state (
+                        owner_instance_id, daemon_pid, started_at, heartbeat_at, status
+                    ) VALUES (?, ?, ?, ?, 'ACTIVE');
+                    """,
+                    (owner_instance_id, daemon_pid, now_str, now_str),
+                )
+            except Exception:
+                pass
+
+    def heartbeat_delivery_owner(self, owner_instance_id: str) -> None:
+        """Updates daemon heartbeat in delivery_owner_state."""
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        try:
+            with self.db.transaction() as cur:
+                cur.execute(
+                    "UPDATE delivery_owner_state SET heartbeat_at = ? WHERE owner_instance_id = ?;",
+                    (now_str, owner_instance_id),
+                )
+        except Exception:
+            pass
+
+    def unregister_delivery_owner(self, owner_instance_id: str) -> None:
+        """Gracefully unregisters delivery owner on shutdown."""
+        try:
+            with self.db.transaction() as cur:
+                cur.execute(
+                    "UPDATE delivery_owner_state SET status = 'SHUTDOWN' WHERE owner_instance_id = ?;",
+                    (owner_instance_id,),
+                )
+        except Exception:
+            pass
+
+    def claim_next_held_prompt(
+        self, project_id: str, owner_instance_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Process-safe transactional queue claim (BEGIN IMMEDIATE).
+        Strict Head-of-Line FIFO: oldest non-final message blocks subsequent messages.
+        """
+        proj_lock = self._get_project_lock(project_id)
+        with proj_lock:
+            with self.db.transaction() as cur:
+                # 1. Gate must be OPEN
+                cur.execute(
+                    "SELECT prompt_gate FROM projects_state WHERE project_id = ?;",
+                    (project_id,),
+                )
+                row_g = cur.fetchone()
+                if row_g and row_g["prompt_gate"] != "OPEN":
+                    return None
+
+                # 2. Strict head-of-line: if any message for this target is in-flight (DISPATCHING),
+                # no new message may be claimed
+                cur.execute(
+                    "SELECT COUNT(*) FROM held_prompt_queue WHERE project_id = ? AND status = 'DISPATCHING';",
+                    (project_id,),
+                )
+                if cur.fetchone()[0] > 0:
+                    return None
+
+                # 3. Select oldest HELD message
+                cur.execute(
+                    """
+                    SELECT id, project_id, message_id, routing_target, payload, sequence_num
+                    FROM held_prompt_queue
+                    WHERE project_id = ? AND status = 'HELD'
+                    ORDER BY sequence_num ASC
+                    LIMIT 1;
+                    """,
+                    (project_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+
+                # 4. Atomically transition HELD -> DISPATCHING bound to delivery owner
+                now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                attempt_id = secrets.token_hex(4)
+                cur.execute(
+                    """
+                    UPDATE held_prompt_queue
+                    SET status = 'DISPATCHING',
+                        delivery_owner_instance_id = ?,
+                        claim_timestamp = ?,
+                        attempt_id = ?,
+                        updated_at = ?
+                    WHERE id = ?;
+                    """,
+                    (owner_instance_id, now_str, attempt_id, now_str, row["id"]),
+                )
+                return {
+                    "id": row["id"],
+                    "project_id": row["project_id"],
+                    "message_id": row["message_id"],
+                    "routing_target": row["routing_target"],
+                    "payload": row["payload"],
+                    "sequence_num": row["sequence_num"],
+                    "attempt_id": attempt_id,
+                }
+
+    def complete_delivery(self, message_id: str, owner_instance_id: str) -> None:
+        """Transitions claimed DISPATCHING prompt to DELIVERED."""
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with self.db.transaction() as cur:
+            cur.execute(
+                """
+                UPDATE held_prompt_queue
+                SET status = 'DELIVERED', updated_at = ?
+                WHERE message_id = ? AND status = 'DISPATCHING';
+                """,
+                (now_str, message_id),
+            )
+
+    def fail_delivery(
+        self, message_id: str, owner_instance_id: str, retryable: bool = True
+    ) -> None:
+        """
+        Transitions DISPATCHING prompt back to HELD (retryable) or FAILED.
+        Enforces head-of-line: remaining HELD prompts will wait until this item succeeds.
+        """
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        new_status = "HELD" if retryable else "FAILED"
+        with self.db.transaction() as cur:
+            cur.execute(
+                """
+                UPDATE held_prompt_queue
+                SET status = ?, retry_count = retry_count + 1, updated_at = ?
+                WHERE message_id = ? AND status = 'DISPATCHING';
+                """,
+                (new_status, now_str, message_id),
+            )
 
     def get_gate_state(self, project_id: str) -> Dict[str, Any]:
         """Returns the current prompt gate state for a project."""

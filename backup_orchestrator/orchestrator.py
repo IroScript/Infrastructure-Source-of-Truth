@@ -69,6 +69,8 @@ class BackupOrchestrator:
             self.config.sot_root,
             terminal_receiver=self.terminal_receiver,
         )
+        self.delivery_owner_instance_id = f"daemon-{os.getpid()}-{secrets.token_hex(4)}"
+        self.gate_coordinator.register_delivery_owner(self.delivery_owner_instance_id, os.getpid())
         self._init_projects_and_crash_recovery()
 
     def _init_projects_and_crash_recovery(self) -> None:
@@ -677,6 +679,61 @@ class BackupOrchestrator:
             "staging_dir": str(self.config.staging_dir),
         }
 
+    def drain_pending_prompts(self) -> int:
+        """
+        Single delivery owner queue worker (Section A2.1).
+        Claims HELD prompts atomically (BEGIN IMMEDIATE) and dispatches via configured terminal receiver.
+        Enforces strict Head-Of-Line FIFO: if delivery fails, subsequent items wait.
+        """
+        conn = self.db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT DISTINCT project_id FROM held_prompt_queue WHERE status = 'HELD';")
+            held_projects = [r["project_id"] for r in cur.fetchall()]
+        finally:
+            conn.close()
+
+        delivered_total = 0
+        for project_id in held_projects:
+            gate_state = self.gate_coordinator.get_gate_state(project_id)
+            if gate_state.get("prompt_gate") != "OPEN":
+                continue
+
+            handler = self.gate_coordinator._dispatch_handlers.get(project_id)
+            while True:
+                item = self.gate_coordinator.claim_next_held_prompt(
+                    project_id, self.delivery_owner_instance_id
+                )
+                if not item:
+                    break
+
+                try:
+                    if handler:
+                        delivered = handler(item)
+                    else:
+                        ack = self.terminal_receiver.receive_message(item, is_arbitrary_cli=False)
+                        delivered = ack.delivered
+
+                    if delivered:
+                        self.gate_coordinator.complete_delivery(
+                            item["message_id"], self.delivery_owner_instance_id
+                        )
+                        delivered_total += 1
+                    else:
+                        # Transport delivery failed (e.g. tmux target missing or simulated failure)
+                        # Head-of-line: roll back to HELD, subsequent items remain HELD
+                        self.gate_coordinator.fail_delivery(
+                            item["message_id"], self.delivery_owner_instance_id, retryable=True
+                        )
+                        break
+                except Exception:
+                    self.gate_coordinator.fail_delivery(
+                        item["message_id"], self.delivery_owner_instance_id, retryable=True
+                    )
+                    break
+
+        return delivered_total
+
     def run_daemon(self, interval_seconds: int = 30, stop_event: Optional[Any] = None) -> None:
         """
         Continuous unattended daemon execution loop (Section 58):
@@ -684,39 +741,36 @@ class BackupOrchestrator:
         - Runs backup cycles for eligible projects
         - Retries failed uploads
         - Handles termination signals gracefully
+        - Single delivery owner of terminal FIFO prompt delivery
         """
+        self.gate_coordinator.register_delivery_owner(
+            self.delivery_owner_instance_id, os.getpid()
+        )
+
         # On daemon startup, drain any existing HELD prompts for OPEN projects
-        conn = self.db.get_connection()
+        self.drain_pending_prompts()
+
         try:
-            cur = conn.cursor()
-            cur.execute("SELECT project_id FROM projects_state WHERE prompt_gate = 'OPEN';")
-            open_projects = [r["project_id"] for r in cur.fetchall()]
-            cur.execute("SELECT DISTINCT project_id FROM held_prompt_queue WHERE status = 'HELD';")
-            held_projects = [r["project_id"] for r in cur.fetchall()]
-        finally:
-            conn.close()
+            while not (stop_event and stop_event.is_set()):
+                self.drain_pending_prompts()
+                self.gate_coordinator.heartbeat_delivery_owner(self.delivery_owner_instance_id)
 
-        all_projects = set(open_projects) | set(held_projects) | set(self.watchers.keys())
-        for p_id in all_projects:
-            try:
-                gate_state = self.gate_coordinator.get_gate_state(p_id)
-                if gate_state.get("prompt_gate") == "OPEN":
-                    self.gate_coordinator.open_gate(p_id)
-            except Exception:
-                pass
-
-        while not (stop_event and stop_event.is_set()):
-            for project_id in list(self.watchers.keys()):
+                for project_id in list(self.watchers.keys()):
+                    try:
+                        self.run_cycle_for_project(project_id)
+                    except Exception:
+                        pass
                 try:
-                    self.run_cycle_for_project(project_id)
+                    self.retry_pending_uploads()
                 except Exception:
                     pass
-            try:
-                self.retry_pending_uploads()
-            except Exception:
-                pass
-            if stop_event:
-                if stop_event.wait(timeout=interval_seconds):
-                    break
-            else:
-                time.sleep(interval_seconds)
+
+                self.drain_pending_prompts()
+
+                if stop_event:
+                    if stop_event.wait(timeout=interval_seconds):
+                        break
+                else:
+                    time.sleep(interval_seconds)
+        finally:
+            self.gate_coordinator.unregister_delivery_owner(self.delivery_owner_instance_id)
