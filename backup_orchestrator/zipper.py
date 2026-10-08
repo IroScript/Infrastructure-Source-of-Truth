@@ -37,6 +37,7 @@ class ProjectZipper:
         zip_start_generation: int,
         check_mutation_callback: Optional[Callable[[], bool]] = None,
         get_current_generation_callback: Optional[Callable[[], int]] = None,
+        on_capture_complete_callback: Optional[Callable[[], None]] = None,
     ) -> ZipResult:
         """
         Creates a zip archive of the project root:
@@ -118,12 +119,25 @@ class ProjectZipper:
             if mutation_seen_during_zip:
                 if partial_zip_path.exists():
                     partial_zip_path.unlink()
+                if on_capture_complete_callback:
+                    try:
+                        on_capture_complete_callback()
+                    except Exception:
+                        pass
                 return ZipResult(
                     status="MUTATION_DETECTED",
                     archive_path=None,
                     mutation_seen=True,
                     error="Filesystem mutation observed during zip archive creation",
                 )
+
+            # Live source archive walk & file write is complete!
+            # Notify caller immediately so prompt gate reopens before hashing/testzip!
+            if on_capture_complete_callback:
+                try:
+                    on_capture_complete_callback()
+                except Exception:
+                    pass
 
             # Local verification on .partial.zip: testzip()
             with zipfile.ZipFile(partial_zip_path, "r") as test_zf:
@@ -159,6 +173,11 @@ class ProjectZipper:
             )
 
         except Exception as exc:
+            if on_capture_complete_callback:
+                try:
+                    on_capture_complete_callback()
+                except Exception:
+                    pass
             if partial_zip_path.exists():
                 partial_zip_path.unlink()
             if final_zip_path.exists():

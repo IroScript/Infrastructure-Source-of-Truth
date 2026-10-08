@@ -70,7 +70,6 @@ class BackupOrchestrator:
             terminal_receiver=self.terminal_receiver,
         )
         self.delivery_owner_instance_id = f"daemon-{os.getpid()}-{secrets.token_hex(4)}"
-        self.gate_coordinator.register_delivery_owner(self.delivery_owner_instance_id, os.getpid())
         self._init_projects_and_crash_recovery()
 
     def _init_projects_and_crash_recovery(self) -> None:
@@ -109,7 +108,7 @@ class BackupOrchestrator:
             cur = conn.cursor()
             cur.execute(
                 """
-                SELECT project_id, prompt_gate, lifecycle_lock, active_backup_id
+                SELECT project_id, prompt_gate, zip_pid, lifecycle_lock, active_backup_id
                 FROM projects_state
                 WHERE prompt_gate = 'CLOSED' OR lifecycle_lock = 'LOCKED';
                 """
@@ -121,6 +120,7 @@ class BackupOrchestrator:
         for sp in stranded_projects:
             p_id = sp["project_id"]
             active_b_id = sp["active_backup_id"]
+            zip_pid = sp["zip_pid"] if "zip_pid" in sp.keys() else None
 
             # Check if active backup run exists and its status
             run_status = None
@@ -148,19 +148,24 @@ class BackupOrchestrator:
                     cur.execute(
                         """
                         UPDATE projects_state
-                        SET prompt_gate = 'OPEN', lifecycle_lock = 'UNLOCKED', updated_at = ?
+                        SET prompt_gate = 'OPEN', zip_pid = NULL, lifecycle_lock = 'UNLOCKED', updated_at = ?
                         WHERE project_id = ?;
                         """,
                         (now_str, p_id),
                     )
             else:
+                # If zip_pid is still genuinely alive, do not interrupt active run
+                from .gate import is_pid_alive
+                if is_pid_alive(zip_pid):
+                    continue
+
                 # Interrupted during local capture: mark FAILED, clean partial, OPEN gate
                 if active_b_id:
                     with self.db.transaction() as cur:
                         cur.execute(
                             """
                             UPDATE backup_runs
-                            SET status = 'FAILED', error_message = 'Interrupted by service restart', finished_at = ?
+                            SET status = 'FAILED', error_message = 'Interrupted by service restart or dead ZIP process', finished_at = ?
                             WHERE backup_id = ?;
                             """,
                             (now_str, active_b_id),
@@ -170,7 +175,7 @@ class BackupOrchestrator:
                     self.watchers[p_id].reconcile_filesystem()
 
                 # Clean any partial zips for this project in staging
-                for pz in self.config.staging_dir.glob(f"{p_id}*.partial"):
+                for pz in self.config.staging_dir.glob(f"{p_id}*.partial*"):
                     try:
                         pz.unlink()
                     except OSError:
@@ -181,7 +186,7 @@ class BackupOrchestrator:
                     cur.execute(
                         """
                         UPDATE projects_state
-                        SET prompt_gate = 'OPEN', lifecycle_lock = 'UNLOCKED', active_backup_id = NULL, updated_at = ?
+                        SET prompt_gate = 'OPEN', zip_pid = NULL, lifecycle_lock = 'UNLOCKED', active_backup_id = NULL, updated_at = ?
                         WHERE project_id = ?;
                         """,
                         (now_str, p_id),
@@ -311,8 +316,10 @@ class BackupOrchestrator:
             )
 
         # Re-check callbacks for atomic gate closure
+        current_pid = os.getpid()
         gate_closed = self.gate_coordinator.close_gate(
             project_id=project_id,
+            zip_pid=current_pid,
             recheck_agent_callback=lambda: self.agent_evaluator.is_backup_eligible(
                 self.agent_evaluator.evaluate_project_agents(project_connections, False, mock_override=agent_state_override),
                 self.gate_coordinator.has_in_flight_messages(project_id),
@@ -343,17 +350,17 @@ class BackupOrchestrator:
                 last_good_generation=last_good,
             )
 
-        # Record backup run as CAPTURING
+        # Record backup run as CAPTURING with active ZIP_PID
         archive_name = generate_backup_filename(project_slug, self.clock)
         expected_zip_path = self.config.staging_dir / archive_name
         with self.db.transaction() as cur:
             cur.execute(
                 """
                 INSERT INTO backup_runs (
-                    backup_id, project_id, project_slug, captured_generation, zip_path, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, 'CAPTURING', ?);
+                    backup_id, project_id, project_slug, captured_generation, zip_path, status, zip_pid, created_at
+                ) VALUES (?, ?, ?, ?, ?, 'CAPTURING', ?, ?);
                 """,
-                (backup_id, project_id, project_slug, captured_gen, str(expected_zip_path), now_str),
+                (backup_id, project_id, project_slug, captured_gen, str(expected_zip_path), current_pid, now_str),
             )
 
         # 2. Create local ZIP archive while tracking mutations
@@ -375,6 +382,10 @@ class BackupOrchestrator:
             finally:
                 conn.close()
 
+        def on_capture_complete() -> None:
+            # Exact ZIP gate boundary: Gate reopens IMMEDIATELY when source walk/write finishes!
+            self.gate_coordinator.open_gate(project_id)
+
         try:
             zip_res = self.zipper.create_project_zip(
                 project_root=project_root,
@@ -382,9 +393,10 @@ class BackupOrchestrator:
                 zip_start_generation=captured_gen,
                 check_mutation_callback=check_mutation,
                 get_current_generation_callback=get_current_gen,
+                on_capture_complete_callback=on_capture_complete,
             )
 
-            # 3. Prompt gate OPENS immediately after local ZIP creation/verification
+            # Ensure gate is open if not already opened by callback
             self.gate_coordinator.open_gate(project_id)
 
             if zip_res.status != "LOCAL_VERIFIED":
@@ -681,9 +693,10 @@ class BackupOrchestrator:
 
     def drain_pending_prompts(self) -> int:
         """
-        Single delivery owner queue worker (Section A2.1).
-        Claims HELD prompts atomically (BEGIN IMMEDIATE) and dispatches via configured terminal receiver.
-        Enforces strict Head-Of-Line FIFO: if delivery fails, subsequent items wait.
+        Deprecated. SOT is ZIP gate owner only; terminal transport delivery belongs
+        exclusively to WhatsApp Bridge.
+        If an in-memory dispatch handler is explicitly registered (e.g. in test suites),
+        drains held prompts to that handler; otherwise zero terminal injection is performed.
         """
         conn = self.db.get_connection()
         try:
@@ -705,6 +718,9 @@ class BackupOrchestrator:
                 continue
 
             handler = self.gate_coordinator._dispatch_handlers.get(project_id)
+            if not handler:
+                continue
+
             while True:
                 item = self.gate_coordinator.claim_next_held_prompt(
                     project_id, self.delivery_owner_instance_id
@@ -713,20 +729,13 @@ class BackupOrchestrator:
                     break
 
                 try:
-                    if handler:
-                        delivered = handler(item)
-                    else:
-                        ack = self.terminal_receiver.receive_message(item, is_arbitrary_cli=False)
-                        delivered = ack.delivered
-
+                    delivered = handler(item)
                     if delivered:
                         self.gate_coordinator.complete_delivery(
                             item["message_id"], self.delivery_owner_instance_id
                         )
                         delivered_total += 1
                     else:
-                        # Transport delivery failed (e.g. tmux target missing or simulated failure)
-                        # Head-of-line: roll back to HELD, subsequent items remain HELD
                         self.gate_coordinator.fail_delivery(
                             item["message_id"], self.delivery_owner_instance_id, retryable=True
                         )
@@ -746,22 +755,15 @@ class BackupOrchestrator:
         - Runs backup cycles for eligible projects
         - Retries failed uploads
         - Handles termination signals gracefully
-        - Single delivery owner of terminal FIFO prompt delivery
         """
-        self.gate_coordinator.register_delivery_owner(
-            self.delivery_owner_instance_id, os.getpid()
-        )
-
-        # On daemon startup, drain any existing HELD prompts for OPEN projects
+        # If in-memory dispatch handlers were registered (e.g. in test fixtures), drain them
         self.drain_pending_prompts()
 
         last_cycle_time = 0.0
         try:
             while not (stop_event and stop_event.is_set()):
-                self.drain_pending_prompts()
                 now = time.monotonic()
                 if now - last_cycle_time >= interval_seconds:
-                    self.gate_coordinator.heartbeat_delivery_owner(self.delivery_owner_instance_id)
                     for project_id in list(self.watchers.keys()):
                         try:
                             self.run_cycle_for_project(project_id)
@@ -773,8 +775,6 @@ class BackupOrchestrator:
                         pass
                     last_cycle_time = now
 
-                self.drain_pending_prompts()
-
                 sleep_chunk = min(0.2, interval_seconds)
                 if stop_event:
                     if stop_event.wait(timeout=sleep_chunk):
@@ -782,4 +782,4 @@ class BackupOrchestrator:
                 else:
                     time.sleep(sleep_chunk)
         finally:
-            self.gate_coordinator.unregister_delivery_owner(self.delivery_owner_instance_id)
+            pass

@@ -978,3 +978,253 @@ def test_gate_drain_fifo_delivery(test_env):
         assert cur.fetchone()["status"] == "HELD"
     assert gate.close_gate(project_id) is True
 
+
+def test_gate_check_cli_open(test_env, capsys):
+    """
+    Milestone 1 Test: gate-check CLI returns ALLOW_NOW and ZIP_GATE_OPEN when gate is open.
+    """
+    from backup_orchestrator.cli import handle_backup_orchestrator_cli
+    import argparse
+
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    project_id = "test_cli_open_proj"
+    proj_dir = test_env["projects_root"] / project_id
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    gate.register_or_update_project(project_id, project_id, str(proj_dir))
+
+    args = argparse.Namespace(
+        orchestrator_action="gate-check",
+        project_uuid=project_id,
+        project="",
+        route="",
+        home=str(test_env["home"]),
+    )
+    rc = handle_backup_orchestrator_cli(args, test_env["sot_root"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert data["project_uuid"] == project_id
+    assert data["zip_gate"] == "ZIP_GATE_OPEN"
+    assert data["action"] == "ALLOW_NOW"
+    assert data["zip_running"] is False
+    assert data["zip_pid"] is None
+
+
+def test_gate_check_cli_closed(test_env, capsys):
+    """
+    Milestone 1 Test: gate-check CLI returns HOLD_FOR_ZIP, ZIP_GATE_CLOSED, and live zip_pid when gate is closed.
+    """
+    from backup_orchestrator.cli import handle_backup_orchestrator_cli
+    import argparse
+
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    project_id = "test_cli_closed_proj"
+    proj_dir = test_env["projects_root"] / project_id
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    gate.register_or_update_project(project_id, project_id, str(proj_dir))
+
+    current_pid = os.getpid()
+    assert gate.close_gate(project_id, zip_pid=current_pid) is True
+
+    args = argparse.Namespace(
+        orchestrator_action="gate-check",
+        project_uuid=project_id,
+        project="",
+        route="",
+        home=str(test_env["home"]),
+    )
+    rc = handle_backup_orchestrator_cli(args, test_env["sot_root"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert data["project_uuid"] == project_id
+    assert data["zip_gate"] == "ZIP_GATE_CLOSED"
+    assert data["action"] == "HOLD_FOR_ZIP"
+    assert data["zip_running"] is True
+    assert data["zip_pid"] == current_pid
+
+
+def test_gate_check_dead_pid_autonomous_recovery(test_env, capsys):
+    """
+    Milestone 1 Test: gate-check CLI autonomously reopens gate and allows prompts if recorded zip_pid is dead.
+    """
+    from backup_orchestrator.cli import handle_backup_orchestrator_cli
+    import argparse
+
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    project_id = "test_dead_pid_proj"
+    proj_dir = test_env["projects_root"] / project_id
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    gate.register_or_update_project(project_id, project_id, str(proj_dir))
+
+    dead_pid = 999999
+    now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with db.transaction() as cur:
+        cur.execute(
+            """
+            INSERT INTO backup_runs (
+                backup_id, project_id, project_slug, captured_generation, zip_path, status, zip_pid, created_at
+            ) VALUES ('b-dead-1', ?, ?, 1, '/tmp/dummy.zip', 'CAPTURING', ?, ?);
+            """,
+            (project_id, project_id, dead_pid, now_str),
+        )
+        cur.execute(
+            """
+            UPDATE projects_state
+            SET prompt_gate = 'CLOSED', zip_pid = ?, lifecycle_lock = 'LOCKED', active_backup_id = 'b-dead-1'
+            WHERE project_id = ?;
+            """,
+            (dead_pid, project_id),
+        )
+
+    args = argparse.Namespace(
+        orchestrator_action="gate-check",
+        project_uuid=project_id,
+        project="",
+        route="",
+        home=str(test_env["home"]),
+    )
+    rc = handle_backup_orchestrator_cli(args, test_env["sot_root"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert data["project_uuid"] == project_id
+    assert data["zip_gate"] == "ZIP_GATE_OPEN"
+    assert data["action"] == "ALLOW_NOW"
+    assert data["zip_running"] is False
+    assert data["zip_pid"] is None
+
+    with db.transaction() as cur:
+        cur.execute("SELECT prompt_gate, zip_pid, lifecycle_lock, active_backup_id FROM projects_state WHERE project_id = ?;", (project_id,))
+        row = cur.fetchone()
+        assert row["prompt_gate"] == "OPEN"
+        assert row["zip_pid"] is None
+        assert row["lifecycle_lock"] == "UNLOCKED"
+        assert row["active_backup_id"] is None
+
+        cur.execute("SELECT status, error_message FROM backup_runs WHERE backup_id = 'b-dead-1';")
+        r_run = cur.fetchone()
+        assert r_run["status"] == "FAILED"
+        assert "Interrupted" in r_run["error_message"]
+
+
+def test_exact_zip_boundary_reopens_before_hashing(test_env):
+    """
+    Milestone 1 Test: Gate closes ONLY during live file walk, and reopens IMMEDIATELY
+    when source archive walk/write finishes, BEFORE testzip() and SHA256 hashing.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    db: Database = test_env["db"]
+    clock: InjectableClock = test_env["clock"]
+    project_id = "test_boundary_proj"
+    proj_dir = test_env["projects_root"] / project_id
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    test_file = proj_dir / "code.py"
+    test_file.write_text("print('hello world')")
+
+    gate = PromptGateCoordinator(db)
+    gate.register_or_update_project(project_id, project_id, str(proj_dir), initial_generation=1)
+
+    watcher = ProjectFsWatcher(project_id, proj_dir, db, clock=clock)
+    watcher.start_watches()
+    watcher.reconcile_filesystem()
+
+    orch = BackupOrchestrator(cfg, clock=clock)
+    orch.watchers[project_id] = watcher
+
+    gate_states_during_lifecycle = []
+
+    orig_create_zip = orch.zipper.create_project_zip
+    def spy_create_zip(*args, **kwargs):
+        st_before = orch.gate_coordinator.get_gate_state(project_id)
+        gate_states_during_lifecycle.append(("during_capture_walk", st_before["prompt_gate"], st_before["zip_pid"]))
+
+        real_cb = kwargs.get("on_capture_complete_callback")
+        def wrapped_cb():
+            if real_cb:
+                real_cb()
+            st_after_walk = orch.gate_coordinator.get_gate_state(project_id)
+            gate_states_during_lifecycle.append(("after_walk_before_hashing", st_after_walk["prompt_gate"], st_after_walk["zip_pid"]))
+
+        kwargs["on_capture_complete_callback"] = wrapped_cb
+        res = orig_create_zip(*args, **kwargs)
+        st_after_zip = orch.gate_coordinator.get_gate_state(project_id)
+        gate_states_during_lifecycle.append(("after_full_zip_return", st_after_zip["prompt_gate"], st_after_zip["zip_pid"]))
+        return res
+
+    orch.zipper.create_project_zip = spy_create_zip
+
+    res = orch.run_cycle_for_project(project_id, force=True)
+    assert res.action_taken == "BACKUP_COMPLETED"
+
+    assert gate_states_during_lifecycle[0][0] == "during_capture_walk"
+    assert gate_states_during_lifecycle[0][1] == "CLOSED"
+    assert gate_states_during_lifecycle[0][2] == os.getpid()
+
+    assert gate_states_during_lifecycle[1][0] == "after_walk_before_hashing"
+    assert gate_states_during_lifecycle[1][1] == "OPEN"
+    assert gate_states_during_lifecycle[1][2] is None
+
+    assert gate_states_during_lifecycle[2][0] == "after_full_zip_return"
+    assert gate_states_during_lifecycle[2][1] == "OPEN"
+
+
+def test_submit_prompt_delivery_owner_is_not_daemon(test_env, capsys):
+    """
+    Milestone 1 Test: submit-prompt must NOT return delivery_owner == 'daemon'.
+    """
+    from backup_orchestrator.cli import handle_backup_orchestrator_cli
+    import argparse
+
+    project_id = "test_sub_owner_proj"
+    proj_dir = test_env["projects_root"] / project_id
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    gate.register_or_update_project(project_id, project_id, str(proj_dir))
+
+    args = argparse.Namespace(
+        orchestrator_action="submit-prompt",
+        route=project_id,
+        message_id="msg-owner-test",
+        payload="test payload",
+        base64=False,
+        home=str(test_env["home"]),
+    )
+    rc = handle_backup_orchestrator_cli(args, test_env["sot_root"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    ack = json.loads(captured.out)
+    assert ack["delivery_owner"] != "daemon"
+    assert ack["delivered"] is False
+
+
+def test_orchestrator_zero_terminal_injection_during_drain(test_env):
+    """
+    Milestone 1 Test: Backup Orchestrator does not perform terminal injection.
+    tmux send-keys is never called by Backup Orchestrator.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    orch = BackupOrchestrator(cfg)
+    project_id = "test_no_tmux_proj"
+    proj_dir = test_env["projects_root"] / project_id
+    proj_dir.mkdir(parents=True, exist_ok=True)
+
+    orch.gate_coordinator.register_or_update_project(project_id, project_id, str(proj_dir))
+
+    orch.gate_coordinator.dispatch_or_hold_message(
+        project_id=project_id,
+        message_id="msg-zero-tmux",
+        routing_target="agy:0",
+        payload="should not be injected to tmux by SOT",
+    )
+
+    delivered = orch.drain_pending_prompts()
+    assert delivered == 0
+

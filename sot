@@ -260,6 +260,7 @@ def main():
     bo_exp = bos.add_parser("export-state"); bo_exp.add_argument("output_file"); bo_exp.add_argument("--key"); bo_exp.add_argument("--home"); bo_exp.set_defaults(func=cmd_backup_orchestrator)
     bo_imp = bos.add_parser("import-state"); bo_imp.add_argument("input_file"); bo_imp.add_argument("--key"); bo_imp.add_argument("--home"); bo_imp.set_defaults(func=cmd_backup_orchestrator)
     bo_daemon = bos.add_parser("run-daemon"); bo_daemon.add_argument("--home"); bo_daemon.add_argument("--interval", type=int, default=30); bo_daemon.set_defaults(func=cmd_backup_orchestrator)
+    bo_gate = bos.add_parser("gate-check"); bo_gate.add_argument("--project-uuid"); bo_gate.add_argument("--project"); bo_gate.add_argument("--route"); bo_gate.add_argument("--json", action="store_true"); bo_gate.add_argument("--home"); bo_gate.set_defaults(func=cmd_backup_orchestrator)
     bo_prompt = bos.add_parser("submit-prompt"); bo_prompt.add_argument("--route", required=True); bo_prompt.add_argument("--message-id", default=""); bo_prompt.add_argument("--payload", default=""); bo_prompt.add_argument("--base64", action="store_true"); bo_prompt.add_argument("--home"); bo_prompt.add_argument("--state-root"); bo_prompt.add_argument("--projects-root"); bo_prompt.set_defaults(func=cmd_backup_orchestrator)
     fr = sub.add_parser("frappe")
     frs = fr.add_subparsers(dest="frappe_action", required=True)

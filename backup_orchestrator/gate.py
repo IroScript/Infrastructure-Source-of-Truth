@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import sqlite3
 import threading
@@ -9,6 +10,21 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 from .db import Database
+
+
+def is_pid_alive(pid: Optional[int]) -> bool:
+    """Checks whether a given process ID is actively running on the host system."""
+    if pid is None or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
 
 
 @dataclass
@@ -33,6 +49,20 @@ class PromptGateCoordinator:
         self.db = db
         self._dispatch_handlers: Dict[str, Callable[[Dict[str, Any]], bool]] = {}
         self._default_dispatch_handler: Optional[Callable[[Dict[str, Any]], bool]] = None
+        self._ensure_schema()
+
+    def _ensure_schema(self) -> None:
+        """Ensures zip_pid column exists in projects_state and backup_runs."""
+        try:
+            with self.db.transaction() as cur:
+                cur.execute("ALTER TABLE projects_state ADD COLUMN zip_pid INTEGER DEFAULT NULL;")
+        except Exception:
+            pass
+        try:
+            with self.db.transaction() as cur:
+                cur.execute("ALTER TABLE backup_runs ADD COLUMN zip_pid INTEGER DEFAULT NULL;")
+        except Exception:
+            pass
 
     def set_default_dispatch_handler(self, handler: Callable[[Dict[str, Any]], bool]) -> None:
         self._default_dispatch_handler = handler
@@ -90,7 +120,7 @@ class PromptGateCoordinator:
             with self.db.transaction() as cur:
                 # Ensure project record exists in projects_state to satisfy FOREIGN KEY constraint
                 cur.execute(
-                    "SELECT prompt_gate FROM projects_state WHERE project_id = ?;",
+                    "SELECT prompt_gate, zip_pid FROM projects_state WHERE project_id = ?;",
                     (project_id,),
                 )
                 row = cur.fetchone()
@@ -100,14 +130,35 @@ class PromptGateCoordinator:
                         """
                         INSERT INTO projects_state (
                             project_id, project_slug, canonical_path, dirty_generation,
-                            last_good_generation, prompt_gate, lifecycle_lock, updated_at
-                        ) VALUES (?, ?, ?, 0, 0, 'OPEN', 'UNLOCKED', ?);
+                            last_good_generation, prompt_gate, zip_pid, lifecycle_lock, updated_at
+                        ) VALUES (?, ?, ?, 0, 0, 'OPEN', NULL, 'UNLOCKED', ?);
                         """,
                         (project_id, project_id, routing_target or project_id, now_str),
                     )
                     gate_state = "OPEN"
                 else:
-                    gate_state = row["prompt_gate"]
+                    gate_raw = (row["prompt_gate"] or "").upper()
+                    zip_pid = row["zip_pid"] if "zip_pid" in row.keys() else None
+                    if gate_raw in ("CLOSED", "ZIP_GATE_CLOSED"):
+                        if is_pid_alive(zip_pid):
+                            gate_state = "CLOSED"
+                        else:
+                            # Autonomous crash recovery: dead ZIP PID recovers gate immediately
+                            cur.execute(
+                                """
+                                UPDATE projects_state
+                                SET prompt_gate = 'OPEN',
+                                    lifecycle_lock = 'UNLOCKED',
+                                    zip_pid = NULL,
+                                    active_backup_id = NULL,
+                                    updated_at = ?
+                                WHERE project_id = ?;
+                                """,
+                                (now_str, project_id),
+                            )
+                            gate_state = "OPEN"
+                    else:
+                        gate_state = "OPEN"
 
                 # Check if message_id was already received (idempotency check)
                 cur.execute(
@@ -173,6 +224,7 @@ class PromptGateCoordinator:
     def close_gate(
         self,
         project_id: str,
+        zip_pid: Optional[int] = None,
         recheck_agent_callback: Optional[Callable[[], bool]] = None,
         recheck_generation_callback: Optional[Callable[[], int]] = None,
         expected_generation: Optional[int] = None,
@@ -181,10 +233,11 @@ class PromptGateCoordinator:
         Closes prompt gate atomically.
         1. Acquire project gate lock.
         2. Verify no dispatch transition is in-flight (status='DISPATCHING').
-        3. Persist PROMPT_GATE = 'CLOSED'.
+        3. Persist PROMPT_GATE = 'CLOSED' with recorded zip_pid.
         4. Recheck active agent state + filesystem generation.
         5. If agent became BUSY or generation changed, rollback gate to OPEN and return False.
         """
+        actual_pid = zip_pid if zip_pid is not None else os.getpid()
         proj_lock = self._get_project_lock(project_id)
         with proj_lock:
             with self.db.transaction() as cur:
@@ -202,13 +255,14 @@ class PromptGateCoordinator:
                     """
                     INSERT INTO projects_state (
                         project_id, project_slug, canonical_path, dirty_generation,
-                        last_good_generation, prompt_gate, lifecycle_lock, updated_at
-                    ) VALUES (?, ?, ?, 0, 0, 'CLOSED', 'UNLOCKED', ?)
+                        last_good_generation, prompt_gate, zip_pid, lifecycle_lock, updated_at
+                    ) VALUES (?, ?, ?, 0, 0, 'CLOSED', ?, 'UNLOCKED', ?)
                     ON CONFLICT(project_id) DO UPDATE SET
                         prompt_gate = 'CLOSED',
+                        zip_pid = excluded.zip_pid,
                         updated_at = excluded.updated_at;
                     """,
-                    (project_id, project_id, project_id, now_str),
+                    (project_id, project_id, project_id, actual_pid, now_str),
                 )
 
             # Recheck active-agent + filesystem-generation
@@ -225,7 +279,7 @@ class PromptGateCoordinator:
             return True
 
     def open_gate(self, project_id: str, dispatch_func: Optional[Callable[[Dict[str, Any]], bool]] = None) -> int:
-        """Opens prompt gate immediately and drains held prompts in strict FIFO order."""
+        """Opens prompt gate immediately, clears zip_pid, and drains held prompts in strict FIFO order."""
         proj_lock = self._get_project_lock(project_id)
         with proj_lock:
             now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -234,10 +288,11 @@ class PromptGateCoordinator:
                     """
                     INSERT INTO projects_state (
                         project_id, project_slug, canonical_path, dirty_generation,
-                        last_good_generation, prompt_gate, lifecycle_lock, updated_at
-                    ) VALUES (?, ?, ?, 0, 0, 'OPEN', 'UNLOCKED', ?)
+                        last_good_generation, prompt_gate, zip_pid, lifecycle_lock, updated_at
+                    ) VALUES (?, ?, ?, 0, 0, 'OPEN', NULL, 'UNLOCKED', ?)
                     ON CONFLICT(project_id) DO UPDATE SET
                         prompt_gate = 'OPEN',
+                        zip_pid = NULL,
                         updated_at = excluded.updated_at;
                     """,
                     (project_id, project_id, project_id, now_str),
@@ -246,6 +301,110 @@ class PromptGateCoordinator:
             if fn:
                 return self.release_held_prompts(project_id, fn)
             return 0
+
+    def recover_stale_gate(self, project_id: str, reason: str = "") -> None:
+        """
+        Autonomous crash recovery for stale closed gate (Sections 12, 24).
+        Reopens gate to OPEN, clears zip_pid, unlocks lifecycle_lock,
+        and marks any active CAPTURING backup run as FAILED.
+        """
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        proj_lock = self._get_project_lock(project_id)
+        with proj_lock:
+            with self.db.transaction() as cur:
+                cur.execute(
+                    "SELECT active_backup_id FROM projects_state WHERE project_id = ?;",
+                    (project_id,),
+                )
+                row = cur.fetchone()
+                active_b_id = row["active_backup_id"] if row else None
+                if active_b_id:
+                    cur.execute(
+                        """
+                        UPDATE backup_runs
+                        SET status = 'FAILED', error_message = ?, finished_at = ?
+                        WHERE backup_id = ? AND status IN ('CAPTURING', 'LOCKED');
+                        """,
+                        (f"Interrupted: {reason}", now_str, active_b_id),
+                    )
+                cur.execute(
+                    """
+                    UPDATE projects_state
+                    SET prompt_gate = 'OPEN',
+                        lifecycle_lock = 'UNLOCKED',
+                        zip_pid = NULL,
+                        active_backup_id = NULL,
+                        updated_at = ?
+                    WHERE project_id = ?;
+                    """,
+                    (now_str, project_id),
+                )
+
+    def check_gate(self, project_id: str) -> Dict[str, Any]:
+        """
+        Fast, lightweight gate inspection API (PROJECT.md § Interface Contracts).
+        Returns:
+            {
+                "project_uuid": project_id,
+                "zip_gate": "ZIP_GATE_OPEN" | "ZIP_GATE_CLOSED",
+                "action": "ALLOW_NOW" | "HOLD_FOR_ZIP",
+                "zip_running": bool,
+                "zip_pid": int | None,
+            }
+        Autonomous recovery: If prompt_gate is CLOSED but recorded zip_pid is no longer alive,
+        automatically reopens gate, marks interrupted backup FAILED, and returns ALLOW_NOW.
+        """
+        conn = self.db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT prompt_gate, zip_pid FROM projects_state WHERE project_id = ?;",
+                (project_id,),
+            )
+            row = cur.fetchone()
+        finally:
+            conn.close()
+
+        if not row:
+            return {
+                "project_uuid": project_id,
+                "zip_gate": "ZIP_GATE_OPEN",
+                "action": "ALLOW_NOW",
+                "zip_running": False,
+                "zip_pid": None,
+            }
+
+        gate_val = (row["prompt_gate"] or "").upper()
+        zip_pid = row["zip_pid"] if "zip_pid" in row.keys() else None
+
+        if gate_val in ("CLOSED", "ZIP_GATE_CLOSED"):
+            if is_pid_alive(zip_pid):
+                return {
+                    "project_uuid": project_id,
+                    "zip_gate": "ZIP_GATE_CLOSED",
+                    "action": "HOLD_FOR_ZIP",
+                    "zip_running": True,
+                    "zip_pid": zip_pid,
+                }
+            else:
+                self.recover_stale_gate(
+                    project_id=project_id,
+                    reason=f"Recorded zip_pid {zip_pid} is no longer alive",
+                )
+                return {
+                    "project_uuid": project_id,
+                    "zip_gate": "ZIP_GATE_OPEN",
+                    "action": "ALLOW_NOW",
+                    "zip_running": False,
+                    "zip_pid": None,
+                }
+        return {
+            "project_uuid": project_id,
+            "zip_gate": "ZIP_GATE_OPEN",
+            "action": "ALLOW_NOW",
+            "zip_running": False,
+            "zip_pid": None,
+        }
 
     def release_held_prompts(
         self,
@@ -340,31 +499,10 @@ class PromptGateCoordinator:
 
     def register_delivery_owner(self, owner_instance_id: str, daemon_pid: int) -> None:
         """
-        Registers active delivery owner daemon and performs crash ambiguity recovery.
-        Stale in-flight DISPATCHING messages transition to UNCERTAIN (Section A2.6).
+        Deprecated registration stub. SOT is ZIP gate owner only;
+        WhatsApp Bridge is the sole delivery owner of terminal transport.
         """
-        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        with self.db.transaction() as cur:
-            # Crash ambiguity resolution: unconfirmed DISPATCHING becomes UNCERTAIN
-            cur.execute(
-                "UPDATE held_prompt_queue SET status = 'UNCERTAIN', updated_at = ? WHERE status = 'DISPATCHING';",
-                (now_str,),
-            )
-            # Mark previous active owners as ABANDONED
-            try:
-                cur.execute(
-                    "UPDATE delivery_owner_state SET status = 'ABANDONED' WHERE status = 'ACTIVE';"
-                )
-                cur.execute(
-                    """
-                    INSERT OR REPLACE INTO delivery_owner_state (
-                        owner_instance_id, daemon_pid, started_at, heartbeat_at, status
-                    ) VALUES (?, ?, ?, ?, 'ACTIVE');
-                    """,
-                    (owner_instance_id, daemon_pid, now_str, now_str),
-                )
-            except Exception:
-                pass
+        pass
 
     def heartbeat_delivery_owner(self, owner_instance_id: str) -> None:
         """Updates daemon heartbeat in delivery_owner_state."""
@@ -490,28 +628,42 @@ class PromptGateCoordinator:
             )
 
     def get_gate_state(self, project_id: str) -> Dict[str, Any]:
-        """Returns the current prompt gate state for a project."""
+        """Returns the current prompt gate state for a project with autonomous recovery."""
         conn = self.db.get_connection()
         try:
             cur = conn.cursor()
             cur.execute(
-                "SELECT project_id, prompt_gate, lifecycle_lock, active_backup_id FROM projects_state WHERE project_id = ?;",
+                "SELECT project_id, prompt_gate, zip_pid, lifecycle_lock, active_backup_id FROM projects_state WHERE project_id = ?;",
                 (project_id,),
             )
             row = cur.fetchone()
-            if row:
-                return {
-                    "project_id": row["project_id"],
-                    "prompt_gate": row["prompt_gate"],
-                    "lifecycle_lock": row["lifecycle_lock"],
-                    "active_backup_id": row["active_backup_id"],
-                }
-            return {
-                "project_id": project_id,
-                "prompt_gate": "OPEN",
-                "lifecycle_lock": "UNLOCKED",
-                "active_backup_id": None,
-            }
         finally:
             conn.close()
+
+        if row:
+            gate_val = (row["prompt_gate"] or "").upper()
+            zip_pid = row["zip_pid"] if "zip_pid" in row.keys() else None
+            if gate_val in ("CLOSED", "ZIP_GATE_CLOSED") and not is_pid_alive(zip_pid):
+                self.recover_stale_gate(project_id, reason=f"Recorded zip_pid {zip_pid} is dead")
+                return {
+                    "project_id": row["project_id"],
+                    "prompt_gate": "OPEN",
+                    "lifecycle_lock": "UNLOCKED",
+                    "active_backup_id": None,
+                    "zip_pid": None,
+                }
+            return {
+                "project_id": row["project_id"],
+                "prompt_gate": row["prompt_gate"],
+                "lifecycle_lock": row["lifecycle_lock"],
+                "active_backup_id": row["active_backup_id"],
+                "zip_pid": zip_pid,
+            }
+        return {
+            "project_id": project_id,
+            "prompt_gate": "OPEN",
+            "lifecycle_lock": "UNLOCKED",
+            "active_backup_id": None,
+            "zip_pid": None,
+        }
 

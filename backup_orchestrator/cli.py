@@ -18,6 +18,49 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
     )
     action = getattr(args, "orchestrator_action", "status")
 
+    if action == "gate-check":
+        project_uuid = (
+            getattr(args, "project_uuid", "")
+            or getattr(args, "project", "")
+            or getattr(args, "route", "")
+            or getattr(args, "project_id", "")
+        )
+        if not project_uuid:
+            print("Error: --project-uuid or --route is required for gate-check", file=sys.stderr)
+            return 2
+
+        # Resolve route to project_id via connection mappings
+        wa_file = sot_root / "connections" / "WHATSAPP_CONNECTIONS.json"
+        if wa_file.is_file():
+            try:
+                wa_data = json.loads(wa_file.read_text(encoding="utf-8"))
+                for conn in wa_data.get("connections", []):
+                    p_id = conn.get("project_id")
+                    if not p_id:
+                        continue
+                    if project_uuid.strip().lower() in (
+                        (conn.get("group_id") or "").strip().lower(),
+                        (conn.get("agent_name") or "").strip().lower(),
+                        (conn.get("agent_route") or "").strip().lower(),
+                        p_id.lower(),
+                    ):
+                        project_uuid = p_id
+                        break
+            except Exception:
+                pass
+
+        if ":" in project_uuid:
+            target = project_uuid.split(":", 1)[1].strip()
+            if target:
+                project_uuid = target
+
+        from .gate import PromptGateCoordinator
+        db = Database(config.db_path)
+        coordinator = PromptGateCoordinator(db)
+        gate_info = coordinator.check_gate(project_uuid)
+        print(json.dumps(gate_info, indent=2))
+        return 0
+
     if action == "submit-prompt":
         import base64
         route = getattr(args, "route", "")
@@ -72,18 +115,18 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
                 "delivered": False,
                 "exactly_once_provable": True,
                 "status": "DUPLICATE_REJECTED",
+                "delivery_owner": "bridge",
             }
         else:
-            status_name = "ACCEPTED_FOR_DELIVERY" if decision.status == "DISPATCHING" else decision.status
             ack = {
                 "message_id": msg_id,
                 "delivered": False,
                 "exactly_once_provable": True,
-                "status": status_name,
+                "status": decision.status,
                 "dispatch_state": decision.status,
                 "gate_state": decision.gate_state,
                 "sequence_num": decision.sequence_num,
-                "delivery_owner": "daemon",
+                "delivery_owner": "bridge",
             }
         print(json.dumps(ack, indent=2))
         return 0 if ack["status"] in ("ACCEPTED_FOR_DELIVERY", "DISPATCHING", "DELIVERED", "HELD", "DUPLICATE_REJECTED") else 1
