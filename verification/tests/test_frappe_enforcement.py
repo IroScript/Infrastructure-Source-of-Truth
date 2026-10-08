@@ -331,7 +331,7 @@ def test_codex_b1_fabricated_api_and_get_doc_blocked(sot_root, bench_root):
 
     # Adversarial B1: untracked, nested, and staged outdated Frappe code in apps/alco_ecommerce
     app_dir = Path("/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce")
-    if app_dir.is_dir():
+    if app_dir.is_dir() and os.access(app_dir, os.W_OK):
         bad_file = app_dir / "adversarial_untracked.py"
         try:
             bad_file.write_text(f"import frappe\nfrappe.{nonexistent_attr}()\n", encoding="utf-8")
@@ -627,4 +627,40 @@ def test_codex_b5_native_test_contract_catches_errors(sot_root, tmp_path):
     res2 = profile.verify_native_test_contract(mock_bench)
     assert res2.is_pass is False
     assert any("APP_HOOKS_RUNTIME_ERROR" in e for e in res2.errors)
+
+
+def test_codex_b4_blank_vm_supplied_project_root_preserved(sot_root, tmp_path):
+    """
+    Codex B4: Supplied project root is respected without falling back to old $HOME/Frappe-erp-Alco.
+    """
+    from project_profiles.cli import handle_frappe_cli
+    import argparse
+    alt_home = tmp_path / "blank_home"
+    alt_home.mkdir()
+    alt_state = tmp_path / "blank_state"
+    alt_projects = tmp_path / "blank_projects"
+    # Destination directory does NOT exist yet on disk
+    assert not (alt_projects / "Frappe-erp-Alco").exists()
+
+    args_verify = argparse.Namespace(
+        frappe_action="verify",
+        home=str(alt_home),
+        state_root=str(alt_state),
+        projects_root=str(alt_projects),
+        format="json",
+    )
+    import io
+    from contextlib import redirect_stdout
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc = handle_frappe_cli(args_verify, sot_root)
+
+    # Returns 2 on verify fail because directory does not exist on blank VM
+    assert rc == 2
+    output = json.loads(buf.getvalue())
+    bench_root = output["test_contract"]["bench_root"]
+    # Invariant: bench_root MUST be rooted in alt_projects, NOT alt_home or /home/azureuser!
+    assert bench_root == str(alt_projects / "Frappe-erp-Alco")
+    assert not bench_root.startswith(str(alt_home))
+    assert not bench_root.startswith("/home/azureuser")
 

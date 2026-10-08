@@ -35,7 +35,7 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
         adapter = BridgeAdapter(coordinator, sot_root)
         ack = adapter.handle_incoming_message(route_spec=route, message_id=msg_id, payload=payload, is_arbitrary_cli=False)
         print(json.dumps(ack.__dict__, indent=2))
-        return 0 if ack.status in ("DELIVERED", "HELD") else 1
+        return 0 if ack.status in ("DELIVERED", "HELD", "DUPLICATE_REJECTED") else 1
 
     orchestrator = BackupOrchestrator(config)
 

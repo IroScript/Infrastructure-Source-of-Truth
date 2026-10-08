@@ -72,9 +72,19 @@ class FrappeBootstrapEngine:
             state_root / "frappe_evidence",
             state_root / "rules",
             home / ".codex" / "rules",
+            projects_root,
         ):
             d.mkdir(parents=True, exist_ok=True)
             report["directories_created"].append(str(d))
+
+        reg_src = self.sot_root / "projects" / "PROJECT_REGISTRY.json"
+        reg_dest = state_root / "PROJECT_REGISTRY.json"
+        if reg_src.is_file() and not reg_dest.exists():
+            try:
+                shutil.copy2(reg_src, reg_dest)
+                report["directories_created"].append(str(reg_dest))
+            except Exception:
+                pass
 
         # 2. Install Frappe agent rules
         rules_src = self.sot_root / "project_profiles" / "frappe" / "rules.md"

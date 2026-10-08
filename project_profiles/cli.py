@@ -38,18 +38,26 @@ def handle_frappe_cli(args, sot_root: Path) -> int:
     # Resolve project path with dynamic root mapping
     proj = manager.resolve_project(getattr(args, "project_id", "frappe_erp_alco") or "frappe_erp_alco", state_root=state_root)
     proj_path = None
-    if proj:
+    if getattr(args, "project_path", None):
+        proj_path = Path(args.project_path).resolve()
+    elif getattr(args, "bench_root", None):
+        proj_path = Path(args.bench_root).resolve()
+    elif proj:
         raw_cpath = proj.get("canonical_path", "")
-        mapped_cpath = raw_cpath.replace("${HOME}", str(home)).replace("${PROJECTS_ROOT}", str(projects_root))
-        if "/home/azureuser" in mapped_cpath and str(home) != "/home/azureuser":
-            mapped_cpath = mapped_cpath.replace("/home/azureuser", str(home))
-        cand_p = Path(mapped_cpath)
-        if not cand_p.exists():
-            for alt in [projects_root / Path(raw_cpath).name, home / Path(raw_cpath).name, projects_root / "frappe-bench", home / "frappe-bench"]:
-                if alt.exists():
-                    cand_p = alt
-                    break
-        proj_path = cand_p
+        proj_name = Path(raw_cpath).name or "Frappe-erp-Alco"
+        target_candidate = projects_root / proj_name
+        if target_candidate.exists():
+            proj_path = target_candidate
+        elif (projects_root / "frappe-bench").exists():
+            proj_path = projects_root / "frappe-bench"
+        elif (home / proj_name).exists():
+            proj_path = home / proj_name
+        elif (home / "frappe-bench").exists():
+            proj_path = home / "frappe-bench"
+        elif Path(raw_cpath).exists() and str(home) == "/home/azureuser":
+            proj_path = Path(raw_cpath)
+        else:
+            proj_path = target_candidate
     else:
         for alt in [projects_root / "frappe-bench", home / "frappe-bench"]:
             if alt.exists():

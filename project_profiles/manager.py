@@ -97,18 +97,21 @@ class ProjectProfileManager:
         s_root = state_root or (Path.home() / ".agents")
         if not proj_path.exists() and state_root:
             home = Path(state_root).resolve().parent
-            projects_root = home / "projects"
-            mapped = raw_cpath.replace("${HOME}", str(home)).replace("${PROJECTS_ROOT}", str(projects_root))
-            if "/home/azureuser" in mapped and str(home) != "/home/azureuser":
-                mapped = mapped.replace("/home/azureuser", str(home))
-            cand_p = Path(mapped)
-            if not cand_p.exists():
-                for alt in [projects_root / Path(raw_cpath).name, home / Path(raw_cpath).name, projects_root / "frappe-bench", home / "frappe-bench"]:
-                    if alt.exists():
-                        cand_p = alt
-                        break
-            if cand_p.exists():
-                proj_path = cand_p
+            projects_root = Path(os.environ.get("PROJECTS_ROOT") or (home / "projects")).resolve()
+            proj_name = Path(raw_cpath).name or "Frappe-erp-Alco"
+            target_candidate = projects_root / proj_name
+            if target_candidate.exists():
+                proj_path = target_candidate
+            elif (projects_root / "frappe-bench").exists():
+                proj_path = projects_root / "frappe-bench"
+            elif (home / proj_name).exists():
+                proj_path = home / proj_name
+            elif (home / "frappe-bench").exists():
+                proj_path = home / "frappe-bench"
+            elif Path(raw_cpath).exists() and str(home) == "/home/azureuser":
+                proj_path = Path(raw_cpath)
+            else:
+                proj_path = target_candidate
 
         # 1. Compatibility Contract
         contract = profile.get_compatibility_contract(proj_path)

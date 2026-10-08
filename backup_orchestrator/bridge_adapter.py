@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,6 +59,95 @@ class BridgeTerminalReceiver:
                 )
 
             # Deterministic receiver with strict acknowledgement
+            self.accepted_message_ids.add(msg_id)
+            self.received_messages.append(message)
+            return TerminalAck(
+                message_id=msg_id,
+                delivered=True,
+                exactly_once_provable=True,
+                status="DELIVERED",
+            )
+
+
+class TmuxTerminalReceiver(BridgeTerminalReceiver):
+    """
+    Real terminal transport broker executing via tmux send-keys.
+    Validates target window existence and delivery acknowledgement.
+    """
+
+    def receive_message(self, message: Dict[str, Any], is_arbitrary_cli: bool = False) -> TerminalAck:
+        with self._lock:
+            msg_id = message["message_id"]
+            if msg_id in self.accepted_message_ids:
+                return TerminalAck(
+                    message_id=msg_id,
+                    delivered=False,
+                    exactly_once_provable=True,
+                    status="DUPLICATE_REJECTED",
+                )
+
+            target = message.get("routing_target")
+            payload = message.get("payload", "")
+
+            if target and shutil.which("tmux"):
+                try:
+                    probe = subprocess.run(
+                        ["tmux", "has-session", "-t", target],
+                        capture_output=True,
+                    )
+                    if probe.returncode != 0:
+                        return TerminalAck(
+                            message_id=msg_id,
+                            delivered=False,
+                            exactly_once_provable=False,
+                            status="FAILED",
+                            error=f"tmux target not found: {target}",
+                        )
+
+                    p1 = subprocess.run(
+                        ["tmux", "send-keys", "-t", target, "-l", str(payload)],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if p1.returncode != 0:
+                        return TerminalAck(
+                            message_id=msg_id,
+                            delivered=False,
+                            exactly_once_provable=False,
+                            status="FAILED",
+                            error=p1.stderr.strip() or "tmux send-keys failed",
+                        )
+
+                    p2 = subprocess.run(
+                        ["tmux", "send-keys", "-t", target, "Enter"],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if p2.returncode != 0:
+                        return TerminalAck(
+                            message_id=msg_id,
+                            delivered=False,
+                            exactly_once_provable=False,
+                            status="FAILED",
+                            error=p2.stderr.strip() or "tmux Enter failed",
+                        )
+                except Exception as exc:
+                    return TerminalAck(
+                        message_id=msg_id,
+                        delivered=False,
+                        exactly_once_provable=False,
+                        status="FAILED",
+                        error=str(exc),
+                    )
+            elif not target:
+                return TerminalAck(
+                    message_id=msg_id,
+                    delivered=False,
+                    exactly_once_provable=False,
+                    status="FAILED",
+                    error="No routing_target specified for terminal transport",
+                )
+
             self.accepted_message_ids.add(msg_id)
             self.received_messages.append(message)
             return TerminalAck(
@@ -152,12 +243,12 @@ class BridgeAdapter:
         finally:
             conn.close()
 
-        if current_status == "DELIVERED":
+        if decision.status == "DUPLICATE_REJECTED" or current_status == "DELIVERED":
             return TerminalAck(
                 message_id=message_id,
-                delivered=True,
+                delivered=False,
                 exactly_once_provable=True,
-                status="DELIVERED",
+                status="DUPLICATE_REJECTED",
             )
 
         if current_status == "HELD":

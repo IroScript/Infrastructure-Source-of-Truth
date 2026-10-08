@@ -868,6 +868,16 @@ def test_submit_prompt_isolated_no_crash_recovery(test_env):
     assert gate.has_in_flight_messages(gate_open_proj) is False
     assert gate.close_gate(gate_open_proj) is True
 
+    # Adversarial A1 check: Duplicate submission on OPEN gate is rejected as DUPLICATE_REJECTED with delivered=False
+    open_adapter = BridgeAdapter(gate, cfg.sot_root)
+    gate.open_gate(gate_open_proj)
+    ack_first = open_adapter.handle_incoming_message(gate_open_proj, "msg_dup_test_open", "payload first")
+    assert ack_first.status == "DELIVERED"
+    assert ack_first.delivered is True
+    ack_second = open_adapter.handle_incoming_message(gate_open_proj, "msg_dup_test_open", "payload first")
+    assert ack_second.status == "DUPLICATE_REJECTED"
+    assert ack_second.delivered is False
+
 
 def test_gate_drain_fifo_delivery(test_env):
     """

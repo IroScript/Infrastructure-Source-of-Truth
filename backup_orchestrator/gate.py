@@ -115,8 +115,9 @@ class PromptGateCoordinator:
                 )
                 existing = cur.fetchone()
                 if existing:
+                    status_to_return = "DUPLICATE_REJECTED" if existing["status"] == "DELIVERED" else existing["status"]
                     return DispatchDecision(
-                        status=existing["status"],
+                        status=status_to_return,
                         message_id=message_id,
                         sequence_num=existing["sequence_num"],
                         gate_state=gate_state,
