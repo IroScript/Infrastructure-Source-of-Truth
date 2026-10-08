@@ -1299,3 +1299,95 @@ def test_gate_check_uuid_resolution(test_env, capsys):
     assert gate_info["action"] == "ALLOW_NOW"
     assert gate_info["zip_gate"] == "ZIP_GATE_OPEN"
 
+
+
+def test_in_flight_delivery_lock_deferral(test_env):
+    """
+    Milestone 3: Verifies that an ephemeral in-flight delivery lock marker
+    causes close_gate to defer (return False) and clearing the lock permits closure.
+    """
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    project_id = "test_inflight_deferral"
+    gate.register_or_update_project(project_id, "test_inflight", "/tmp/nonexistent")
+
+    # Acquire ephemeral in-flight lock marker
+    gate.set_in_flight_lock(project_id, True)
+    assert gate.has_in_flight_delivery_lock(project_id) is True
+
+    # Gate closure must be rejected/deferred
+    closed = gate.close_gate(project_id)
+    assert closed is False
+    assert gate.get_gate_state(project_id)["prompt_gate"] == "OPEN"
+
+    # Release in-flight lock
+    gate.set_in_flight_lock(project_id, False)
+    assert gate.has_in_flight_delivery_lock(project_id) is False
+
+    # Gate closure now succeeds
+    closed_after = gate.close_gate(project_id)
+    assert closed_after is True
+    assert gate.get_gate_state(project_id)["prompt_gate"] == "CLOSED"
+    gate.open_gate(project_id)
+
+
+def test_read_only_task_mode_guards(test_env, monkeypatch):
+    """
+    Milestone 5: Verifies machine-enforced READ_ONLY guard blocks mutations
+    with POLICY_VIOLATION_READ_ONLY.
+    """
+    db: Database = test_env["db"]
+    gate = PromptGateCoordinator(db)
+    project_id = "test_readonly_guard"
+    gate.register_or_update_project(project_id, "test_ro", "/tmp/nonexistent")
+
+    monkeypatch.setenv("TASK_MODE", "READ_ONLY")
+
+    with pytest.raises(PermissionError) as exc_close:
+        gate.close_gate(project_id)
+    assert "POLICY_VIOLATION_READ_ONLY" in str(exc_close.value)
+
+    with pytest.raises(PermissionError) as exc_open:
+        gate.open_gate(project_id)
+    assert "POLICY_VIOLATION_READ_ONLY" in str(exc_open.value)
+
+    with pytest.raises(PermissionError) as exc_disp:
+        gate.dispatch_or_hold_message(project_id, "msg_ro", "agy:0", "payload")
+    assert "POLICY_VIOLATION_READ_ONLY" in str(exc_disp.value)
+
+
+def test_observability_status_all_fields_present(test_env):
+    """
+    Milestone 5: Verifies that get_health_report produces all 14 required
+    structured observability fields per Section 24.
+    """
+    cfg: BackupOrchestratorConfig = test_env["cfg"]
+    clock: InjectableClock = test_env["clock"]
+    orchestrator = BackupOrchestrator(cfg, clock=clock)
+
+    report = orchestrator.get_health_report()
+    assert report["status"] == "HEALTHY"
+
+    required_fields = [
+        "PROJECT",
+        "ZIP_GATE",
+        "ZIP_RUNNING",
+        "ZIP_PID",
+        "BACKUP_STATE",
+        "LAST_GOOD",
+        "LOCAL_GOOD_COUNT",
+        "REMOTE_GOOD_COUNT",
+        "HELD_FOR_ZIP_MESSAGES",
+        "DELIVERY_RETRY_MESSAGES",
+        "WHATSAPP_CONNECTION",
+        "TARGET_TERMINAL",
+        "LAST_DELIVERY",
+        "LAST_ERROR",
+    ]
+    for field in required_fields:
+        assert field in report, f"Missing required top-level observability field: {field}"
+
+    if report["projects"]:
+        for p in report["projects"]:
+            for field in required_fields:
+                assert field in p, f"Missing required project-level observability field: {field} in {p.get('PROJECT')}"

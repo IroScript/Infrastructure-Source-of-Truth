@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -84,6 +85,29 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
         home=Path(args.home) if getattr(args, "home", None) else None,
     )
     action = getattr(args, "orchestrator_action", "status")
+    if os.environ.get("TASK_MODE") == "READ_ONLY":
+        if action in ("run-cycle", "run-daemon", "retry-uploads", "import-state"):
+            print(f"FAIL: POLICY_VIOLATION_READ_ONLY: {action} forbidden in READ_ONLY mode", file=sys.stderr)
+            return 2
+
+    if action == "in-flight-lock":
+        p_uuid = getattr(args, "project_uuid", "") or getattr(args, "project", "")
+        sub_action = getattr(args, "sub_action", "check")
+        from .gate import PromptGateCoordinator
+        db = Database(config.db_path)
+        coordinator = PromptGateCoordinator(db)
+        if sub_action == "acquire":
+            coordinator.set_in_flight_lock(p_uuid, True)
+            print(json.dumps({"project_uuid": p_uuid, "in_flight": True, "status": "LOCKED"}))
+            return 0
+        elif sub_action == "release":
+            coordinator.set_in_flight_lock(p_uuid, False)
+            print(json.dumps({"project_uuid": p_uuid, "in_flight": False, "status": "RELEASED"}))
+            return 0
+        else:
+            in_flight = coordinator.has_in_flight_delivery_lock(p_uuid)
+            print(json.dumps({"project_uuid": p_uuid, "in_flight": in_flight}))
+            return 0
 
     if action == "gate-check":
         project_uuid = (
@@ -156,7 +180,8 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
     orchestrator = BackupOrchestrator(config)
 
     if action == "status":
-        report = orchestrator.get_health_report()
+        p_filter = getattr(args, "project", "") or getattr(args, "project_id", "") or getattr(args, "project_uuid", "")
+        report = orchestrator.get_health_report(target_project_id=p_filter)
         print(json.dumps(report, indent=2))
         return 0
 

@@ -17,10 +17,10 @@ class ZipResult:
     status: str  # "LOCAL_VERIFIED", "MUTATION_DETECTED", "VERIFICATION_FAILED"
     archive_path: Optional[Path]
     size: int = 0
-    sha256: str = ""
-    md5: str = ""
+    sha256: str = ''
+    md5: str = ''
     mutation_seen: bool = False
-    error: str = ""
+    error: str = ''
 
 
 class ProjectZipper:
@@ -38,21 +38,26 @@ class ProjectZipper:
         check_mutation_callback: Optional[Callable[[], bool]] = None,
         get_current_generation_callback: Optional[Callable[[], int]] = None,
         on_capture_complete_callback: Optional[Callable[[], None]] = None,
+        destination_dir: Optional[Path] = None,
     ) -> ZipResult:
         """
         Creates a zip archive of the project root:
         - Includes hidden files, .git, logs, source, etc.
         - Preserves symlinks as symlinks without reading external targets.
         - Monitors for mutations during archive creation.
+        - Destination and temporary .partial.zip remain strictly outside project source root.
         - Verifies CRC32 and computes SHA256 & MD5.
         """
         project_root = Path(project_root).resolve()
-        final_zip_path = self.staging_dir / archive_name
+        out_dir = Path(destination_dir).resolve() if destination_dir else self.staging_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        final_zip_path = out_dir / archive_name
         if archive_name.endswith(".zip"):
             partial_name = archive_name[:-4] + ".partial.zip"
         else:
             partial_name = f"{archive_name}.partial.zip"
-        partial_zip_path = self.staging_dir / partial_name
+        partial_zip_path = out_dir / partial_name
 
         if partial_zip_path.exists():
             partial_zip_path.unlink()

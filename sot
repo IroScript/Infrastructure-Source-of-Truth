@@ -253,13 +253,14 @@ def main():
     ws.add_parser("cloud-parity").set_defaults(func=cmd_watcher)
     bo = sub.add_parser("backup-orchestrator")
     bos = bo.add_subparsers(dest="orchestrator_action", required=True)
-    bo_status = bos.add_parser("status"); bo_status.add_argument("--home"); bo_status.set_defaults(func=cmd_backup_orchestrator)
+    bo_status = bos.add_parser("status"); bo_status.add_argument("--home"); bo_status.add_argument("--project"); bo_status.add_argument("--project-id"); bo_status.add_argument("--project-uuid"); bo_status.set_defaults(func=cmd_backup_orchestrator)
     bo_run = bos.add_parser("run-cycle"); bo_run.add_argument("--project-id", required=True); bo_run.add_argument("--force", action="store_true"); bo_run.add_argument("--strict", action="store_true"); bo_run.add_argument("--home"); bo_run.set_defaults(func=cmd_backup_orchestrator)
     bo_ret = bos.add_parser("retry-uploads"); bo_ret.add_argument("--strict", action="store_true"); bo_ret.add_argument("--home"); bo_ret.set_defaults(func=cmd_backup_orchestrator)
     bo_cid = bos.add_parser("client-id-check"); bo_cid.add_argument("--remote"); bo_cid.add_argument("--home"); bo_cid.set_defaults(func=cmd_backup_orchestrator)
     bo_exp = bos.add_parser("export-state"); bo_exp.add_argument("output_file"); bo_exp.add_argument("--key"); bo_exp.add_argument("--home"); bo_exp.set_defaults(func=cmd_backup_orchestrator)
     bo_imp = bos.add_parser("import-state"); bo_imp.add_argument("input_file"); bo_imp.add_argument("--key"); bo_imp.add_argument("--home"); bo_imp.set_defaults(func=cmd_backup_orchestrator)
     bo_daemon = bos.add_parser("run-daemon"); bo_daemon.add_argument("--home"); bo_daemon.add_argument("--interval", type=int, default=30); bo_daemon.set_defaults(func=cmd_backup_orchestrator)
+    bo_inflight = bos.add_parser("in-flight-lock"); bo_inflight.add_argument("--project-uuid", required=True); bo_inflight.add_argument("--sub-action", choices=["check", "acquire", "release"], default="check"); bo_inflight.add_argument("--home"); bo_inflight.set_defaults(func=cmd_backup_orchestrator)
     bo_gate = bos.add_parser("gate-check"); bo_gate.add_argument("--project-uuid"); bo_gate.add_argument("--project"); bo_gate.add_argument("--route"); bo_gate.add_argument("--json", action="store_true"); bo_gate.add_argument("--home"); bo_gate.set_defaults(func=cmd_backup_orchestrator)
     bo_prompt = bos.add_parser("submit-prompt"); bo_prompt.add_argument("--route", required=True); bo_prompt.add_argument("--message-id", default=""); bo_prompt.add_argument("--payload", default=""); bo_prompt.add_argument("--base64", action="store_true"); bo_prompt.add_argument("--home"); bo_prompt.add_argument("--state-root"); bo_prompt.add_argument("--projects-root"); bo_prompt.set_defaults(func=cmd_backup_orchestrator)
     fr = sub.add_parser("frappe")
@@ -281,6 +282,27 @@ def main():
     if len(sys.argv) >= 3 and sys.argv[1] == "backup" and sys.argv[2] == "orchestrator":
         sys.argv = [sys.argv[0], "backup-orchestrator"] + sys.argv[3:]
     args = parser.parse_args()
+    if os.environ.get("TASK_MODE") == "READ_ONLY":
+        first_cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+        sub_cmd = (
+            getattr(args, f"{first_cmd}_action", None)
+            or getattr(args, "orchestrator_action", None)
+            or getattr(args, "watcher_action", None)
+            or getattr(args, "action", None)
+        )
+        mutating_commands = {
+            ("rules", "install"), ("rules", "rollback"), ("rules", "sync"),
+            ("watcher", "run-daemon"), ("watcher", "sync-once"),
+            ("backup-orchestrator", "run-cycle"), ("backup-orchestrator", "run-daemon"),
+            ("backup-orchestrator", "retry-uploads"), ("backup-orchestrator", "import-state"),
+            ("project", "register"), ("project", "finalize"),
+        }
+        if (first_cmd, sub_cmd) in mutating_commands:
+            print(f"FAIL: POLICY_VIOLATION_READ_ONLY: mutating operation {first_cmd} {sub_cmd} forbidden in READ_ONLY mode", file=sys.stderr)
+            return 2
+        if first_cmd == "bootstrap" and not getattr(args, "dry_run", False):
+            print("FAIL: POLICY_VIOLATION_READ_ONLY: bootstrap mutation forbidden in READ_ONLY mode", file=sys.stderr)
+            return 2
     try:
         return args.func(args)
     except (RuleError, OSError, ValueError, json.JSONDecodeError) as exc:

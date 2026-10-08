@@ -18,9 +18,35 @@ class BackupOrchestratorConfig:
     staging_dir: Path
     db_path: Path
     quiet_interval_seconds: float = 1800.0  # 30 minutes monotonic
-    rclone_remote: str = "gdrive:Backups/Projects"
+    rclone_remote: str = "gdrive:IroScript_Project_Backups"
     retention_count: int = 10
     timezone_name: str = "Asia/Dhaka"
+    backup_root: Optional[Path] = None
+
+    def __post_init__(self) -> None:
+        if self.backup_root is None:
+            self.backup_root = Path(
+                os.environ.get("BACKUP_ROOT") or (self.home / "IroScript_Backups")
+            ).resolve()
+
+    def get_project_backup_dir(
+        self,
+        project_slug: str,
+        project_id: str,
+        project_uuid: Optional[str] = None,
+    ) -> Path:
+        """
+        Returns dedicated local project backup directory:
+        $BACKUP_ROOT/<ProjectSlug__UUID>/
+        """
+        uuid_val = project_uuid or project_id
+        if f"__{uuid_val}" in project_slug:
+            folder_name = project_slug
+        else:
+            folder_name = f"{project_slug}__{uuid_val}"
+        target_dir = (self.backup_root or (self.home / "IroScript_Backups")) / folder_name
+        target_dir.mkdir(parents=True, exist_ok=True)
+        return target_dir
 
     @classmethod
     def resolve(
@@ -30,10 +56,11 @@ class BackupOrchestratorConfig:
         projects_root: Optional[Path] = None,
         state_root: Optional[Path] = None,
         staging_dir: Optional[Path] = None,
+        backup_root: Optional[Path] = None,
         quiet_interval_seconds: Optional[float] = None,
     ) -> BackupOrchestratorConfig:
         s_root = Path(sot_root or Path(__file__).resolve().parent.parent).resolve()
-        h_dir = Path(home or os.environ.get("HOME", "/home/azureuser")).resolve()
+        h_dir = Path(home or os.environ.get("HOME") or os.path.expanduser("~")).resolve()
         p_dir = Path(
             projects_root
             or os.environ.get("PROJECTS_ROOT")
@@ -49,6 +76,11 @@ class BackupOrchestratorConfig:
             staging_dir
             or os.environ.get("BACKUP_STAGING_ROOT")
             or (b_state / "staging")
+        ).resolve()
+        b_root = Path(
+            backup_root
+            or os.environ.get("BACKUP_ROOT")
+            or (h_dir / "IroScript_Backups")
         ).resolve()
 
         q_interval = (
@@ -66,9 +98,10 @@ class BackupOrchestratorConfig:
             staging_dir=stg_dir,
             db_path=b_state / "backup_state.sqlite",
             quiet_interval_seconds=q_interval,
-            rclone_remote=os.environ.get("BACKUP_RCLONE_REMOTE", "gdrive:Backups/Projects"),
+            rclone_remote=os.environ.get("BACKUP_RCLONE_REMOTE", "gdrive:IroScript_Project_Backups"),
             retention_count=int(os.environ.get("BACKUP_RETENTION_COUNT", 10)),
             timezone_name="Asia/Dhaka",
+            backup_root=b_root,
         )
 
     def load_registered_projects(self) -> List[Dict[str, Any]]:

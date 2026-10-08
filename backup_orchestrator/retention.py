@@ -204,9 +204,15 @@ class RetentionManager:
 
         for run in all_runs:
             b_id = run["backup_id"]
+            if not run["zip_path"]:
+                continue
             z_path = Path(run["zip_path"])
             if b_id not in retained_backup_ids and z_path.is_file():
                 try:
                     z_path.unlink()
                 except OSError:
-                    pass
+                    with self.db.transaction() as cur:
+                        cur.execute(
+                            "UPDATE verified_backups SET retention_state = 'RETENTION_PENDING' WHERE backup_id = ?;",
+                            (b_id,),
+                        )

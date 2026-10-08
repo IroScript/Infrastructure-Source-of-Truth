@@ -8,6 +8,7 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from .db import Database
 
@@ -121,6 +122,8 @@ class PromptGateCoordinator:
         if CLOSED or HELD count > 0: atomically persist as HELD, return HELD
         COMMIT
         """
+        if os.environ.get("TASK_MODE") == "READ_ONLY":
+            raise PermissionError("POLICY_VIOLATION_READ_ONLY: mutating operations forbidden in READ_ONLY mode")
         proj_lock = self._get_project_lock(project_id)
         with proj_lock:
             with self.db.transaction() as cur:
@@ -243,6 +246,8 @@ class PromptGateCoordinator:
         4. Recheck active agent state + filesystem generation.
         5. If agent became BUSY or generation changed, rollback gate to OPEN and return False.
         """
+        if os.environ.get("TASK_MODE") == "READ_ONLY":
+            raise PermissionError("POLICY_VIOLATION_READ_ONLY: mutating operations forbidden in READ_ONLY mode")
         actual_pid = zip_pid if zip_pid is not None else os.getpid()
         proj_lock = self._get_project_lock(project_id)
         with proj_lock:
@@ -253,7 +258,7 @@ class PromptGateCoordinator:
                     (project_id,),
                 )
                 in_flight = cur.fetchone()[0]
-                if in_flight > 0:
+                if in_flight > 0 or self.has_in_flight_delivery_lock(project_id):
                     return False  # Message currently crossing boundary
 
                 now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -286,6 +291,8 @@ class PromptGateCoordinator:
 
     def open_gate(self, project_id: str, dispatch_func: Optional[Callable[[Dict[str, Any]], bool]] = None) -> int:
         """Opens prompt gate immediately, clears zip_pid, and drains held prompts in strict FIFO order."""
+        if os.environ.get("TASK_MODE") == "READ_ONLY":
+            raise PermissionError("POLICY_VIOLATION_READ_ONLY: mutating operations forbidden in READ_ONLY mode")
         proj_lock = self._get_project_lock(project_id)
         with proj_lock:
             now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -493,8 +500,28 @@ class PromptGateCoordinator:
                 (now_str, message_id),
             )
 
-    def has_in_flight_messages(self, project_id: str) -> bool:
-        """Checks if any messages are currently DISPATCHING for the project."""
+    def get_in_flight_locks_dir(self) -> Path:
+        p = Path(self.db.db_path).parent / "in_flight_locks"
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    def set_in_flight_lock(self, project_id: str, active: bool = True) -> None:
+        """Sets or clears ephemeral project-scoped in-flight delivery lock marker."""
+        locks_dir = self.get_in_flight_locks_dir()
+        safe_id = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in project_id)
+        lock_file = locks_dir / f"{safe_id}.lock"
+        if active:
+            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            lock_file.write_text(json.dumps({"pid": os.getpid(), "project_id": project_id, "time": now_str}))
+        else:
+            try:
+                if lock_file.is_file():
+                    lock_file.unlink()
+            except OSError:
+                pass
+
+    def has_in_flight_delivery_lock(self, project_id: str) -> bool:
+        """Checks both database DISPATCHING state and ephemeral in-flight lock marker for project."""
         conn = self.db.get_connection()
         try:
             cur = conn.cursor()
@@ -502,9 +529,27 @@ class PromptGateCoordinator:
                 "SELECT COUNT(*) FROM held_prompt_queue WHERE project_id = ? AND status = 'DISPATCHING';",
                 (project_id,),
             )
-            return cur.fetchone()[0] > 0
+            if cur.fetchone()[0] > 0:
+                return True
         finally:
             conn.close()
+
+        locks_dir = self.get_in_flight_locks_dir()
+        safe_id = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in project_id)
+        lock_file = locks_dir / f"{safe_id}.lock"
+        if lock_file.is_file():
+            try:
+                if time.time() - lock_file.stat().st_mtime > 60:
+                    lock_file.unlink(missing_ok=True)
+                    return False
+                return True
+            except OSError:
+                pass
+        return False
+
+    def has_in_flight_messages(self, project_id: str) -> bool:
+        """Checks if any messages or delivery locks are currently in flight for the project."""
+        return self.has_in_flight_delivery_lock(project_id)
 
     def register_delivery_owner(self, owner_instance_id: str, daemon_pid: int) -> None:
         """

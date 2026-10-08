@@ -345,9 +345,24 @@ class BackupOrchestrator:
                 last_good_generation=last_good,
             )
 
-        # Record backup run as CAPTURING with active ZIP_PID
-        archive_name = generate_backup_filename(project_slug, self.clock)
-        expected_zip_path = self.config.staging_dir / archive_name
+        # Resolve project UUID
+        project_uuid = self.project_metadata.get(project_id, {}).get("project_uuid")
+        if not project_uuid:
+            registered = self.config.load_registered_projects()
+            for p in registered:
+                if p.get("project_id") == project_id:
+                    project_uuid = p.get("project_uuid")
+                    break
+        project_uuid = project_uuid or project_id
+
+        # Dedicated local backup root layout: $BACKUP_ROOT/<ProjectSlug__UUID>/
+        if getattr(self.config, "backup_root", None):
+            proj_backup_dir = self.config.get_project_backup_dir(project_slug, project_id, project_uuid)
+        else:
+            proj_backup_dir = self.config.staging_dir
+
+        archive_name = generate_backup_filename(project_slug, self.clock, unique_suffix=backup_id)
+        expected_zip_path = proj_backup_dir / archive_name
         with self.db.transaction() as cur:
             cur.execute(
                 """
@@ -389,6 +404,7 @@ class BackupOrchestrator:
                 check_mutation_callback=check_mutation,
                 get_current_generation_callback=get_current_gen,
                 on_capture_complete_callback=on_capture_complete,
+                destination_dir=proj_backup_dir,
             )
 
             # Ensure gate is open if not already opened by callback
@@ -396,7 +412,7 @@ class BackupOrchestrator:
 
             if zip_res.status != "LOCAL_VERIFIED":
                 # Mutation or verification failed
-                status_val = "MUTATION_INVALIDATED" if zip_res.mutation_seen else "FAILED"
+                status_val = "INVALIDATED" if zip_res.mutation_seen else "FAILED"
                 with self.db.transaction() as cur:
                     cur.execute(
                         """
@@ -461,10 +477,19 @@ class BackupOrchestrator:
                 (zip_res.size, zip_res.sha256, zip_res.md5, backup_id),
             )
 
-        # 4. Upload to remote storage independently (gate is already OPEN, coding continues!)
+        # 4. Upload to remote storage independently: <rclone-remote>:IroScript_Project_Backups/<ProjectSlug__UUID>/
+        remote_base = self.config.rclone_remote.rstrip("/")
+        if not remote_base.startswith("/") and not remote_base.endswith("IroScript_Project_Backups") and "IroScript_Project_Backups" not in remote_base:
+            remote_dest_root = f"{remote_base}:IroScript_Project_Backups" if ":" not in remote_base else f"{remote_base}/IroScript_Project_Backups"
+        else:
+            remote_dest_root = remote_base
+
+        folder_slug_uuid = f"{project_slug}__{project_uuid}" if f"__{project_uuid}" not in project_slug else project_slug
+        remote_dest_dir = f"{remote_dest_root}/{folder_slug_uuid}"
+
         upload_res = self.uploader.upload_and_verify(
             local_archive=zip_res.archive_path,
-            remote_dest_dir=f"{self.config.rclone_remote.rstrip('/')}/{project_slug}",
+            remote_dest_dir=remote_dest_dir,
             expected_sha256=zip_res.sha256,
             expected_md5=zip_res.md5,
             strict_download_verify=strict_download_verify,
@@ -478,7 +503,7 @@ class BackupOrchestrator:
                 cur.execute(
                     """
                     UPDATE backup_runs
-                    SET status = 'FAILED', error_message = ?, finished_at = ?
+                    SET status = 'UPLOAD_PENDING', error_message = ?, finished_at = ?
                     WHERE backup_id = ?;
                     """,
                     (upload_res.error, fin_time, backup_id),
@@ -563,6 +588,8 @@ class BackupOrchestrator:
         Retries failed uploads from existing LOCAL_VERIFIED archives without rebuilding (Section 52).
         Gate remains OPEN during upload retry.
         """
+        if os.environ.get("TASK_MODE") == "READ_ONLY":
+            raise PermissionError("POLICY_VIOLATION_READ_ONLY: mutating operations forbidden in READ_ONLY mode")
         conn = self.db.get_connection()
         try:
             cur = conn.cursor()
@@ -570,7 +597,7 @@ class BackupOrchestrator:
                 """
                 SELECT backup_id, project_id, project_slug, captured_generation, zip_path, zip_size, zip_sha256, zip_md5
                 FROM backup_runs
-                WHERE status IN ('LOCAL_VERIFIED', 'FAILED') AND zip_size > 0
+                WHERE status IN ('LOCAL_VERIFIED', 'FAILED', 'UPLOAD_PENDING') AND zip_size > 0
                 ORDER BY created_at ASC;
                 """
             )
@@ -651,37 +678,181 @@ class BackupOrchestrator:
 
         return results
 
-    def get_health_report(self) -> Dict[str, Any]:
-        """Provides overall health and status report across all projects."""
+    def get_health_report(self, target_project_id: Optional[str] = None) -> Dict[str, Any]:
+        """Provides overall health and status report across all projects with full observability."""
         conn = self.db.get_connection()
         try:
             cur = conn.cursor()
             cur.execute(
                 """
                 SELECT project_id, project_slug, canonical_path, dirty_generation,
-                       last_good_generation, prompt_gate, lifecycle_lock, filesystem_state, updated_at
+                       last_good_generation, prompt_gate, zip_pid, lifecycle_lock, filesystem_state, updated_at
                 FROM projects_state;
                 """
             )
-            projects = [dict(r) for r in cur.fetchall()]
+            raw_projects = [dict(r) for r in cur.fetchall()]
+
+            enriched_projects = []
+            for p in raw_projects:
+                p_id = p["project_id"]
+                gate_raw = (p.get("prompt_gate") or "OPEN").upper()
+                zip_pid = p.get("zip_pid")
+                from .gate import is_pid_alive
+                zip_running = is_pid_alive(zip_pid) if zip_pid else False
+                zip_gate = "ZIP_GATE_CLOSED" if gate_raw in ("CLOSED", "ZIP_GATE_CLOSED") and zip_running else "ZIP_GATE_OPEN"
+
+                cur.execute(
+                    """
+                    SELECT status, error_message, created_at, finished_at
+                    FROM backup_runs
+                    WHERE project_id = ?
+                    ORDER BY created_at DESC LIMIT 1;
+                    """,
+                    (p_id,),
+                )
+                run_row = cur.fetchone()
+                backup_state = run_row["status"] if run_row else "IDLE"
+                last_error = run_row["error_message"] if run_row else None
+
+                cur.execute(
+                    """
+                    SELECT verified_at FROM verified_backups
+                    WHERE project_id = ? AND status = 'GOOD' AND retention_state = 'ACTIVE'
+                    ORDER BY verified_at DESC LIMIT 1;
+                    """,
+                    (p_id,),
+                )
+                vg_row = cur.fetchone()
+                last_good = vg_row["verified_at"] if vg_row else None
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*) FROM verified_backups
+                    WHERE project_id = ? AND status = 'GOOD' AND retention_state = 'ACTIVE';
+                    """,
+                    (p_id,),
+                )
+                remote_good_count = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT zip_path FROM backup_runs
+                    WHERE project_id = ? AND (status IN ('GOOD', 'LOCAL_VERIFIED')) AND zip_path IS NOT NULL;
+                    """,
+                    (p_id,),
+                )
+                local_good_count = sum(1 for r in cur.fetchall() if r["zip_path"] and Path(r["zip_path"]).is_file())
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*) FROM held_prompt_queue
+                    WHERE project_id = ? AND status = 'HELD';
+                    """,
+                    (p_id,),
+                )
+                held_count = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT COUNT(*) FROM held_prompt_queue
+                    WHERE project_id = ? AND status IN ('RETRYING', 'DISPATCHING');
+                    """,
+                    (p_id,),
+                )
+                retry_count = cur.fetchone()[0]
+
+                cur.execute(
+                    """
+                    SELECT updated_at FROM held_prompt_queue
+                    WHERE project_id = ? AND status = 'DELIVERED'
+                    ORDER BY updated_at DESC LIMIT 1;
+                    """,
+                    (p_id,),
+                )
+                del_row = cur.fetchone()
+                last_delivery = del_row["updated_at"] if del_row else None
+
+                meta = self.project_metadata.get(p_id, {})
+                target_terminal = meta.get("runtime", {}).get("tmux_window") or meta.get("connections", {}).get("whatsapp", {}).get("agent_route") or "agy:0"
+
+                wa_auth_dir = Path(os.environ.get("HOME") or "/root") / ".webterminal" / "wa_auth"
+                wa_conn = "CONNECTED" if wa_auth_dir.is_dir() else "UNKNOWN"
+
+                proj_record = {
+                    **p,
+                    "PROJECT": p_id,
+                    "ZIP_GATE": zip_gate,
+                    "ZIP_RUNNING": zip_running,
+                    "ZIP_PID": zip_pid,
+                    "BACKUP_STATE": backup_state,
+                    "LAST_GOOD": last_good,
+                    "LOCAL_GOOD_COUNT": local_good_count,
+                    "REMOTE_GOOD_COUNT": remote_good_count,
+                    "HELD_FOR_ZIP_MESSAGES": held_count,
+                    "DELIVERY_RETRY_MESSAGES": retry_count,
+                    "WHATSAPP_CONNECTION": wa_conn,
+                    "TARGET_TERMINAL": target_terminal,
+                    "LAST_DELIVERY": last_delivery,
+                    "LAST_ERROR": last_error,
+                }
+                enriched_projects.append(proj_record)
 
             cur.execute("SELECT COUNT(*) FROM held_prompt_queue WHERE status = 'HELD';")
-            held_count = cur.fetchone()[0]
-
+            total_held = cur.fetchone()[0]
             cur.execute("SELECT COUNT(*) FROM verified_backups WHERE status = 'GOOD' AND retention_state = 'ACTIVE';")
-            good_count = cur.fetchone()[0]
+            total_good = cur.fetchone()[0]
         finally:
             conn.close()
+
+        primary = None
+        if target_project_id:
+            for ep in enriched_projects:
+                if ep["PROJECT"] == target_project_id or ep.get("project_slug") == target_project_id:
+                    primary = ep
+                    break
+        if not primary and enriched_projects:
+            primary = enriched_projects[0]
+        if not primary:
+            primary = {
+                "PROJECT": "none",
+                "ZIP_GATE": "ZIP_GATE_OPEN",
+                "ZIP_RUNNING": False,
+                "ZIP_PID": None,
+                "BACKUP_STATE": "IDLE",
+                "LAST_GOOD": None,
+                "LOCAL_GOOD_COUNT": 0,
+                "REMOTE_GOOD_COUNT": 0,
+                "HELD_FOR_ZIP_MESSAGES": 0,
+                "DELIVERY_RETRY_MESSAGES": 0,
+                "WHATSAPP_CONNECTION": "UNKNOWN",
+                "TARGET_TERMINAL": "agy:0",
+                "LAST_DELIVERY": None,
+                "LAST_ERROR": None,
+            }
 
         rclone_audit = self.uploader.audit_rclone_client_id(self.config.rclone_remote)
 
         return {
             "status": "HEALTHY",
             "db_path": str(self.config.db_path),
-            "projects_count": len(projects),
-            "projects": projects,
-            "held_prompts_count": held_count,
-            "verified_goods_count": good_count,
+            "projects_count": len(enriched_projects),
+            "PROJECT": primary.get("PROJECT"),
+            "ZIP_GATE": primary.get("ZIP_GATE"),
+            "ZIP_RUNNING": primary.get("ZIP_RUNNING"),
+            "ZIP_PID": primary.get("ZIP_PID"),
+            "BACKUP_STATE": primary.get("BACKUP_STATE"),
+            "LAST_GOOD": primary.get("LAST_GOOD"),
+            "LOCAL_GOOD_COUNT": primary.get("LOCAL_GOOD_COUNT"),
+            "REMOTE_GOOD_COUNT": primary.get("REMOTE_GOOD_COUNT"),
+            "HELD_FOR_ZIP_MESSAGES": primary.get("HELD_FOR_ZIP_MESSAGES"),
+            "DELIVERY_RETRY_MESSAGES": primary.get("DELIVERY_RETRY_MESSAGES"),
+            "WHATSAPP_CONNECTION": primary.get("WHATSAPP_CONNECTION"),
+            "TARGET_TERMINAL": primary.get("TARGET_TERMINAL"),
+            "LAST_DELIVERY": primary.get("LAST_DELIVERY"),
+            "LAST_ERROR": primary.get("LAST_ERROR"),
+            "projects": enriched_projects,
+            "held_prompts_count": total_held,
+            "verified_goods_count": total_good,
             "rclone_client_id_audit": rclone_audit,
             "staging_dir": str(self.config.staging_dir),
         }
