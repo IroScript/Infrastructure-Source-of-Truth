@@ -39,7 +39,10 @@ class FrappeReferenceManager:
         candidates.append(s_root / "official-references" / "frappe")
 
         # Portable SOT sibling or docs-reference
-        candidates.append(self.sot_root.parent / "Frappe-erp-Alco" / "frappe-docs-latest")
+        if self.sot_root.parent.is_dir():
+            for sib in self.sot_root.parent.iterdir():
+                if sib.is_dir() and sib.name != self.sot_root.name:
+                    candidates.append(sib / "frappe-docs-latest")
         candidates.append(self.sot_root / "frappe" / "docs-reference")
 
         # De-duplicate while preserving order
@@ -89,6 +92,8 @@ class FrappeReferenceManager:
             Path.home() / "frappe_docs",
             Path.home() / ".agents" / "frappe_docs",
         ]
+        if state_root:
+            old_frappe_docs.append(Path(state_root) / "frappe_docs")
         if project_path:
             old_frappe_docs.append(Path(project_path) / "frappe_docs")
 
@@ -132,14 +137,17 @@ class FrappeReferenceManager:
                 details={"reference_path": str(ref_dir)},
             )
 
-        # 1. Check source domain (must explicitly declare source from docs.frappe.io)
+        # 1. Check source domain (must explicitly declare source from docs.frappe.io using parsed hostname validation)
         source = manifest_data.get("source")
-        if not source or not (source.startswith("https://docs.frappe.io") or source.startswith("http://docs.frappe.io")):
+        from urllib.parse import urlparse
+        parsed = urlparse(source) if source else None
+        hostname = (parsed.hostname or "").lower() if parsed else ""
+        if not source or not parsed or parsed.scheme not in ("http", "https") or hostname != "docs.frappe.io":
             return ProfileVerificationResult(
                 status="FAIL",
                 profile_name="frappe",
                 errors=[f"FRAPPE_REFERENCE_NOT_VERIFIED: INVALID_SOURCE_DOMAIN: Reference source '{source}' missing or not from docs.frappe.io."],
-                details={"reference_path": str(ref_dir), "source": source},
+                details={"reference_path": str(ref_dir), "source": source, "hostname": hostname},
             )
 
         # 2. Check major version match (MUST be explicitly declared, NO guessing!)
@@ -232,25 +240,88 @@ class FrappeReferenceManager:
                 details={"reference_path": str(ref_dir), "fetched_at_utc": fetched_at},
             )
 
-        # 6. Check artifact integrity if page hashes are declared in manifest
-        pages_list = manifest_data.get("pages")
-        if isinstance(pages_list, list) and pages_list:
-            import hashlib
-            sample_pages = pages_list[:10]
-            for p_info in sample_pages:
-                rel_path = p_info.get("path")
-                expected_sha = p_info.get("sha256")
-                if rel_path and expected_sha:
-                    f_on_disk = ref_dir / rel_path
-                    if f_on_disk.is_file():
-                        actual_sha = hashlib.sha256(f_on_disk.read_bytes()).hexdigest()
-                        if actual_sha != expected_sha:
-                            return ProfileVerificationResult(
-                                status="FAIL",
-                                profile_name="frappe",
-                                errors=[f"ARTIFACT_INTEGRITY_FAILED: Page '{rel_path}' sha256 mismatch."],
-                                details={"file": str(f_on_disk), "expected": expected_sha, "actual": actual_sha},
-                            )
+        # 6. Check artifact integrity across the ENTIRE canonical artifact set:
+        # Immediately reject unlisted, missing, or checksum-mismatched files.
+        import hashlib
+        import posixpath
+        pages_raw = manifest_data.get("pages")
+        canonical_pages: Dict[str, str] = {}
+
+        if isinstance(pages_raw, list):
+            for p_info in pages_raw:
+                if isinstance(p_info, dict):
+                    rel_p = p_info.get("path")
+                    sha = p_info.get("sha256")
+                    if rel_p:
+                        norm_p = posixpath.normpath(rel_p)
+                        canonical_pages[norm_p] = sha or ""
+        elif isinstance(pages_raw, dict):
+            for rel_p, val in pages_raw.items():
+                norm_p = posixpath.normpath(rel_p)
+                if isinstance(val, dict):
+                    canonical_pages[norm_p] = val.get("sha256", "")
+                elif isinstance(val, str):
+                    canonical_pages[norm_p] = val
+
+        if not canonical_pages:
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=["FRAPPE_REFERENCE_NOT_VERIFIED: Manifest contains empty or invalid 'pages' declaration."],
+                details={"reference_path": str(ref_dir)},
+            )
+
+        # Check missing or checksum-mismatched files in canonical pages
+        for rel_path, expected_sha in canonical_pages.items():
+            f_on_disk = (ref_dir / rel_path).resolve()
+            if not f_on_disk.is_relative_to(ref_dir.resolve()):
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"CANONICAL_PAGE_INVALID_PATH: Page path '{rel_path}' attempts path traversal outside reference directory."],
+                    details={"reference_path": str(ref_dir), "page": rel_path},
+                )
+            if not f_on_disk.is_file():
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"CANONICAL_PAGE_MISSING: Canonical page '{rel_path}' is missing on disk."],
+                    details={"reference_path": str(ref_dir), "missing_page": rel_path},
+                )
+            if not expected_sha:
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"ARTIFACT_INTEGRITY_FAILED: Page '{rel_path}' is missing declared sha256 checksum in manifest."],
+                    details={"file": str(f_on_disk), "page": rel_path},
+                )
+            actual_sha = hashlib.sha256(f_on_disk.read_bytes()).hexdigest()
+            if actual_sha != expected_sha:
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"ARTIFACT_INTEGRITY_FAILED: Page '{rel_path}' sha256 mismatch."],
+                    details={"file": str(f_on_disk), "expected": expected_sha, "actual": actual_sha},
+                )
+
+        # Check for unlisted files on disk (excluding root MANIFEST.json and crawler indexes)
+        canonical_set = set(canonical_pages.keys())
+        unlisted_files = []
+        for disk_file in ref_dir.glob("**/*"):
+            if disk_file.is_file():
+                rel = disk_file.relative_to(ref_dir).as_posix()
+                if rel == "MANIFEST.json" or disk_file.name in ("llms.txt", "llms-full.txt"):
+                    continue
+                if rel not in canonical_set:
+                    unlisted_files.append(rel)
+
+        if unlisted_files:
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"UNLISTED_FILE_DETECTED: Reference directory contains unlisted file(s): {sorted(unlisted_files)}."],
+                details={"reference_path": str(ref_dir), "unlisted_files": sorted(unlisted_files)},
+            )
 
         details["reference_path"] = str(ref_dir)
         details["page_count"] = page_count

@@ -90,9 +90,15 @@ class FrappeBootstrapEngine:
         # 3. Restore local official reference link if source is available
         cand_docs = [
             self.sot_root / "frappe" / "docs-reference",
-            projects_root / "Frappe-erp-Alco" / "frappe-docs-latest",
-            home / "Frappe-erp-Alco" / "frappe-docs-latest",
         ]
+        if projects_root.is_dir():
+            for p_sub in projects_root.iterdir():
+                if p_sub.is_dir():
+                    cand_docs.append(p_sub / "frappe-docs-latest")
+        if home.is_dir():
+            for h_sub in home.iterdir():
+                if h_sub.is_dir():
+                    cand_docs.append(h_sub / "frappe-docs-latest")
         target_ref = state_root / "official-references" / "frappe"
         for cand in cand_docs:
             if cand.is_dir() and (cand / "MANIFEST.json").is_file():
@@ -101,7 +107,10 @@ class FrappeBootstrapEngine:
                         target_ref.unlink()
                     elif target_ref.is_dir():
                         shutil.rmtree(target_ref)
-                    target_ref.symlink_to(cand.resolve(), target_is_directory=True)
+                    try:
+                        target_ref.symlink_to(cand.resolve(), target_is_directory=True)
+                    except Exception:
+                        shutil.copytree(cand.resolve(), target_ref)
                     report["official_reference_linked"] = str(cand)
                     break
                 except Exception:

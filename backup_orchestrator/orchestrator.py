@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from .agent_model import AgentState, AgentStateEvaluator
 from .config import BackupOrchestratorConfig
 from .db import Database
+from .bridge_adapter import BridgeAdapter
 from .gate import PromptGateCoordinator
 from .retention import RetentionManager
 from .timekeeping import Clock, RealClock, generate_backup_filename
@@ -61,6 +62,7 @@ class BackupOrchestrator:
         )
         self.watchers: Dict[str, ProjectFsWatcher] = {}
         self.project_metadata: Dict[str, Dict[str, Any]] = {}
+        self.bridge_adapter = BridgeAdapter(self.gate_coordinator, self.config.sot_root)
         self._init_projects_and_crash_recovery()
 
     def _init_projects_and_crash_recovery(self) -> None:
@@ -678,10 +680,21 @@ class BackupOrchestrator:
         - Handles termination signals gracefully
         """
         # On daemon startup, drain any existing HELD prompts for OPEN projects
-        for p_id in list(self.watchers.keys()):
+        conn = self.db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT project_id FROM projects_state WHERE prompt_gate = 'OPEN';")
+            open_projects = [r["project_id"] for r in cur.fetchall()]
+            cur.execute("SELECT DISTINCT project_id FROM held_prompt_queue WHERE status = 'HELD';")
+            held_projects = [r["project_id"] for r in cur.fetchall()]
+        finally:
+            conn.close()
+
+        all_projects = set(open_projects) | set(held_projects) | set(self.watchers.keys())
+        for p_id in all_projects:
             try:
-                row = self.gate_coordinator.get_gate_state(p_id)
-                if row.get("prompt_gate") == "OPEN":
+                gate_state = self.gate_coordinator.get_gate_state(p_id)
+                if gate_state.get("prompt_gate") == "OPEN":
                     self.gate_coordinator.open_gate(p_id)
             except Exception:
                 pass

@@ -781,6 +781,93 @@ def test_submit_prompt_isolated_no_crash_recovery(test_env):
         assert row["lifecycle_lock"] == "LOCKED"
         assert row["active_backup_id"] == "active_backup_123"
 
+    # Adversarial A1 check: fail-closed dispatch when SOT binary is missing
+    missing_bridge = BridgeAdapter(gate_coordinator=gate, sot_root=Path("/nonexistent/sot_root"))
+    missing_sot = Path("/nonexistent/sot_root/sot")
+    assert not missing_sot.exists()
+    # In BridgeAdapter, when SOT root or binary is invalid, dispatching cannot violate gate boundary
+    res_missing = missing_bridge.handle_incoming_message(
+        route_spec=project_id,
+        message_id="msg_a1_missing",
+        payload="adversarial prompt with missing SOT",
+    )
+    assert res_missing.status == "HELD"
+    assert res_missing.delivered is False
+
+    # Adversarial A1 check: Idempotency on duplicate message submission
+    res_dup1 = gate.dispatch_or_hold_message(project_id, "dup_msg_001", "term", "payload 1")
+    res_dup2 = gate.dispatch_or_hold_message(project_id, "dup_msg_001", "term", "payload 1")
+    assert res_dup1.status == res_dup2.status
+    assert res_dup1.sequence_num == res_dup2.sequence_num
+
+    # Adversarial A1 check: Unregistered project does not trigger Foreign Key crash
+    unreg_proj = "unregistered_test_proj_999"
+    res_unreg = gate.dispatch_or_hold_message(unreg_proj, "unreg_msg_001", "term", "payload unreg")
+    assert res_unreg.status in ("DISPATCHING", "HELD")
+
+    # Adversarial A1 check: whatsapp_bridge.js fails closed when SOT is missing or inaccessible
+    bridge_script = Path("/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/whatsapp_bridge.js")
+    if bridge_script.is_file():
+        # Test 1: SOT binary missing -> dispatchToTmux returns false
+        node_check_missing = subprocess.run(
+            ["node", "-e", f"""
+            process.env.SOT_PATH = '/nonexistent/sot/path';
+            const {{ dispatchToTmux }} = require('{bridge_script}');
+            const res = dispatchToTmux('test prompt missing sot', 'agy:0', 'test_msg_missing');
+            if (res !== false) process.exit(1);
+            process.exit(0);
+            """],
+            capture_output=True,
+            text=True,
+        )
+        assert node_check_missing.returncode == 0, f"Missing SOT check failed: {node_check_missing.stderr}"
+
+        # Test 2: SOT binary inaccessible (unreadable permissions) -> dispatchToTmux returns false
+        node_check_inacc = subprocess.run(
+            ["node", "-e", f"""
+            const fs = require('fs');
+            const tmp = '/tmp/unreadable_sot_adversarial_test';
+            fs.writeFileSync(tmp, '#!/bin/sh\\n');
+            fs.chmodSync(tmp, 0000);
+            process.env.SOT_PATH = tmp;
+            const {{ dispatchToTmux }} = require('{bridge_script}');
+            const res = dispatchToTmux('test prompt inacc sot', 'agy:0', 'test_msg_inacc');
+            fs.unlinkSync(tmp);
+            if (res !== false) process.exit(1);
+            process.exit(0);
+            """],
+            capture_output=True,
+            text=True,
+        )
+        assert node_check_inacc.returncode == 0, f"Inaccessible SOT check failed: {node_check_inacc.stderr}"
+
+        # Test 3: SOT binary is a directory -> dispatchToTmux returns false (fail closed)
+        node_check_dir = subprocess.run(
+            ["node", "-e", f"""
+            process.env.SOT_PATH = '/home/azureuser';
+            const {{ dispatchToTmux }} = require('{bridge_script}');
+            const res = dispatchToTmux('test prompt dir sot', 'agy:0', 'test_msg_dir');
+            if (res !== false) process.exit(1);
+            process.exit(0);
+            """],
+            capture_output=True,
+            text=True,
+        )
+        assert node_check_dir.returncode == 0, f"Directory SOT check failed: {node_check_dir.stderr}"
+
+    # Adversarial A1 check: Failing receiver in BridgeAdapter rolls back to HELD and prevents in-flight leak
+    gate_open_proj = "proj_a1_open"
+    gate.register_or_update_project(gate_open_proj, "proj_a1_open", str(proj_dir), initial_generation=1)
+    class FailingReceiver(BridgeTerminalReceiver):
+        def receive_message(self, message, is_arbitrary_cli=False):
+            return TerminalAck(message_id=message["message_id"], delivered=False, exactly_once_provable=False, status="FAILED", error="tty error")
+
+    failing_adapter = BridgeAdapter(gate, cfg.sot_root, FailingReceiver())
+    ack_fail = failing_adapter.handle_incoming_message(gate_open_proj, "msg_fail_receiver", "payload fail")
+    assert ack_fail.delivered is False
+    assert gate.has_in_flight_messages(gate_open_proj) is False
+    assert gate.close_gate(gate_open_proj) is True
+
 
 def test_gate_drain_fifo_delivery(test_env):
     """
@@ -822,4 +909,62 @@ def test_gate_drain_fifo_delivery(test_env):
     assert delivered_prompts[0] == (project_id, "prompt 1")
     assert delivered_prompts[1] == (project_id, "prompt 2")
     assert delivered_prompts[2] == (project_id, "prompt 3")
+
+    # Adversarial A2 check: Restarting daemon with HELD prompts auto-drains queue in FIFO order once OPEN
+    assert gate.close_gate(project_id) is True
+    d4 = gate.dispatch_or_hold_message(project_id, "msg4", "terminal", "prompt 4")
+    d5 = gate.dispatch_or_hold_message(project_id, "msg5", "terminal", "prompt 5")
+    assert d4.status == "HELD"
+    assert d5.status == "HELD"
+
+    # Set gate to OPEN in database while prompts are still HELD
+    with db.transaction() as cur:
+        cur.execute("UPDATE projects_state SET prompt_gate = 'OPEN' WHERE project_id = ?;", (project_id,))
+
+    # Start orchestrator daemon and verify it auto-drains on startup
+    import threading
+    orch = BackupOrchestrator(cfg)
+    orch.gate_coordinator.register_dispatch_handler(project_id, mock_dispatch)
+    stop_event = threading.Event()
+    stop_event.set()
+    orch.run_daemon(interval_seconds=1, stop_event=stop_event)
+
+    assert len(delivered_prompts) == 5
+    assert delivered_prompts[3] == (project_id, "prompt 4")
+    assert delivered_prompts[4] == (project_id, "prompt 5")
+
+    # Adversarial A2 check: Broker failure during drain rolls back status to HELD and prevents in-flight leak
+    assert gate.close_gate(project_id) is True
+    d_fail = gate.dispatch_or_hold_message(project_id, "msg_fail", "terminal", "prompt fail")
+    assert d_fail.status == "HELD"
+
+    failing_dispatch = lambda p: False
+    gate.register_dispatch_handler(project_id, failing_dispatch)
+    drained_failed = gate.open_gate(project_id)
+    assert drained_failed == 0
+
+    # Status must NOT be stuck in DISPATCHING
+    assert gate.has_in_flight_messages(project_id) is False
+    with db.transaction() as cur:
+        cur.execute("SELECT status FROM held_prompt_queue WHERE message_id = ?;", ("msg_fail",))
+        assert cur.fetchone()["status"] == "HELD"
+
+    # Future close_gate must succeed cleanly without being permanently blocked
+    assert gate.close_gate(project_id) is True
+
+    # Adversarial A2 check: Exception thrown by dispatch_func rolls back status to HELD and prevents in-flight leak
+    d_exc = gate.dispatch_or_hold_message(project_id, "msg_exc", "terminal", "prompt exc")
+    assert d_exc.status == "HELD"
+
+    def exploding_dispatch(p):
+        raise RuntimeError("Broker connection suddenly severed!")
+
+    gate.register_dispatch_handler(project_id, exploding_dispatch)
+    drained_exc = gate.open_gate(project_id)
+    assert drained_exc == 0
+    assert gate.has_in_flight_messages(project_id) is False
+    with db.transaction() as cur:
+        cur.execute("SELECT status FROM held_prompt_queue WHERE message_id = ?;", ("msg_exc",))
+        assert cur.fetchone()["status"] == "HELD"
+    assert gate.close_gate(project_id) is True
 

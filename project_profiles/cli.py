@@ -12,6 +12,7 @@ Provides CLI subcommands:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -29,14 +30,33 @@ def handle_frappe_cli(args, sot_root: Path) -> int:
         return 1
 
     action = getattr(args, "frappe_action", "doctor")
-    home = Path(args.home).resolve() if getattr(args, "home", None) else Path.home()
-    state_root = home / ".agents"
-    projects_root = home / "projects"
+    home = Path(args.home).resolve() if getattr(args, "home", None) else Path(os.environ.get("HOME", Path.home())).resolve()
+    state_root = Path(getattr(args, "state_root", None) or os.environ.get("STATE_ROOT") or (home / ".agents")).resolve()
+    projects_root = Path(getattr(args, "projects_root", None) or os.environ.get("PROJECTS_ROOT") or (home / "projects")).resolve()
     profile_roots = {"HOME": str(home), "STATE_ROOT": str(state_root), "PROJECTS_ROOT": str(projects_root)}
 
-    # Resolve project path
+    # Resolve project path with dynamic root mapping
     proj = manager.resolve_project(getattr(args, "project_id", "frappe_erp_alco") or "frappe_erp_alco", state_root=state_root)
-    proj_path = Path(proj.get("canonical_path", "")) if proj else Path(home / "Frappe-erp-Alco")
+    proj_path = None
+    if proj:
+        raw_cpath = proj.get("canonical_path", "")
+        mapped_cpath = raw_cpath.replace("${HOME}", str(home)).replace("${PROJECTS_ROOT}", str(projects_root))
+        if "/home/azureuser" in mapped_cpath and str(home) != "/home/azureuser":
+            mapped_cpath = mapped_cpath.replace("/home/azureuser", str(home))
+        cand_p = Path(mapped_cpath)
+        if not cand_p.exists():
+            for alt in [projects_root / Path(raw_cpath).name, home / Path(raw_cpath).name, projects_root / "frappe-bench", home / "frappe-bench"]:
+                if alt.exists():
+                    cand_p = alt
+                    break
+        proj_path = cand_p
+    else:
+        for alt in [projects_root / "frappe-bench", home / "frappe-bench"]:
+            if alt.exists():
+                proj_path = alt
+                break
+        if not proj_path:
+            proj_path = projects_root / "frappe-bench"
 
     if action == "doctor":
         report = profile.run_doctor(proj_path, profile_roots)
@@ -77,10 +97,15 @@ def handle_frappe_cli(args, sot_root: Path) -> int:
             candidates = [
                 sot_root / "frappe" / "docs-reference",
                 proj_path / "frappe-docs-latest",
-                projects_root / "Frappe-erp-Alco" / "frappe-docs-latest",
-                home / "Frappe-erp-Alco" / "frappe-docs-latest",
-                sot_root.parent / "Frappe-erp-Alco" / "frappe-docs-latest",
             ]
+            if projects_root.is_dir():
+                for p_sub in projects_root.iterdir():
+                    if p_sub.is_dir():
+                        candidates.append(p_sub / "frappe-docs-latest")
+            if home.is_dir():
+                for h_sub in home.iterdir():
+                    if h_sub.is_dir():
+                        candidates.append(h_sub / "frappe-docs-latest")
             source_dir = next((c for c in candidates if c.is_dir() and (c / "MANIFEST.json").is_file()), None)
         if not source_dir or not Path(source_dir).is_dir():
             print(json.dumps({"status": "FAIL", "error": "No valid reference source found with MANIFEST.json"}))
@@ -126,7 +151,9 @@ def handle_profile_cli(args, sot_root: Path) -> int:
     """Handles 'sot profile' subcommands."""
     manager = ProjectProfileManager(sot_root)
     action = getattr(args, "profile_action", "list")
-    state_root = Path(args.home).resolve() / ".agents" if getattr(args, "home", None) else Path.home() / ".agents"
+    home = Path(args.home).resolve() if getattr(args, "home", None) else Path(os.environ.get("HOME", Path.home())).resolve()
+    state_root = Path(getattr(args, "state_root", None) or os.environ.get("STATE_ROOT") or (home / ".agents")).resolve()
+    projects_root = Path(getattr(args, "projects_root", None) or os.environ.get("PROJECTS_ROOT") or (home / "projects")).resolve()
 
     if action == "list":
         profiles = ProfileRegistry.list_profiles()

@@ -92,8 +92,23 @@ class ProjectProfileManager:
         if not profile:
             return True, "GENERIC_PROJECT_GATE_PASS", {}
 
-        proj_path = Path(project.get("canonical_path", "")).resolve()
+        raw_cpath = project.get("canonical_path", "")
+        proj_path = Path(raw_cpath).resolve()
         s_root = state_root or (Path.home() / ".agents")
+        if not proj_path.exists() and state_root:
+            home = Path(state_root).resolve().parent
+            projects_root = home / "projects"
+            mapped = raw_cpath.replace("${HOME}", str(home)).replace("${PROJECTS_ROOT}", str(projects_root))
+            if "/home/azureuser" in mapped and str(home) != "/home/azureuser":
+                mapped = mapped.replace("/home/azureuser", str(home))
+            cand_p = Path(mapped)
+            if not cand_p.exists():
+                for alt in [projects_root / Path(raw_cpath).name, home / Path(raw_cpath).name, projects_root / "frappe-bench", home / "frappe-bench"]:
+                    if alt.exists():
+                        cand_p = alt
+                        break
+            if cand_p.exists():
+                proj_path = cand_p
 
         # 1. Compatibility Contract
         contract = profile.get_compatibility_contract(proj_path)
@@ -117,27 +132,88 @@ class ProjectProfileManager:
         files_to_scan: List[Path] = []
         if proposed_files:
             files_to_scan.extend(proposed_files)
-        else:
-            # Auto-inspect modified, staged, and untracked files in the project repository
-            try:
-                import subprocess
-                diff_cmd = subprocess.run(
-                    ["git", "status", "--porcelain"],
-                    cwd=proj_path,
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                )
-                if diff_cmd.returncode == 0:
-                    for line in diff_cmd.stdout.splitlines():
-                        parts = line.strip().split(maxsplit=1)
-                        if len(parts) == 2:
-                            rel_p = parts[1]
-                            full_p = proj_path / rel_p
-                            if full_p.is_file() and full_p.suffix == ".py":
-                                files_to_scan.append(full_p)
-            except Exception:
-                pass
+
+        # Collect changed (staged, unstaged, and untracked) files across:
+        # 1. Bench root / proj_path
+        # 2. Registered git.repository_path
+        # 3. All independently Git-managed apps inside apps directories
+        repos_to_scan: List[Path] = []
+        if proj_path.is_dir():
+            repos_to_scan.append(proj_path)
+
+        git_conf = project.get("git") or {}
+        reg_repo_path = git_conf.get("repository_path") or project.get("repository_path")
+        if reg_repo_path:
+            p_repo = Path(reg_repo_path).resolve()
+            if not p_repo.is_dir() and state_root:
+                home = Path(state_root).resolve().parent
+                projects_root = home / "projects"
+                mapped_repo = reg_repo_path.replace("${HOME}", str(home)).replace("${PROJECTS_ROOT}", str(projects_root))
+                if "/home/azureuser" in mapped_repo and str(home) != "/home/azureuser":
+                    mapped_repo = mapped_repo.replace("/home/azureuser", str(home))
+                cand_repo = Path(mapped_repo)
+                if not cand_repo.exists():
+                    for alt in [projects_root / Path(reg_repo_path).name, home / Path(reg_repo_path).name]:
+                        if alt.exists():
+                            cand_repo = alt
+                            break
+                if cand_repo.is_dir():
+                    p_repo = cand_repo
+            if p_repo.is_dir() and p_repo not in repos_to_scan:
+                repos_to_scan.append(p_repo)
+
+        # Look for apps directories in bench
+        candidate_apps_dirs = [
+            proj_path / "apps",
+            proj_path / "frappe-bench" / "apps",
+        ]
+        if reg_repo_path:
+            parent_p = Path(reg_repo_path).resolve().parent
+            if parent_p.name == "apps" and parent_p not in candidate_apps_dirs:
+                candidate_apps_dirs.append(parent_p)
+
+        non_git_app_files: List[Path] = []
+        for a_dir in candidate_apps_dirs:
+            if a_dir.is_dir():
+                for app_dir in a_dir.iterdir():
+                    if app_dir.is_dir():
+                        if (app_dir / ".git").exists():
+                            if app_dir not in repos_to_scan:
+                                repos_to_scan.append(app_dir)
+                        elif app_dir.name not in ("frappe", "erpnext"):
+                            for py_f in app_dir.glob("**/*.py"):
+                                if py_f.is_file() and py_f not in files_to_scan:
+                                    non_git_app_files.append(py_f)
+
+        if not proposed_files:
+            files_to_scan.extend(non_git_app_files)
+            import subprocess
+            for r_path in repos_to_scan:
+                try:
+                    diff_cmd = subprocess.run(
+                        ["git", "status", "--porcelain", "-uall"],
+                        cwd=r_path,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if diff_cmd.returncode == 0:
+                        for line in diff_cmd.stdout.splitlines():
+                            parts = line.strip().split(maxsplit=1)
+                            if len(parts) == 2:
+                                rel_p = parts[1].strip('"')
+                                if " -> " in rel_p:
+                                    rel_p = rel_p.split(" -> ")[-1].strip('"')
+                                full_p = r_path / rel_p
+                                if full_p.is_file() and full_p.suffix == ".py":
+                                    if full_p not in files_to_scan:
+                                        files_to_scan.append(full_p)
+                                elif full_p.is_dir():
+                                    for sub_py in full_p.glob("**/*.py"):
+                                        if sub_py.is_file() and sub_py not in files_to_scan:
+                                            files_to_scan.append(sub_py)
+                except Exception:
+                    pass
 
         if code_snippets:
             for fpath, code in code_snippets.items():
@@ -147,7 +223,7 @@ class ProjectProfileManager:
         for fpath in files_to_scan:
             if fpath.is_file() and fpath.suffix == ".py":
                 try:
-                    code = fpath.read_text(encoding="utf-8")
+                    code = fpath.read_text(encoding="utf-8", errors="replace")
                     p_findings = profile.check_code_patterns(fpath, code)
                     findings.extend(p_findings)
                 except Exception:

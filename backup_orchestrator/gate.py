@@ -87,13 +87,41 @@ class PromptGateCoordinator:
         proj_lock = self._get_project_lock(project_id)
         with proj_lock:
             with self.db.transaction() as cur:
-                # Read current gate state
+                # Ensure project record exists in projects_state to satisfy FOREIGN KEY constraint
                 cur.execute(
                     "SELECT prompt_gate FROM projects_state WHERE project_id = ?;",
                     (project_id,),
                 )
                 row = cur.fetchone()
-                gate_state = row["prompt_gate"] if row else "OPEN"
+                now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                if not row:
+                    cur.execute(
+                        """
+                        INSERT INTO projects_state (
+                            project_id, project_slug, canonical_path, dirty_generation,
+                            last_good_generation, prompt_gate, lifecycle_lock, updated_at
+                        ) VALUES (?, ?, ?, 0, 0, 'OPEN', 'UNLOCKED', ?);
+                        """,
+                        (project_id, project_id, routing_target or project_id, now_str),
+                    )
+                    gate_state = "OPEN"
+                else:
+                    gate_state = row["prompt_gate"]
+
+                # Check if message_id was already received (idempotency check)
+                cur.execute(
+                    "SELECT status, sequence_num FROM held_prompt_queue WHERE message_id = ?;",
+                    (message_id,),
+                )
+                existing = cur.fetchone()
+                if existing:
+                    return DispatchDecision(
+                        status=existing["status"],
+                        message_id=message_id,
+                        sequence_num=existing["sequence_num"],
+                        gate_state=gate_state,
+                        project_id=project_id,
+                    )
 
                 # Check if there are already held prompts for this project
                 cur.execute(
@@ -109,7 +137,6 @@ class PromptGateCoordinator:
                 )
                 seq_num = cur.fetchone()[0]
 
-                now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                 # If gate is CLOSED OR there are earlier held prompts, status must be HELD to preserve FIFO sequence
                 status = "DISPATCHING" if (gate_state == "OPEN" and held_count == 0) else "HELD"
 
@@ -254,7 +281,11 @@ class PromptGateCoordinator:
                     )
 
                 # Dispatch through normal receiver mechanism
-                success = dispatch_func(item)
+                try:
+                    success = dispatch_func(item)
+                except Exception:
+                    success = False
+
                 if success:
                     with self.db.transaction() as cur:
                         cur.execute(
@@ -263,10 +294,24 @@ class PromptGateCoordinator:
                         )
                     released_count += 1
                 else:
-                    # Keep as DISPATCHING or return to HELD if broker failed
+                    # Broker/receiver failed: roll back status to HELD so message is retried and does not permanently block close_gate
+                    with self.db.transaction() as cur:
+                        cur.execute(
+                            "UPDATE held_prompt_queue SET status = 'HELD', updated_at = ? WHERE id = ?;",
+                            (now_str, item["id"]),
+                        )
                     break
 
         return released_count
+
+    def rollback_to_held(self, message_id: str) -> None:
+        """Rolls back a DISPATCHING message to HELD upon broker/receiver delivery failure."""
+        now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with self.db.transaction() as cur:
+            cur.execute(
+                "UPDATE held_prompt_queue SET status = 'HELD', updated_at = ? WHERE message_id = ?;",
+                (now_str, message_id),
+            )
 
     def has_in_flight_messages(self, project_id: str) -> bool:
         """Checks if any messages are currently DISPATCHING for the project."""
@@ -280,3 +325,30 @@ class PromptGateCoordinator:
             return cur.fetchone()[0] > 0
         finally:
             conn.close()
+
+    def get_gate_state(self, project_id: str) -> Dict[str, Any]:
+        """Returns the current prompt gate state for a project."""
+        conn = self.db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT project_id, prompt_gate, lifecycle_lock, active_backup_id FROM projects_state WHERE project_id = ?;",
+                (project_id,),
+            )
+            row = cur.fetchone()
+            if row:
+                return {
+                    "project_id": row["project_id"],
+                    "prompt_gate": row["prompt_gate"],
+                    "lifecycle_lock": row["lifecycle_lock"],
+                    "active_backup_id": row["active_backup_id"],
+                }
+            return {
+                "project_id": project_id,
+                "prompt_gate": "OPEN",
+                "lifecycle_lock": "UNLOCKED",
+                "active_backup_id": None,
+            }
+        finally:
+            conn.close()
+

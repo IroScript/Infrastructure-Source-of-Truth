@@ -6,10 +6,16 @@
   "spaces": [
     "framework"
   ],
-  "pages_ok": 235,
+  "pages_ok": 236,
   "pages_failed": 0,
   "failures": [],
   "pages": [
+    {
+      "path": "framework/llms.txt",
+      "url": "https://docs.frappe.io/framework/llms.txt",
+      "bytes": 23734,
+      "sha256": "9a553dfda9eb9bab3b5bd7a0e68adad9cec0675c9f13375ffffc31c77740c25b"
+    },
     {
       "path": "framework/keyboard-shortcuts.md",
       "url": "https://docs.frappe.io/framework/keyboard-shortcuts.md",

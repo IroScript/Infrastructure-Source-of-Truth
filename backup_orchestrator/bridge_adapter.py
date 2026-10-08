@@ -176,8 +176,19 @@ class BridgeAdapter:
             "payload": payload,
             "sequence_num": decision.sequence_num,
         }
-        ack = self.terminal_receiver.receive_message(msg_obj, is_arbitrary_cli=is_arbitrary_cli)
-        if ack.delivered:
-            self.gate_coordinator.mark_message_delivered(message_id)
-
-        return ack
+        try:
+            ack = self.terminal_receiver.receive_message(msg_obj, is_arbitrary_cli=is_arbitrary_cli)
+            if ack.delivered:
+                self.gate_coordinator.mark_message_delivered(message_id)
+            else:
+                self.gate_coordinator.rollback_to_held(message_id)
+            return ack
+        except Exception as exc:
+            self.gate_coordinator.rollback_to_held(message_id)
+            return TerminalAck(
+                message_id=message_id,
+                delivered=False,
+                exactly_once_provable=False,
+                status="FAILED",
+                error=str(exc),
+            )
