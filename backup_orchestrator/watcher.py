@@ -178,7 +178,7 @@ class ProjectFsWatcher:
                 UPDATE projects_state
                 SET dirty_generation = dirty_generation + 1,
                     last_activity_mono = ?,
-                    filesystem_state = 'DIRTY',
+                    filesystem_state = CASE WHEN filesystem_state = 'UNKNOWN_DIRTY' THEN 'UNKNOWN_DIRTY' ELSE 'DIRTY' END,
                     updated_at = ?
                 WHERE project_id = ?;
                 """,

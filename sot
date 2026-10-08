@@ -259,6 +259,8 @@ def main():
     bo_cid = bos.add_parser("client-id-check"); bo_cid.add_argument("--remote"); bo_cid.add_argument("--home"); bo_cid.set_defaults(func=cmd_backup_orchestrator)
     bo_exp = bos.add_parser("export-state"); bo_exp.add_argument("output_file"); bo_exp.add_argument("--key"); bo_exp.add_argument("--home"); bo_exp.set_defaults(func=cmd_backup_orchestrator)
     bo_imp = bos.add_parser("import-state"); bo_imp.add_argument("input_file"); bo_imp.add_argument("--key"); bo_imp.add_argument("--home"); bo_imp.set_defaults(func=cmd_backup_orchestrator)
+    bo_daemon = bos.add_parser("run-daemon"); bo_daemon.add_argument("--home"); bo_daemon.add_argument("--interval", type=int, default=30); bo_daemon.set_defaults(func=cmd_backup_orchestrator)
+    bo_prompt = bos.add_parser("submit-prompt"); bo_prompt.add_argument("--route", required=True); bo_prompt.add_argument("--message-id", default=""); bo_prompt.add_argument("--payload", default=""); bo_prompt.add_argument("--base64", action="store_true"); bo_prompt.add_argument("--home"); bo_prompt.set_defaults(func=cmd_backup_orchestrator)
     fr = sub.add_parser("frappe")
     frs = fr.add_subparsers(dest="frappe_action", required=True)
     fr_doc = frs.add_parser("doctor"); fr_doc.add_argument("--home"); fr_doc.add_argument("--format", choices=["json", "text"], default="text"); fr_doc.set_defaults(func=cmd_frappe)
@@ -275,6 +277,8 @@ def main():
     project = sub.add_parser("project"); project.add_argument("action", choices=["discover", "audit", "register", "finalize"]); project.add_argument("--path"); project.add_argument("--name", default=""); project.add_argument("--project-id", default=""); project.add_argument("--remote",default=""); project.add_argument("--branch",default="main"); project.add_argument("--local-only",action="store_true"); project.add_argument("--type",default="application"); project.add_argument("--data-files",default=""); project.add_argument("--data-classification",choices=["unknown","source_only","persistent_data","mixed"],default="unknown"); project.add_argument("--verification-profile",default="deterministic"); project.add_argument("--tmux",default=""); project.add_argument("--whatsapp-group",default=""); project.add_argument("--whatsapp-route",default=""); project.add_argument("--push",action="store_true"); project.set_defaults(func=cmd_project)
     backup = sub.add_parser("backup"); backup.add_argument("action", choices=["inventory", "verify", "restore-test"], default="inventory"); backup.add_argument("--asset"); backup.set_defaults(func=cmd_backup)
     evidence = sub.add_parser("evidence"); evidence.add_argument("action", choices=["validate", "init", "handoff"]); evidence.add_argument("path", nargs="?"); evidence.add_argument("--task-id"); evidence.add_argument("--project-uuid"); evidence.add_argument("--request-summary", default=""); evidence.set_defaults(func=cmd_evidence)
+    if len(sys.argv) >= 3 and sys.argv[1] == "backup" and sys.argv[2] == "orchestrator":
+        sys.argv = [sys.argv[0], "backup-orchestrator"] + sys.argv[3:]
     args = parser.parse_args()
     try:
         return args.func(args)

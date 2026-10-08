@@ -25,16 +25,24 @@ class PromptGateCoordinator:
     the backup orchestrator gate boundary.
     """
 
-    _project_locks: Dict[str, threading.Lock] = {}
+    _project_locks: Dict[str, threading.RLock] = {}
     _global_meta_lock = threading.Lock()
 
     def __init__(self, db: Database):
         self.db = db
+        self._dispatch_handlers: Dict[str, Callable[[Dict[str, Any]], bool]] = {}
+        self._default_dispatch_handler: Optional[Callable[[Dict[str, Any]], bool]] = None
 
-    def _get_project_lock(self, project_id: str) -> threading.Lock:
+    def set_default_dispatch_handler(self, handler: Callable[[Dict[str, Any]], bool]) -> None:
+        self._default_dispatch_handler = handler
+
+    def register_dispatch_handler(self, project_id: str, handler: Callable[[Dict[str, Any]], bool]) -> None:
+        self._dispatch_handlers[project_id] = handler
+
+    def _get_project_lock(self, project_id: str) -> threading.RLock:
         with self._global_meta_lock:
             if project_id not in self._project_locks:
-                self._project_locks[project_id] = threading.Lock()
+                self._project_locks[project_id] = threading.RLock()
             return self._project_locks[project_id]
 
     def register_or_update_project(
@@ -71,9 +79,9 @@ class PromptGateCoordinator:
         """
         Atomic dispatch boundary for incoming prompts.
         BEGIN transaction / project coordination lock:
-        read PROMPT_GATE
-        if OPEN: atomically persist message as DISPATCHING, return DISPATCHING
-        if CLOSED: atomically persist as HELD, return HELD
+        read PROMPT_GATE and existing HELD count
+        if OPEN and HELD count == 0: atomically persist message as DISPATCHING, return DISPATCHING
+        if CLOSED or HELD count > 0: atomically persist as HELD, return HELD
         COMMIT
         """
         proj_lock = self._get_project_lock(project_id)
@@ -87,6 +95,13 @@ class PromptGateCoordinator:
                 row = cur.fetchone()
                 gate_state = row["prompt_gate"] if row else "OPEN"
 
+                # Check if there are already held prompts for this project
+                cur.execute(
+                    "SELECT COUNT(*) FROM held_prompt_queue WHERE project_id = ? AND status = 'HELD';",
+                    (project_id,),
+                )
+                held_count = cur.fetchone()[0]
+
                 # Get next monotonic sequence number for project
                 cur.execute(
                     "SELECT COALESCE(MAX(sequence_num), 0) + 1 FROM held_prompt_queue WHERE project_id = ?;",
@@ -95,7 +110,8 @@ class PromptGateCoordinator:
                 seq_num = cur.fetchone()[0]
 
                 now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-                status = "DISPATCHING" if gate_state == "OPEN" else "HELD"
+                # If gate is CLOSED OR there are earlier held prompts, status must be HELD to preserve FIFO sequence
+                status = "DISPATCHING" if (gate_state == "OPEN" and held_count == 0) else "HELD"
 
                 cur.execute(
                     """
@@ -106,13 +122,21 @@ class PromptGateCoordinator:
                     (project_id, message_id, routing_target, payload, seq_num, status, now_str, now_str),
                 )
 
-                return DispatchDecision(
+                decision = DispatchDecision(
                     status=status,
                     message_id=message_id,
                     sequence_num=seq_num,
                     gate_state=gate_state,
                     project_id=project_id,
                 )
+
+            # If gate is OPEN but there were held items, auto-trigger FIFO drain
+            if gate_state == "OPEN" and held_count > 0:
+                fn = self._dispatch_handlers.get(project_id) or self._default_dispatch_handler
+                if fn:
+                    self.release_held_prompts(project_id, fn)
+
+            return decision
 
     def mark_message_delivered(self, message_id: str) -> None:
         """Marks a DISPATCHING message as DELIVERED upon broker/receiver confirmation."""
@@ -169,8 +193,8 @@ class PromptGateCoordinator:
 
             return True
 
-    def open_gate(self, project_id: str) -> None:
-        """Opens prompt gate immediately."""
+    def open_gate(self, project_id: str, dispatch_func: Optional[Callable[[Dict[str, Any]], bool]] = None) -> int:
+        """Opens prompt gate immediately and drains held prompts in strict FIFO order."""
         proj_lock = self._get_project_lock(project_id)
         with proj_lock:
             now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -179,6 +203,10 @@ class PromptGateCoordinator:
                     "UPDATE projects_state SET prompt_gate = 'OPEN', updated_at = ? WHERE project_id = ?;",
                     (now_str, project_id),
                 )
+            fn = dispatch_func or self._dispatch_handlers.get(project_id) or self._default_dispatch_handler
+            if fn:
+                return self.release_held_prompts(project_id, fn)
+            return 0
 
     def release_held_prompts(
         self,

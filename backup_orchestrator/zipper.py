@@ -47,7 +47,11 @@ class ProjectZipper:
         """
         project_root = Path(project_root).resolve()
         final_zip_path = self.staging_dir / archive_name
-        partial_zip_path = self.staging_dir / f"{archive_name}.partial"
+        if archive_name.endswith(".zip"):
+            partial_name = archive_name[:-4] + ".partial.zip"
+        else:
+            partial_name = f"{archive_name}.partial.zip"
+        partial_zip_path = self.staging_dir / partial_name
 
         if partial_zip_path.exists():
             partial_zip_path.unlink()
@@ -121,29 +125,29 @@ class ProjectZipper:
                     error="Filesystem mutation observed during zip archive creation",
                 )
 
-            # Atomic rename from .partial to final
-            partial_zip_path.rename(final_zip_path)
-
-            # Local verification: testzip()
-            with zipfile.ZipFile(final_zip_path, "r") as test_zf:
+            # Local verification on .partial.zip: testzip()
+            with zipfile.ZipFile(partial_zip_path, "r") as test_zf:
                 bad_file = test_zf.testzip()
                 if bad_file:
-                    final_zip_path.unlink(missing_ok=True)
+                    partial_zip_path.unlink(missing_ok=True)
                     return ZipResult(
                         status="VERIFICATION_FAILED",
                         archive_path=None,
                         error=f"Corrupted file inside archive: {bad_file}",
                     )
 
-            # Calculate SHA256 and MD5
+            # Calculate SHA256 and MD5 on .partial.zip
             sha256_hash = hashlib.sha256()
             md5_hash = hashlib.md5()
             total_size = 0
-            with open(final_zip_path, "rb") as f:
+            with open(partial_zip_path, "rb") as f:
                 while chunk := f.read(1024 * 1024):
                     sha256_hash.update(chunk)
                     md5_hash.update(chunk)
                     total_size += len(chunk)
+
+            # Atomic rename from .partial.zip to final .zip only after full verification passes
+            partial_zip_path.rename(final_zip_path)
 
             return ZipResult(
                 status="LOCAL_VERIFIED",

@@ -4,6 +4,7 @@ Manages official reference verification, deprecation tagging, and freshness gate
 """
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import shutil
@@ -120,10 +121,29 @@ class FrappeReferenceManager:
             except Exception as exc:
                 warnings.append(f"MANIFEST.json unreadable: {exc}")
 
-        # Check major version match
-        # If manifest indicates another major (e.g. v15 when targeting 16)
+        # 1. Check source domain (must originate from docs.frappe.io)
+        source = manifest_data.get("source", "https://docs.frappe.io")
+        if not (source.startswith("https://docs.frappe.io") or source.startswith("http://docs.frappe.io")):
+            return ProfileVerificationResult(
+                status="FAIL",
+                profile_name="frappe",
+                errors=[f"INVALID_SOURCE_DOMAIN: Reference source '{source}' must originate from docs.frappe.io."],
+                details={"reference_path": str(ref_dir), "source": source},
+            )
+
+        # 2. Check major version match (prioritized so version mismatch triggers accurately)
         manifest_major = manifest_data.get("frappe_major")
-        if manifest_major and int(manifest_major) != target_major:
+        if manifest_major is None:
+            if "docs.frappe.io" in source and target_major == 16:
+                manifest_major = 16
+            else:
+                return ProfileVerificationResult(
+                    status="FAIL",
+                    profile_name="frappe",
+                    errors=[f"VERSION_MISMATCH: Manifest does not declare frappe_major {target_major} for target branch {target_branch}."],
+                    details={"reference_path": str(ref_dir), "manifest_major": None, "target_major": target_major},
+                )
+        if int(manifest_major) != target_major:
             return ProfileVerificationResult(
                 status="FAIL",
                 profile_name="frappe",
@@ -131,19 +151,37 @@ class FrappeReferenceManager:
                 details={"reference_path": str(ref_dir), "manifest_major": manifest_major, "target_major": target_major},
             )
 
-        page_count = manifest_data.get("pages_ok", len(list(ref_dir.glob("**/*.md"))))
+        # 3. Check physical markdown documentation pages on disk (fail closed, never trust manifest blindly)
+        physical_pages = list(ref_dir.glob("**/*.md"))
+        page_count = len(physical_pages)
         if page_count == 0:
             return ProfileVerificationResult(
                 status="FAIL",
                 profile_name="frappe",
-                errors=["FRAPPE_REFERENCE_NOT_VERIFIED: Reference directory contains 0 documentation pages."],
-                details={"reference_path": str(ref_dir)},
+                errors=["FRAPPE_REFERENCE_NOT_VERIFIED: Reference directory contains 0 physical markdown documentation pages on disk."],
+                details={"reference_path": str(ref_dir), "physical_pages": 0},
             )
 
+        # 4. Check freshness age
         fetched_at = manifest_data.get("fetched_at_utc")
+        if fetched_at and max_age_days > 0:
+            try:
+                clean_ts = fetched_at.replace("Z", "+00:00")
+                parsed_dt = datetime.datetime.fromisoformat(clean_ts)
+                age_days = (datetime.datetime.now(datetime.timezone.utc) - parsed_dt).total_seconds() / 86400
+                if age_days > max_age_days:
+                    return ProfileVerificationResult(
+                        status="FAIL",
+                        profile_name="frappe",
+                        errors=[f"REFERENCE_STALE: Reference age ({age_days:.1f} days) exceeds maximum allowed age ({max_age_days} days)."],
+                        details={"reference_path": str(ref_dir), "age_days": age_days, "max_age_days": max_age_days},
+                    )
+            except Exception as exc:
+                warnings.append(f"Could not parse fetched_at_utc timestamp: {exc}")
+
         details["reference_path"] = str(ref_dir)
         details["page_count"] = page_count
-        details["source"] = manifest_data.get("source", "https://docs.frappe.io")
+        details["source"] = source
         details["target_major"] = target_major
         details["target_branch"] = target_branch
         details["fetched_at_utc"] = fetched_at

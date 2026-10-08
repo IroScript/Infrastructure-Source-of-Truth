@@ -62,5 +62,32 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
         print(json.dumps({"imported_encrypted_state": str(in_file), "status": "PASS"}, indent=2))
         return 0
 
+    if action == "run-daemon":
+        interval = getattr(args, "interval", 30)
+        try:
+            orchestrator.run_daemon(interval_seconds=interval)
+            return 0
+        except KeyboardInterrupt:
+            return 0
+        except Exception as exc:
+            print(f"Daemon error: {exc}", file=sys.stderr)
+            return 1
+
+    if action == "submit-prompt":
+        import base64
+        route = getattr(args, "route", "")
+        msg_id = getattr(args, "message_id", "") or f"msg-{int(time.time() * 1000)}"
+        payload = getattr(args, "payload", "")
+        if getattr(args, "base64", False) and payload:
+            try:
+                payload = base64.b64decode(payload).decode("utf-8")
+            except Exception:
+                pass
+        from .bridge_adapter import BridgeAdapter
+        adapter = BridgeAdapter(orchestrator.gate_coordinator, sot_root)
+        ack = adapter.handle_incoming_message(route_spec=route, message_id=msg_id, payload=payload, is_arbitrary_cli=False)
+        print(json.dumps(ack.__dict__, indent=2))
+        return 0 if ack.status in ("DELIVERED", "HELD") else 1
+
     print(f"Unknown action: {action}", file=sys.stderr)
     return 2

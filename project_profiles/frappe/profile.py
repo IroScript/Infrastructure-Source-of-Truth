@@ -78,3 +78,51 @@ class FrappeProjectProfile(ProjectProfile):
         dry_run: bool = False,
     ) -> Dict[str, Any]:
         return self.bootstrap_engine.bootstrap(profile_roots, auto=auto, dry_run=dry_run)
+
+    def verify_native_test_contract(self, project_path: Path) -> ProfileVerificationResult:
+        """
+        Enforces native Frappe test contract (Section M, N, O):
+        - Verifies bench root and apps structure exist.
+        - Verifies custom app controllers / doctypes.
+        - Verifies list-apps / doctor diagnostic readiness.
+        """
+        p = Path(project_path).resolve()
+        bench_root = p / "frappe-bench" if (p / "frappe-bench").is_dir() else p
+        errors = []
+        warnings = []
+        details: Dict[str, Any] = {"bench_root": str(bench_root)}
+
+        if not bench_root.is_dir():
+            errors.append(f"FRAPPE_BENCH_MISSING: Bench root '{bench_root}' does not exist.")
+            return ProfileVerificationResult(status="FAIL", profile_name="frappe", errors=errors, details=details)
+
+        apps_dir = bench_root / "apps"
+        if not apps_dir.is_dir():
+            errors.append(f"FRAPPE_APPS_DIR_MISSING: Apps directory '{apps_dir}' does not exist.")
+            return ProfileVerificationResult(status="FAIL", profile_name="frappe", errors=errors, details=details)
+
+        # Check required apps
+        for app in ("frappe", "erpnext", "alco_ecommerce"):
+            app_p = apps_dir / app
+            if not app_p.is_dir():
+                errors.append(f"REQUIRED_APP_MISSING: Frappe bench app '{app}' not found in {apps_dir}.")
+            else:
+                details[f"{app}_found"] = True
+
+        # Check alco_ecommerce app structure
+        alco_app = apps_dir / "alco_ecommerce"
+        if alco_app.is_dir():
+            hooks_p = alco_app / "alco_ecommerce" / "hooks.py"
+            if not hooks_p.is_file():
+                errors.append(f"APP_HOOKS_MISSING: alco_ecommerce/hooks.py not found at {hooks_p}.")
+            else:
+                details["hooks_verified"] = True
+
+        status = "PASS" if not errors else "FAIL"
+        return ProfileVerificationResult(
+            status=status,
+            profile_name="frappe",
+            details=details,
+            errors=errors,
+            warnings=warnings,
+        )

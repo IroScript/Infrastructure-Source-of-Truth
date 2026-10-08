@@ -131,6 +131,13 @@ class ProjectProfileManager:
         if findings:
             return False, "OUTDATED_FRAPPE_PATTERN", {"pattern_findings": findings}
 
+        # 5. Native Test and Component Structure Verification
+        if hasattr(profile, "verify_native_test_contract"):
+            test_res = profile.verify_native_test_contract(proj_path)
+            if not test_res.is_pass:
+                err = test_res.errors[0] if test_res.errors else "FRAPPE_TEST_CONTRACT_FAILED"
+                return False, err, {"test_contract": test_res.details, "errors": test_res.errors}
+
         return True, "OFFICIAL_SOURCE_GATE_PASS", {
             "profile": profile.profile_name,
             "contract": contract,

@@ -60,6 +60,7 @@ class BackupOrchestrator:
             self.db, max_good_retention=self.config.retention_count
         )
         self.watchers: Dict[str, ProjectFsWatcher] = {}
+        self.project_metadata: Dict[str, Dict[str, Any]] = {}
         self._init_projects_and_crash_recovery()
 
     def _init_projects_and_crash_recovery(self) -> None:
@@ -79,6 +80,7 @@ class BackupOrchestrator:
             if not p_id or not c_path:
                 continue
 
+            self.project_metadata[p_id] = p
             self.gate_coordinator.register_or_update_project(
                 project_id=p_id,
                 project_slug=p_slug,
@@ -196,6 +198,11 @@ class BackupOrchestrator:
         10. Executes retention transaction (prunes oldest if count > 10).
         11. Releases project lifecycle lock.
         """
+        # Invariant: Drain inotify events FIRST so recent writes are never skipped
+        watcher = self.watchers.get(project_id)
+        if watcher:
+            watcher.process_events()
+
         conn = self.db.get_connection()
         try:
             cur = conn.cursor()
@@ -241,10 +248,6 @@ class BackupOrchestrator:
             )
 
         # Invariant: Quiet interval >= 30 minutes
-        watcher = self.watchers.get(project_id)
-        if watcher:
-            watcher.process_events()
-
         if not force and watcher and not watcher.is_quiet_interval_satisfied(self.config.quiet_interval_seconds):
             return BackupCycleResult(
                 project_id=project_id,
@@ -255,8 +258,21 @@ class BackupOrchestrator:
 
         # Invariant: Agent state must be IDLE (or safe OFFLINE)
         has_in_flight = self.gate_coordinator.has_in_flight_messages(project_id)
+        p_meta = self.project_metadata.get(project_id, {})
+        runtime_info = p_meta.get("runtime", {})
+        tmux_win = runtime_info.get("tmux_window") or p_meta.get("tmux", "")
+        windows = [w.strip() for w in tmux_win.split(",") if w.strip()] if isinstance(tmux_win, str) else []
+        session = "agy"
+        if windows and ":" in windows[0]:
+            session = windows[0].split(":")[0]
+        project_connections = {
+            "tmux": {
+                "session": session,
+                "windows": windows,
+            }
+        }
         agent_st = self.agent_evaluator.evaluate_project_agents(
-            project_connections={},
+            project_connections=project_connections,
             has_in_flight_messages=has_in_flight,
             mock_override=agent_state_override,
         )
@@ -288,7 +304,7 @@ class BackupOrchestrator:
         gate_closed = self.gate_coordinator.close_gate(
             project_id=project_id,
             recheck_agent_callback=lambda: self.agent_evaluator.is_backup_eligible(
-                self.agent_evaluator.evaluate_project_agents({}, False, mock_override=agent_state_override),
+                self.agent_evaluator.evaluate_project_agents(project_connections, False, mock_override=agent_state_override),
                 self.gate_coordinator.has_in_flight_messages(project_id),
             ),
             recheck_generation_callback=lambda: (
@@ -349,30 +365,60 @@ class BackupOrchestrator:
             finally:
                 conn.close()
 
-        zip_res = self.zipper.create_project_zip(
-            project_root=project_root,
-            archive_name=archive_name,
-            zip_start_generation=captured_gen,
-            check_mutation_callback=check_mutation,
-            get_current_generation_callback=get_current_gen,
-        )
+        try:
+            zip_res = self.zipper.create_project_zip(
+                project_root=project_root,
+                archive_name=archive_name,
+                zip_start_generation=captured_gen,
+                check_mutation_callback=check_mutation,
+                get_current_generation_callback=get_current_gen,
+            )
 
-        # 3. Prompt gate OPENS immediately after local ZIP creation/verification
-        self.gate_coordinator.open_gate(project_id)
+            # 3. Prompt gate OPENS immediately after local ZIP creation/verification
+            self.gate_coordinator.open_gate(project_id)
 
-        if zip_res.status != "LOCAL_VERIFIED":
-            # Mutation or verification failed
+            if zip_res.status != "LOCAL_VERIFIED":
+                # Mutation or verification failed
+                status_val = "MUTATION_INVALIDATED" if zip_res.mutation_seen else "FAILED"
+                with self.db.transaction() as cur:
+                    cur.execute(
+                        """
+                        UPDATE backup_runs
+                        SET status = ?,
+                            mutation_seen = ?,
+                            error_message = ?,
+                            finished_at = ?
+                        WHERE backup_id = ?;
+                        """,
+                        (status_val, int(zip_res.mutation_seen), zip_res.error, now_str, backup_id),
+                    )
+                    cur.execute(
+                        """
+                        UPDATE projects_state
+                        SET lifecycle_lock = 'UNLOCKED', active_backup_id = NULL, updated_at = ?
+                        WHERE project_id = ?;
+                        """,
+                        (now_str, project_id),
+                    )
+                return BackupCycleResult(
+                    project_id=project_id,
+                    action_taken="MUTATION_ABORTED" if zip_res.mutation_seen else "ZIP_FAILED",
+                    backup_id=backup_id,
+                    captured_generation=captured_gen,
+                    dirty_generation=get_current_gen(),
+                    last_good_generation=last_good,
+                    error=zip_res.error,
+                )
+        except Exception as exc:
+            self.gate_coordinator.open_gate(project_id)
             with self.db.transaction() as cur:
                 cur.execute(
                     """
                     UPDATE backup_runs
-                    SET status = 'MUTATION_INVALIDATED' if ? else 'FAILED',
-                        mutation_seen = ?,
-                        error_message = ?,
-                        finished_at = ?
+                    SET status = 'FAILED', error_message = ?, finished_at = ?
                     WHERE backup_id = ?;
                     """,
-                    (zip_res.mutation_seen, int(zip_res.mutation_seen), zip_res.error, now_str, backup_id),
+                    (str(exc), now_str, backup_id),
                 )
                 cur.execute(
                     """
@@ -382,15 +428,7 @@ class BackupOrchestrator:
                     """,
                     (now_str, project_id),
                 )
-            return BackupCycleResult(
-                project_id=project_id,
-                action_taken="MUTATION_ABORTED" if zip_res.mutation_seen else "ZIP_FAILED",
-                backup_id=backup_id,
-                captured_generation=captured_gen,
-                dirty_generation=get_current_gen(),
-                last_good_generation=last_good,
-                error=zip_res.error,
-            )
+            raise
 
         # Local ZIP verified! Update backup run state
         with self.db.transaction() as cur:
@@ -630,3 +668,27 @@ class BackupOrchestrator:
             "rclone_client_id_audit": rclone_audit,
             "staging_dir": str(self.config.staging_dir),
         }
+
+    def run_daemon(self, interval_seconds: int = 30, stop_event: Optional[Any] = None) -> None:
+        """
+        Continuous unattended daemon execution loop (Section 58):
+        - Evaluates all registered projects periodically
+        - Runs backup cycles for eligible projects
+        - Retries failed uploads
+        - Handles termination signals gracefully
+        """
+        while not (stop_event and stop_event.is_set()):
+            for project_id in list(self.watchers.keys()):
+                try:
+                    self.run_cycle_for_project(project_id)
+                except Exception:
+                    pass
+            try:
+                self.retry_pending_uploads()
+            except Exception:
+                pass
+            if stop_event:
+                if stop_event.wait(timeout=interval_seconds):
+                    break
+            else:
+                time.sleep(interval_seconds)

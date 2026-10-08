@@ -48,27 +48,51 @@ class FrappeCoreGuard:
             if not app_dir.is_dir() or not (app_dir / ".git").exists():
                 continue
 
-            # Run git diff for python/framework source
+            # 1. Unstaged modifications
             diff_proc = subprocess.run(
                 ["git", "-C", str(app_dir), "diff", "--name-status"],
                 capture_output=True,
                 text=True,
                 timeout=10,
             )
-            dirty_files = [line.strip() for line in diff_proc.stdout.strip().split("\n") if line.strip()]
+            # 2. Staged modifications
+            cached_proc = subprocess.run(
+                ["git", "-C", str(app_dir), "diff", "--cached", "--name-status"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            # 3. Untracked files
+            status_proc = subprocess.run(
+                ["git", "-C", str(app_dir), "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
 
-            # Filter out known build artifacts like lockfiles from yarn if needed
+            all_entries = []
+            for line in diff_proc.stdout.strip().split("\n"):
+                if line.strip():
+                    all_entries.append((line.strip(), "unstaged"))
+            for line in cached_proc.stdout.strip().split("\n"):
+                if line.strip():
+                    all_entries.append((line.strip(), "staged"))
+            for line in status_proc.stdout.strip().split("\n"):
+                clean_l = line.strip()
+                if clean_l.startswith("??"):
+                    all_entries.append((clean_l[2:].strip(), "untracked"))
+
             code_mods = []
-            for item in dirty_files:
+            for item, kind in all_entries:
                 parts = item.split(None, 1)
                 fname = parts[1] if len(parts) > 1 else parts[0]
-                if fname.endswith(".py") or fname.startswith(core):
-                    code_mods.append(fname)
+                if fname.endswith(".py") or fname.startswith(core) or fname.endswith(".js"):
+                    code_mods.append(f"{fname} ({kind})")
                 else:
-                    warnings.append(f"{core} non-code working tree modification: {fname}")
+                    warnings.append(f"{core} non-code working tree modification: {fname} ({kind})")
 
             if code_mods:
-                errors.append(f"CORE_MODIFICATION_PROHIBITED: Upstream {core} contains uncommitted code edits: {code_mods}")
+                errors.append(f"CORE_MODIFICATION_PROHIBITED: Upstream {core} contains code edits: {code_mods}")
                 details[f"{core}_modified_code"] = code_mods
             else:
                 details[f"{core}_status"] = "CLEAN"

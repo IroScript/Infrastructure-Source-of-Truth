@@ -72,9 +72,14 @@ def handle_frappe_cli(args, sot_root: Path) -> int:
     elif action == "sync-reference":
         source_dir = getattr(args, "source_dir", None)
         if not source_dir:
-            source_dir = proj_path / "frappe-docs-latest"
-            if not source_dir.is_dir():
-                source_dir = Path("/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-docs-latest")
+            candidates = [
+                proj_path / "frappe-docs-latest",
+                projects_root / "Frappe-erp-Alco" / "frappe-docs-latest",
+                home / "Frappe-erp-Alco" / "frappe-docs-latest",
+                sot_root.parent / "Frappe-erp-Alco" / "frappe-docs-latest",
+                sot_root / "frappe" / "docs-reference",
+            ]
+            source_dir = next((c for c in candidates if c.is_dir()), proj_path / "frappe-docs-latest")
         source_p = Path(source_dir).resolve()
         from .frappe import FrappeReferenceManager
         ref_mgr = FrappeReferenceManager(sot_root)

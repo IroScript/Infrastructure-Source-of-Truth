@@ -407,6 +407,41 @@ def main():
                 "reason": f"🛑 [DELETE-GUARD HARD DENIAL: RULE_38] {reason}. Inc-ID: {inc_id}."
             }))
             return
+        # Frappe & Project Profile Governance (Sections E, K, U)
+        if "/apps/frappe/" in target_file or "/apps/erpnext/" in target_file:
+            reason = f"Direct modification of upstream core framework ({target_file}) is strictly forbidden. Business logic must reside in custom apps."
+            try:
+                inc = log_incident(tool_name, {"TargetFile": target_file}, reason, "CORE_MODIFICATION_PROHIBITED")
+                inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+            except Exception:
+                inc_id = "UNKNOWN"
+            print(json.dumps({
+                "decision": "deny",
+                "reason": f"🛑 [DELETE-GUARD HARD DENIAL: CORE_MODIFICATION_PROHIBITED] {reason}. Inc-ID: {inc_id}."
+            }))
+            return
+
+        code_text = args.get("CodeContent") or args.get("ReplacementContent") or ""
+        if code_text and target_file.endswith(".py"):
+            forbidden_patterns = [
+                ("frappe.get_doc_before_save", "Use doc.get_doc_before_save()"),
+                ("frappe.cache().hset", "Use frappe.cache.hset() without parens"),
+                ("frappe.cache().hget", "Use frappe.cache.hget() without parens"),
+                ("frappe.db.sql_ddl", "Use frappe.db.create_table() or Schema API"),
+            ]
+            for pat, rec in forbidden_patterns:
+                if pat in code_text:
+                    reason = f"Code contains outdated Frappe API '{pat}'. Recommendation: {rec}."
+                    try:
+                        inc = log_incident(tool_name, {"TargetFile": target_file, "pattern": pat}, reason, "OUTDATED_FRAPPE_PATTERN")
+                        inc_id = inc.get("incident_id", "UNKNOWN") if isinstance(inc, dict) else "UNKNOWN"
+                    except Exception:
+                        inc_id = "UNKNOWN"
+                    print(json.dumps({
+                        "decision": "deny",
+                        "reason": f"🛑 [DELETE-GUARD HARD DENIAL: OUTDATED_FRAPPE_PATTERN] {reason}. Inc-ID: {inc_id}."
+                    }))
+                    return
 
     elif tool_name == "view_file":
         abs_path = args.get("AbsolutePath", "")
