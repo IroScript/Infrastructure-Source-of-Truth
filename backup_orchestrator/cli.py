@@ -74,19 +74,19 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
                 "status": "DUPLICATE_REJECTED",
             }
         else:
-            # DISPATCHING means gate is OPEN and message is in-flight to terminal (Section 45).
-            # Output DELIVERED for bridge consumers requiring DELIVERED acknowledgment.
-            delivered_status = "DELIVERED" if decision.status == "DISPATCHING" else decision.status
+            status_name = "ACCEPTED_FOR_DELIVERY" if decision.status == "DISPATCHING" else decision.status
             ack = {
                 "message_id": msg_id,
-                "delivered": decision.status == "DISPATCHING",
+                "delivered": False,
                 "exactly_once_provable": True,
-                "status": delivered_status,
+                "status": status_name,
+                "dispatch_state": decision.status,
                 "gate_state": decision.gate_state,
                 "sequence_num": decision.sequence_num,
+                "delivery_owner": "daemon",
             }
         print(json.dumps(ack, indent=2))
-        return 0 if ack["status"] in ("DELIVERED", "HELD", "DISPATCHING", "DUPLICATE_REJECTED") else 1
+        return 0 if ack["status"] in ("ACCEPTED_FOR_DELIVERY", "DISPATCHING", "DELIVERED", "HELD", "DUPLICATE_REJECTED") else 1
 
     orchestrator = BackupOrchestrator(config)
 

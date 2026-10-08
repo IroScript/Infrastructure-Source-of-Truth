@@ -688,7 +688,12 @@ class BackupOrchestrator:
         conn = self.db.get_connection()
         try:
             cur = conn.cursor()
-            cur.execute("SELECT DISTINCT project_id FROM held_prompt_queue WHERE status = 'HELD';")
+            cur.execute(
+                """
+                SELECT DISTINCT project_id FROM held_prompt_queue
+                WHERE status = 'HELD' OR (status = 'DISPATCHING' AND (delivery_owner_instance_id IS NULL OR delivery_owner_instance_id = ''));
+                """
+            )
             held_projects = [r["project_id"] for r in cur.fetchall()]
         finally:
             conn.close()
@@ -750,27 +755,31 @@ class BackupOrchestrator:
         # On daemon startup, drain any existing HELD prompts for OPEN projects
         self.drain_pending_prompts()
 
+        last_cycle_time = 0.0
         try:
             while not (stop_event and stop_event.is_set()):
                 self.drain_pending_prompts()
-                self.gate_coordinator.heartbeat_delivery_owner(self.delivery_owner_instance_id)
-
-                for project_id in list(self.watchers.keys()):
+                now = time.monotonic()
+                if now - last_cycle_time >= interval_seconds:
+                    self.gate_coordinator.heartbeat_delivery_owner(self.delivery_owner_instance_id)
+                    for project_id in list(self.watchers.keys()):
+                        try:
+                            self.run_cycle_for_project(project_id)
+                        except Exception:
+                            pass
                     try:
-                        self.run_cycle_for_project(project_id)
+                        self.retry_pending_uploads()
                     except Exception:
                         pass
-                try:
-                    self.retry_pending_uploads()
-                except Exception:
-                    pass
+                    last_cycle_time = now
 
                 self.drain_pending_prompts()
 
+                sleep_chunk = min(0.2, interval_seconds)
                 if stop_event:
-                    if stop_event.wait(timeout=interval_seconds):
+                    if stop_event.wait(timeout=sleep_chunk):
                         break
                 else:
-                    time.sleep(interval_seconds)
+                    time.sleep(sleep_chunk)
         finally:
             self.gate_coordinator.unregister_delivery_owner(self.delivery_owner_instance_id)

@@ -408,21 +408,21 @@ class PromptGateCoordinator:
                 if row_g and row_g["prompt_gate"] != "OPEN":
                     return None
 
-                # 2. Strict head-of-line: if any message for this target is in-flight (DISPATCHING),
+                # 2. Strict head-of-line: if any message for this target is actively in-flight with an owner,
                 # no new message may be claimed
                 cur.execute(
-                    "SELECT COUNT(*) FROM held_prompt_queue WHERE project_id = ? AND status = 'DISPATCHING';",
+                    "SELECT COUNT(*) FROM held_prompt_queue WHERE project_id = ? AND status = 'DISPATCHING' AND delivery_owner_instance_id IS NOT NULL AND delivery_owner_instance_id != '';",
                     (project_id,),
                 )
                 if cur.fetchone()[0] > 0:
                     return None
 
-                # 3. Select oldest HELD message
+                # 3. Select oldest eligible message (HELD or unowned DISPATCHING)
                 cur.execute(
                     """
                     SELECT id, project_id, message_id, routing_target, payload, sequence_num
                     FROM held_prompt_queue
-                    WHERE project_id = ? AND status = 'HELD'
+                    WHERE project_id = ? AND (status = 'HELD' OR (status = 'DISPATCHING' AND (delivery_owner_instance_id IS NULL OR delivery_owner_instance_id = '')))
                     ORDER BY sequence_num ASC
                     LIMIT 1;
                     """,
