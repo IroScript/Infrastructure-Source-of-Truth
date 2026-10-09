@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "timestamp": "2026-10-09T10:17:05Z",
+  "timestamp": "2026-10-09T10:18:21Z",
   "WATCHER_PROCESS": {
     "running": true,
     "pid": 984,
@@ -37,8 +37,8 @@
       "remote": "/tmp/sot-watcher-test-33o4d9zr/sandbox_remote.git"
     },
     "infrastructure_source_of_truth": {
-      "timestamp": "2026-10-09T10:16:52Z",
-      "commit_sha": "2bf1179054d5d2f78738e21e81f62e8a76be8843",
+      "timestamp": "2026-10-09T10:18:08Z",
+      "commit_sha": "d00078fdeea843900620bd7ea07643657363f4a4",
       "branch": "main",
       "remote": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git"
     }
