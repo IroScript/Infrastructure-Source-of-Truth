@@ -74,9 +74,13 @@ def test_unknown_command_native_rejection(agy_isolated_session):
     cmd = "/definitely_nonexistent_test_command_xyz"
     subprocess.run(["tmux", "send-keys", "-t", session, "-l", cmd])
     subprocess.run(["tmux", "send-keys", "-t", session, "Enter"])
-    time.sleep(1.0)
-
-    pane = subprocess.check_output(["tmux", "capture-pane", "-p", "-t", session]).decode("utf-8")
+    
+    pane = ""
+    for _ in range(30):
+        time.sleep(0.2)
+        pane = subprocess.check_output(["tmux", "capture-pane", "-p", "-t", session]).decode("utf-8")
+        if "Unknown command: /definitely_nonexistent_test_command_xyz" in pane:
+            break
     assert "Unknown command: /definitely_nonexistent_test_command_xyz" in pane
     subprocess.run(["tmux", "send-keys", "-t", session, "Escape"])
     time.sleep(0.3)
