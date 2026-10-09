@@ -30,3 +30,12 @@ This file is the versioned, project-neutral baseline for workers operating in ma
 - All agents must strictly communicate and reply in standard Bengali script (বাংলা বর্ণমালা ও লিপি).
 - Banglish (writing Bengali using English/Latin alphabet, e.g. "Ami kaj ta korechi") is strictly prohibited across all agents and channels.
 - Technical syntax (source code, terminal commands, file paths, JSON schemas, error traces) retains standard English syntax for precision.
+
+## Inter-agent isolation governance
+- One WhatsApp project agent must strictly never see, view, access, or execute work belonging to another WhatsApp project agent.
+- Inter-agent boundary isolation is locked across 5 mandatory layers:
+  1. Pre-tool-use hook policy (delete_guard.py enforcing SETTING_79).
+  2. WhatsApp bridge channel 1:1 routing and zero-fallback delivery.
+  3. OS and tmux working directory jailing.
+  4. Brain session transcripts and conversation state siloing.
+  5. Deterministic 10-fold verification protocol gating.
