@@ -1503,6 +1503,17 @@
       "remote_provider": "gdrive",
       "remote_path": "gdrive:IroScript_Backups/projects/youtube_pipeline/databases/PromptDatabase/database/backups/youtube_pipeline_pre_readiness_20261009_134001.db",
       "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "whatsapp_master-large-webterminal_wa_auth_backup_verified.tar.gz",
+      "project_id": "whatsapp_master",
+      "project_uuid": "08371aa5-5f84-559d-835f-a9ee1ffef3f6",
+      "storage_class": "large_asset",
+      "source_path": "/home/azureuser/IroScript_Projects/Whatsapp master/webterminal/wa_auth_backup_verified.tar.gz",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/whatsapp_master/assets/webterminal/wa_auth_backup_verified.tar.gz",
+      "status": "BACKUP_PENDING"
     }
   ]
 }
