@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "timestamp": "2026-10-09T04:41:08Z",
+  "timestamp": "2026-10-09T04:43:04Z",
   "WATCHER_PROCESS": {
     "running": true,
     "pid": 1868185,
@@ -8,8 +8,13 @@
   },
   "WATCHER_EVENT_SOURCE": "inotify",
   "WATCHER_QUEUE": {
-    "active_queues": 0,
-    "queued_projects": []
+    "active_queues": 4,
+    "queued_projects": [
+      "whatsapp_master",
+      "youtube_pipeline",
+      "rust_task",
+      "infrastructure_source_of_truth"
+    ]
   },
   "PROJECT_LOCKS": {
     "active_locks": []
@@ -24,8 +29,8 @@
       "remote": "/tmp/sot-watcher-test-33o4d9zr/sandbox_remote.git"
     },
     "infrastructure_source_of_truth": {
-      "timestamp": "2026-10-09T04:41:07Z",
-      "commit_sha": "571328e72b463122cb24f02ccc816bc998b699f0",
+      "timestamp": "2026-10-09T04:42:59Z",
+      "commit_sha": "233117e7b7d097a05f778c254350fa3e97cefadc",
       "branch": "main",
       "remote": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git"
     }
