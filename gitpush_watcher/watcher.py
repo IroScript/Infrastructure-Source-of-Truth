@@ -94,7 +94,7 @@ class GitPushWatcher:
                 if pid_name in self.pending_pushes:
                     remote_parity[pid_name] = 'PUSH_PENDING_RETRY'
                 else:
-                    repo_path = Path(p.get('canonical_path', '')).resolve()
+                    repo_path = Path(p.get('git', {}).get('repository_path') or p.get('canonical_path', '')).resolve()
                     branch = p.get('git', {}).get('branch', '') or GitPusher.get_current_branch(repo_path)
                     local_sha = GitPusher.get_head_sha(repo_path) if repo_path.is_dir() else ''
                     remote_sha = ''
@@ -141,7 +141,7 @@ class GitPushWatcher:
         """Synchronizes a single project through the full zero-interaction GitPush pipeline."""
         pid = project.get('project_id', '')
         puuid = project.get('project_uuid', '')
-        repo_path = Path(project.get('canonical_path', '')).resolve()
+        repo_path = Path(project.get('git', {}).get('repository_path') or project.get('canonical_path', '')).resolve()
         if not repo_path.is_dir() or not (repo_path / '.git').exists():
             return (False, 'NOT_A_GIT_REPOSITORY')
         git_conf = project.get('git', {})
@@ -320,7 +320,7 @@ class GitPushWatcher:
             if inotify_fd < 0 or not inotify_add_watch:
                 return
             for p in self.load_registered_projects():
-                cpath = str(Path(p.get('canonical_path', '')).resolve())
+                cpath = str(Path(p.get('git', {}).get('repository_path') or p.get('canonical_path', '')).resolve())
                 if cpath and os.path.isdir(cpath):
                     _watch_tree(cpath, p.get('project_id', ''))
             for gpath in ["/home/azureuser/.agents/rules", "/home/azureuser/.gemini/config/rules"]:
@@ -358,7 +358,7 @@ class GitPushWatcher:
                     _update_watches()
                     _sync_rules_if_modified()
                     for p in self.load_registered_projects():
-                        cpath = Path(p.get('canonical_path', ''))
+                        cpath = Path(p.get('git', {}).get('repository_path') or p.get('canonical_path', ''))
                         if cpath.is_dir() and (cpath / '.git').exists():
                             st = subprocess.run(['git', '-C', str(cpath), 'status', '--porcelain'], capture_output=True, text=True, env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'}, timeout=15)
                             if st.stdout.strip():

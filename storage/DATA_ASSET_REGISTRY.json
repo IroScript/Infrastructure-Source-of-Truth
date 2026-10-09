@@ -26880,6 +26880,17 @@
       "remote_provider": "gdrive",
       "remote_path": "gdrive:IroScript_Backups/projects/youtube_pipeline/assets/docker_flow_workers/profiles/worker_1/Profile 5/trusted_vault.pb",
       "status": "BACKUP_PENDING"
+    },
+    {
+      "asset_id": "youtube_pipeline-db-docker_cloak_cluster_isolated_sandbox_test_pipeline.db",
+      "project_id": "youtube_pipeline",
+      "project_uuid": "72501ab1-551a-5de3-a97c-6eeca0407fde",
+      "storage_class": "database_snapshot",
+      "source_path": "/home/azureuser/IroScript_Projects/Social Media/youtube/Youtube Automation/docker_cloak_cluster/isolated_sandbox/test_pipeline.db",
+      "backup_required": true,
+      "remote_provider": "gdrive",
+      "remote_path": "gdrive:IroScript_Backups/projects/youtube_pipeline/databases/docker_cloak_cluster/isolated_sandbox/test_pipeline.db",
+      "status": "BACKUP_PENDING"
     }
   ]
 }

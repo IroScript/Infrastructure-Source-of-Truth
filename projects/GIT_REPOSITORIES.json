@@ -95,12 +95,12 @@
       "project_id": "frappe_erp_alco",
       "project_uuid": "8d2d4d60-fd9b-5da2-afa8-64d84c8f9e39",
       "display_name": "Frappe ERP Alco",
-      "repository_path": "/home/azureuser/Frappe-erp-Alco",
+      "repository_path": "/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce",
       "remote_url": "https://github.com/IroScript/frappe-erp-alco-project",
       "branch": "main",
       "visibility": "private",
       "backup_required": true,
-      "status": "ONBOARDING_INCOMPLETE"
+      "status": "ACTIVE"
     },
     {
       "project_id": "ask_and_research",

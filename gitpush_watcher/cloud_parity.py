@@ -27,20 +27,21 @@ class CloudParityAuditor:
                     puuid = proj.get('project_uuid', '')
                     cpath = proj.get('canonical_path', '')
                     git_conf = proj.get('git', {})
+                    repo_path = git_conf.get('repository_path') or cpath
                     remote = git_conf.get('remote', '')
                     branch = git_conf.get('branch', 'main')
                     backup_req = git_conf.get('backup_required', True)
                     if not backup_req:
                         verdict = 'NOT_RECOVERABLE'
                         counts[verdict] += 1
-                        matrix.append({'asset_id': f'project:{pid}', 'project_uuid': puuid, 'type': 'project_source', 'local_path': cpath, 'recovery_destination': 'none (local-only)', 'local_commit': 'n/a', 'remote_commit': 'none', 'parity_verdict': verdict, 'note': 'marked local-only'})
+                        matrix.append({'asset_id': f'project:{pid}', 'project_uuid': puuid, 'type': 'project_source', 'local_path': repo_path, 'recovery_destination': 'none (local-only)', 'local_commit': 'n/a', 'remote_commit': 'none', 'parity_verdict': verdict, 'note': 'marked local-only'})
                         continue
-                    if not remote or not os.path.isdir(os.path.join(cpath, '.git')):
+                    if not remote or not os.path.isdir(os.path.join(repo_path, '.git')):
                         verdict = 'NOT_RECOVERABLE'
                         counts[verdict] += 1
-                        matrix.append({'asset_id': f'project:{pid}', 'project_uuid': puuid, 'type': 'project_source', 'local_path': cpath, 'recovery_destination': 'GitHub', 'local_commit': 'none', 'remote_commit': 'none', 'parity_verdict': verdict, 'note': 'no remote or git repo'})
+                        matrix.append({'asset_id': f'project:{pid}', 'project_uuid': puuid, 'type': 'project_source', 'local_path': repo_path, 'recovery_destination': 'GitHub', 'local_commit': 'none', 'remote_commit': 'none', 'parity_verdict': verdict, 'note': 'no remote or git repo'})
                         continue
-                    local_head = subprocess.run(['git', '-C', cpath, 'rev-parse', 'HEAD'], capture_output=True, text=True, timeout=15).stdout.strip()
+                    local_head = subprocess.run(['git', '-C', repo_path, 'rev-parse', 'HEAD'], capture_output=True, text=True, timeout=15).stdout.strip()
                     probe = subprocess.run(['git', 'ls-remote', '--exit-code', remote, f'refs/heads/{branch}'], capture_output=True, text=True, timeout=15)
                     remote_sha = probe.stdout.split()[0] if probe.returncode == 0 and probe.stdout.split() else ''
                     if remote_sha and local_head == remote_sha:

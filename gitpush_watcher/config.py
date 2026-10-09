@@ -42,7 +42,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "*.db",
         "*.sqlite*",
         "*.apk",
-        "output_apk/*"
+        "output_apk/*",
+        "docker_flow_workers/profiles/*",
+        "docker_workers/profile/*",
+        "**/profiles/*",
+        "**/profile/*",
+        "PromptDatabase/database/backups/*"
     ],
     "ephemeral_patterns": [
         "*.swp",
