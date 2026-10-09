@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "timestamp": "2026-10-09T17:34:42Z",
+  "timestamp": "2026-10-09T17:35:08Z",
   "WATCHER_PROCESS": {
     "running": true,
     "pid": 532016,
@@ -8,12 +8,10 @@
   },
   "WATCHER_EVENT_SOURCE": "inotify",
   "WATCHER_QUEUE": {
-    "active_queues": 4,
+    "active_queues": 2,
     "queued_projects": [
-      "infrastructure_source_of_truth",
       "whatsapp_master",
-      "youtube_pipeline",
-      "ask_and_research"
+      "infrastructure_source_of_truth"
     ]
   },
   "PROJECT_LOCKS": {
@@ -29,8 +27,8 @@
       "remote": "/tmp/sot-watcher-test-33o4d9zr/sandbox_remote.git"
     },
     "infrastructure_source_of_truth": {
-      "timestamp": "2026-10-09T15:54:38Z",
-      "commit_sha": "fe096dabfe9e3d9cdb584f42e1ed6ffd6dea2da7",
+      "timestamp": "2026-10-09T17:34:44Z",
+      "commit_sha": "501f8fc0261e718cb77395227625b9915b2aca75",
       "branch": "main",
       "remote": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git"
     },
@@ -59,8 +57,8 @@
       "remote": "git@github.com:IroScript/Article-Publishing-Platform.git"
     },
     "ask_and_research": {
-      "timestamp": "2026-10-09T17:34:23Z",
-      "commit_sha": "3d42f80cd14ad057014b8848f2e95d15c9919e3c",
+      "timestamp": "2026-10-09T17:34:56Z",
+      "commit_sha": "d0e0dbf9785fe2a02b1416da7f059a7697eb519c",
       "branch": "main",
       "remote": "https://github.com/IroScript/Antigravity-Global-Notifier.git"
     }
