@@ -274,19 +274,61 @@ class GitPushWatcher:
         except Exception:
             inotify_fd = -1
 
+        inotify_mask = 2 | 8 | 256 | 512 | 128
+
+        def _watch_tree(base_path: str, project_id: str):
+            if not os.path.isdir(base_path):
+                return
+            for root, dirs, _ in os.walk(base_path):
+                dirs[:] = [d for d in dirs if d not in (
+                    ".git", ".project-locks", ".pytest_cache", "__pycache__",
+                    "node_modules", "wa_auth", "wa_auth_snapshots", "wa_auth_senderkeys_backup",
+                    ".cache", ".venv", "venv", ".nvm", "All_Backup"
+                ) and not d.endswith("_backup") and not d.startswith(".")]
+                if root not in watched_paths:
+                    try:
+                        wd = inotify_add_watch(inotify_fd, root.encode('utf-8'), inotify_mask)
+                        if wd >= 0:
+                            wd_to_project[wd] = project_id
+                            watched_paths.add(root)
+                    except OSError:
+                        pass
+
+        def _sync_rules_if_modified():
+            agents_dir = Path("/home/azureuser/.agents/rules")
+            sot_rules_dir = Path("/home/azureuser/IroScript_Projects/Infrastructure-Source-of-Truth/governance/active_rules")
+            sot_rules_dir.mkdir(parents=True, exist_ok=True)
+            modified = False
+            if agents_dir.is_dir():
+                for rf in agents_dir.glob("*.md"):
+                    dest = sot_rules_dir / rf.name
+                    if not dest.exists() or rf.stat().st_mtime > dest.stat().st_mtime:
+                        dest.write_text(rf.read_text(encoding="utf-8"), encoding="utf-8")
+                        modified = True
+            agents_md = Path("/home/azureuser/AGENTS.md")
+            sot_agents_md = sot_rules_dir / "AGENTS.md"
+            if agents_md.is_file():
+                if not sot_agents_md.exists() or agents_md.stat().st_mtime > sot_agents_md.stat().st_mtime:
+                    sot_agents_md.write_text(agents_md.read_text(encoding="utf-8"), encoding="utf-8")
+                    modified = True
+            if modified:
+                with self._lock:
+                    self.project_queues["infrastructure_source_of_truth"] = time.time()
+
         def _update_watches():
             nonlocal inotify_fd, inotify_add_watch
             if inotify_fd < 0 or not inotify_add_watch:
                 return
-            mask = 2 | 8 | 256 | 512 | 128
             for p in self.load_registered_projects():
                 cpath = str(Path(p.get('canonical_path', '')).resolve())
-                if cpath and cpath not in watched_paths and os.path.isdir(cpath):
-                    wd = inotify_add_watch(inotify_fd, cpath.encode('utf-8'), mask)
-                    if wd >= 0:
-                        wd_to_project[wd] = p.get('project_id', '')
-                        watched_paths.add(cpath)
+                if cpath and os.path.isdir(cpath):
+                    _watch_tree(cpath, p.get('project_id', ''))
+            for gpath in ["/home/azureuser/.agents/rules", "/home/azureuser/.gemini/config/rules"]:
+                if os.path.isdir(gpath):
+                    _watch_tree(gpath, "infrastructure_source_of_truth")
+
         _update_watches()
+        _sync_rules_if_modified()
         self.event_source = 'inotify' if wd_to_project else 'polling'
         last_reconcile = time.time()
         try:
@@ -314,6 +356,7 @@ class GitPushWatcher:
 
                 if now - last_reconcile >= self.config.reconciliation_interval_seconds:
                     _update_watches()
+                    _sync_rules_if_modified()
                     for p in self.load_registered_projects():
                         cpath = Path(p.get('canonical_path', ''))
                         if cpath.is_dir() and (cpath / '.git').exists():
@@ -322,6 +365,7 @@ class GitPushWatcher:
                                 with self._lock:
                                     self.project_queues[p.get('project_id')] = now
                     last_reconcile = now
+                _sync_rules_if_modified()
                 self.run_reconciliation_cycle()
         finally:
             if inotify_fd >= 0:

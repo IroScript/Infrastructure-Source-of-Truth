@@ -24,17 +24,54 @@ class SnapshotManager:
 
     @classmethod
     def capture_working_fingerprints(cls, repo_path: Path, ignored_subpaths: List[str] | None = None) -> Dict[str, Tuple[int, int, str]]:
-        """Captures complete fingerprint state of all trackable files in repo before/after staging."""
+        """Captures fingerprint state of modified/trackable files before/after staging (sub-second fast path)."""
         repo = Path(repo_path).resolve()
         fingerprints: Dict[str, Tuple[int, int, str]] = {}
         ignored = set(ignored_subpaths or [])
 
+        # Sub-second fast path via git status --porcelain
+        try:
+            proc = subprocess.run(
+                ["git", "-C", str(repo), "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if proc.returncode == 0:
+                for line in proc.stdout.splitlines():
+                    if len(line) < 4:
+                        continue
+                    path_part = line[3:].strip()
+                    if " -> " in path_part:
+                        path_part = path_part.split(" -> ")[1].strip()
+                    fpath = repo / path_part
+                    try:
+                        rel = str(fpath.relative_to(repo))
+                        if any(
+                            fnmatch.fnmatch(rel, ign)
+                            or fnmatch.fnmatch(fpath.name, ign)
+                            or fnmatch.fnmatch(f"*/{fpath.name}", ign)
+                            or any(fnmatch.fnmatch(part, ign) for part in fpath.parts)
+                            or rel == ign
+                            or rel.startswith(ign.rstrip("*"))
+                            for ign in ignored
+                        ):
+                            continue
+                        if fpath.is_file() and not fpath.is_symlink():
+                            fingerprints[rel] = cls.get_file_fingerprint(fpath)
+                    except (OSError, ValueError):
+                        continue
+                return fingerprints
+        except Exception:
+            pass
+
+        # Fallback directory walk
         for root, dirs, files in os.walk(repo):
-            # Prune directories in-place so os.walk never traverses them
             dirs[:] = [d for d in dirs if d not in (
                 ".git", ".project-locks", ".pytest_cache", "__pycache__",
                 "node_modules", "wa_auth", "wa_auth_snapshots", "wa_auth_senderkeys_backup",
-                ".cache", ".venv", "venv", ".nvm", "All_Backup"
+                ".cache", ".venv", "venv", ".nvm", "All_Backup", "target", "build", "dist",
+                ".gradle", ".dart_tool", "out", "Pods"
             ) and not d.endswith("_backup") and not d.startswith(".")]
 
             for fname in files:
