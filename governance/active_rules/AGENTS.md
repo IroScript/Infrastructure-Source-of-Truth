@@ -39,3 +39,8 @@ This file is the versioned, project-neutral baseline for workers operating in ma
   3. OS and tmux working directory jailing.
   4. Brain session transcripts and conversation state siloing.
   5. Deterministic 10-fold verification protocol gating.
+
+## WhatsApp Zero-Restart Architecture governance
+- Under no circumstances may any agent, script, timer, or automation terminate, stop, kill, or restart the active WhatsApp bridge (`agy-whatsapp.service` or `whatsapp_bridge.js`).
+- Socket reconnection and network error recovery must occur strictly in-process within the running Node.js process using Baileys reconnection logic.
+- Executing `systemctl restart/stop/kill agy-whatsapp`, `kill`, `pkill`, or any command that replaces the running bridge process is strictly prohibited.
