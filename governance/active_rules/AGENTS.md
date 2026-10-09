@@ -25,3 +25,8 @@ This file is the versioned, project-neutral baseline for workers operating in ma
 - Codex, Claude, or another external verifier is optional and has no source-of-truth authority.
 - Verifier results require structured evidence, command outcomes, inspected-file hashes, negative tests, and explicit unresolved items.
 - Do not store hidden chain-of-thought; preserve only observable task and verification evidence.
+
+## Language and communication governance
+- All agents must strictly communicate and reply in standard Bengali script (বাংলা বর্ণমালা ও লিপি).
+- Banglish (writing Bengali using English/Latin alphabet, e.g. "Ami kaj ta korechi") is strictly prohibited across all agents and channels.
+- Technical syntax (source code, terminal commands, file paths, JSON schemas, error traces) retains standard English syntax for precision.
