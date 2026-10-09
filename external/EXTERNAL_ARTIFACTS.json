@@ -89,7 +89,7 @@
       "agent_runtime": "agy/generic_cli",
       "owner": "current_user",
       "mode": "0755",
-      "sha256": "31ef92ade3fc6e5edab128048acb4bcdb5fa50585f892f5b8b222b4e82282f66",
+      "sha256": "e841e419aba9a936dfe1e080eb72d3473934a60b7391a50301b0adb7a2aa1bd4",
       "activation": "agent instruction or declared hook configuration",
       "reload": "adapter_specific",
       "verification_probe": "sot trust verify",
