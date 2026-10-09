@@ -21,7 +21,7 @@ class AssetClassifier:
         self.root = Path(root).resolve()
         self.large_threshold = large_file_threshold_bytes
         self.secret_name_patterns = ['.env', '.env.*', '*.env', '*credential*', '*secret*', '*token*', 'id_rsa*', 'id_ecdsa*', 'id_ed25519*', '*.pem', '*.key', '*.p12', '*.pkcs12', 'cookies*', '*session*', '*auth_token*']
-        self.secret_content_signatures = [b'PRIVATE KEY', b'BEGIN RSA PRIVATE', b'BEGIN OPENSSH PRIVATE', b'AIzaSy', b'api_key', b'secret_key', b'aws_secret_access_key', b'password=', b'passwd=']
+        self.secret_content_signatures = [b'-----BEGIN PRIVATE KEY', b'-----BEGIN RSA PRIVATE', b'-----BEGIN OPENSSH PRIVATE', b'-----BEGIN EC PRIVATE', b'AIzaSy', b'aws_secret_access_key']
         self.media_extensions = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.mp3', '.wav', '.aac', '.ogg', '.flac', '.m4a'}
         self.archive_extensions = {'.zip', '.tar', '.gz', '.tgz', '.bz2', '.7z', '.iso'}
         self.db_extensions = {'.db', '.sqlite', '.sqlite3', '.db-wal', '.db-shm', '.dump'}
