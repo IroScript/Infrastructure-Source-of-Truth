@@ -22,14 +22,17 @@ def normalize_git_url(url: str) -> str:
     u = u.rstrip("/")
     if u.startswith("/") or u.startswith("./") or u.startswith("../"):
         return u
-    # Convert SSH git@host:owner/repo to host/owner/repo
+    # Convert SSH git@host:owner/repo to https://host/owner/repo
     if "@" in u and ":" in u and "://" not in u:
-        u = u.split("@", 1)[1].replace(":", "/")
-    # Convert https://host/owner/repo or ssh://git@host/owner/repo
+        host_path = u.split("@", 1)[1]
+        host, path = host_path.split(":", 1)
+        return f"https://{host.lower()}/{path.lower().lstrip('/')}"
+    # Network URLs
     if "://" in u:
-        u = u.split("://", 1)[1]
-        if "@" in u:
-            u = u.split("@", 1)[1]
+        scheme, rest = u.split("://", 1)
+        if "@" in rest:
+            rest = rest.split("@", 1)[1]
+        return f"{scheme.lower()}://{rest.lower().lstrip('/')}"
     return u.lower().strip("/")
 
 
