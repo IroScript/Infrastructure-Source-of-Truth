@@ -8,7 +8,14 @@ FORBIDDEN_SUFFIXES = {'.pem', '.p12', '.pfx', '.key', '.db', '.sqlite', '.sqlite
 SKIP_SCAN_DIRS = {'.git', 'node_modules', '.venv', 'venv', 'target', 'build', 'dist', 'vendor', '.cache', '__pycache__'}
 SENSITIVE_DIRS = {'wa_auth', '.ssh'}
 MAX_BINARY_BYTES = 50 * 1024 * 1024
-SECRET_PATTERNS = [re.compile(b'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'), re.compile(b'(?i)(?:api[_-]?key|password|secret|token)\\s*[:=]\\s*[\'\\"][^\'\\"\\s]{12,}'), re.compile(b'gh[pousr]_[A-Za-z0-9]{30,}')]
+SECRET_PATTERNS = [
+    re.compile(b'-----BEGIN (?:[A-Z0-9_-]+ )?PRIVATE KEY-----'),
+    re.compile(b'(?i)(?:api[_-]?key|password|secret|token)\\s*[:=]\\s*[\'\\"][^\'\\"\\s]{12,}'),
+    re.compile(b'gh[pousr]_[A-Za-z0-9]{30,}'),
+    re.compile(b'"type"\\s*:\\s*"service_account"'),
+    re.compile(b'"client_secret"\\s*:\\s*"[^"]+"'),
+    re.compile(b'AKIA[0-9A-Z]{16}'),
+]
 CLASSIFIER_LITERALS = {b'CLASS_D_SECRET', b'CLASS_A_GIT', b'CLASS_B_DATABASE', b'CLASS_C_LARGE_ASSET', b'CLASS_E_EPHEMERAL'}
 
 def _has_secret_pattern(data: bytes) -> bool:

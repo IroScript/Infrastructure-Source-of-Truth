@@ -327,6 +327,55 @@ def inspect_command(command_str, caller_key, allowed_roots):
     # 2. File and directory deletions within authorized workspace are PERMITTED
     return False, "Operation permitted (delete and sudo approved, within project boundary)", "ALLOW"
 
+def check_read_only_violation(tool_name, args, payload):
+    task_mode = os.environ.get("TASK_MODE") or payload.get("taskMode") or payload.get("env", {}).get("TASK_MODE")
+    if task_mode != "READ_ONLY":
+        return False, ""
+
+    if tool_name in ["write_to_file", "replace_file_content"]:
+        return True, f"File modification tool '{tool_name}' is forbidden in READ_ONLY mode"
+
+    if tool_name == "run_command":
+        cmd = args.get("CommandLine", "").strip()
+        # 1. File write / edit
+        if re.search(r'(?:>|>>|\|\s*tee\b)', cmd):
+            return True, f"File output redirection or piping to tee is forbidden in READ_ONLY mode: {cmd}"
+        if re.search(r'\b(?:sed|perl)\b.*-(?:i|pi)\b', cmd):
+            return True, f"In-place file editing is forbidden in READ_ONLY mode: {cmd}"
+        if re.search(r'\b(?:rm|unlink|rmdir|mkdir|touch|cp|mv|truncate|dd|install)\b', cmd):
+            return True, f"File or directory mutation command is forbidden in READ_ONLY mode: {cmd}"
+
+        # 2. Git mutation
+        if re.search(r'\bgit\s+(?:add|commit|push|checkout\s+-[bB]|checkout\s+--|restore|reset|merge|rebase|tag|stash|clean|cherry-pick|revert|branch\s+-(?:[dDmM]))\b', cmd):
+            return True, f"Git repository mutation is forbidden in READ_ONLY mode: {cmd}"
+
+        # 3. Tmux keystroke / terminal injection
+        if re.search(r'\btmux\s+(?:send-keys|paste-buffer|load-buffer|set-buffer)\b', cmd):
+            return True, f"Tmux terminal input injection is forbidden in READ_ONLY mode: {cmd}"
+
+        # 4. Service restart / stop
+        if re.search(r'\b(?:systemctl|service)\s+(?:restart|stop|start|reload|enable|disable|mask|unmask)\b', cmd):
+            return True, f"Service state mutation is forbidden in READ_ONLY mode: {cmd}"
+
+        # 5. Process kill / signal
+        if re.search(r'\b(?:kill|pkill|killall|fuser\s+-k)\b', cmd):
+            return True, f"Process termination or signal delivery is forbidden in READ_ONLY mode: {cmd}"
+
+        # 6. Database writes
+        if re.search(r'\bsqlite3\b.*(?:\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bALTER\b|\bCREATE\b|\bREPLACE\b)', cmd, re.IGNORECASE):
+            return True, f"Database write mutation is forbidden in READ_ONLY mode: {cmd}"
+        if re.search(r'\b(?:mysql|mariadb)\b.*(?:\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bALTER\b|\bCREATE\b|\bREPLACE\b)', cmd, re.IGNORECASE):
+            return True, f"Database write mutation is forbidden in READ_ONLY mode: {cmd}"
+        if re.search(r'\bredis-cli\b.*(?:\bSET\b|\bDEL\b|\bHSET\b|\bFLUSHALL\b|\bFLUSHDB\b)', cmd, re.IGNORECASE):
+            return True, f"Redis cache mutation is forbidden in READ_ONLY mode: {cmd}"
+
+        # 7. Configuration mutation
+        if re.search(r'\b(?:chmod|chown|chgrp)\b', cmd):
+            return True, f"File permission or ownership mutation is forbidden in READ_ONLY mode: {cmd}"
+
+    return False, ""
+
+
 def main():
     try:
         raw_input = sys.stdin.read()
@@ -345,6 +394,14 @@ def main():
     tool_call = payload.get("toolCall", {})
     tool_name = tool_call.get("name", "")
     args = tool_call.get("args", {})
+
+    is_ro_viol, ro_reason = check_read_only_violation(tool_name, args, payload)
+    if is_ro_viol:
+        print(json.dumps({
+            "decision": "deny",
+            "reason": f"🛑 [POLICY_VIOLATION_READ_ONLY] {ro_reason}"
+        }))
+        return
 
     cwd_arg = args.get("Cwd")
     caller_key, allowed_roots = identify_caller_project(cwd_arg)
