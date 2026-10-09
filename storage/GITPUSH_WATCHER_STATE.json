@@ -1,16 +1,15 @@
 {
   "schema_version": "1.0.0",
-  "timestamp": "2026-10-09T11:44:16Z",
+  "timestamp": "2026-10-09T11:46:19Z",
   "WATCHER_PROCESS": {
     "running": true,
-    "pid": 32608,
+    "pid": 39982,
     "alive": true
   },
   "WATCHER_EVENT_SOURCE": "inotify",
   "WATCHER_QUEUE": {
-    "active_queues": 4,
+    "active_queues": 3,
     "queued_projects": [
-      "whatsapp_master",
       "youtube_pipeline",
       "rust_task",
       "infrastructure_source_of_truth"
@@ -23,10 +22,10 @@
   "PENDING_PUSHES": [
     {
       "project_id": "whatsapp_master",
-      "commit_sha": "64362cacbc5d7f7fe986b0126e7289600ac0daa6",
+      "commit_sha": "afd2ee9062678221d49ca80ce0b417047207f52b",
       "error": "REMOTE_DRIFT: configured 'git@github.com:IroScript/Antigravity-Global-Notifier.git' != canonical 'https://github.com/IroScript/Antigravity-Global-Notifier.git'",
-      "timestamp": "2026-10-09T11:24:41Z",
-      "retry_count": 151
+      "timestamp": "2026-10-09T11:46:18Z",
+      "retry_count": 154
     }
   ],
   "LAST_SUCCESSFUL_PUSH": {
@@ -37,8 +36,8 @@
       "remote": "/tmp/sot-watcher-test-33o4d9zr/sandbox_remote.git"
     },
     "infrastructure_source_of_truth": {
-      "timestamp": "2026-10-09T11:43:36Z",
-      "commit_sha": "df8d18138c6882e82aa3c426872ff727f1160b05",
+      "timestamp": "2026-10-09T11:44:49Z",
+      "commit_sha": "972c8f792cad9f9e2e0a88b36c2e2556086c8eea",
       "branch": "main",
       "remote": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git"
     }
@@ -57,5 +56,5 @@
     "openai_codex": "LOCAL_ONLY",
     "infrastructure_source_of_truth": "VERIFIED"
   },
-  "FAILED_RETRIES": 151
+  "FAILED_RETRIES": 154
 }

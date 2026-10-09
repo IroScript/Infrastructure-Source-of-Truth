@@ -1,3 +1,4 @@
+import fnmatch
 import hashlib
 import os
 import subprocess
@@ -29,21 +30,26 @@ class SnapshotManager:
         ignored = set(ignored_subpaths or [])
 
         for root, dirs, files in os.walk(repo):
-            # Prune .git and lock directories
-            if ".git" in dirs:
-                dirs.remove(".git")
-            if ".project-locks" in dirs:
-                dirs.remove(".project-locks")
-            if ".pytest_cache" in dirs:
-                dirs.remove(".pytest_cache")
-            if "__pycache__" in dirs:
-                dirs.remove("__pycache__")
+            # Prune directories in-place so os.walk never traverses them
+            dirs[:] = [d for d in dirs if d not in (
+                ".git", ".project-locks", ".pytest_cache", "__pycache__",
+                "node_modules", "wa_auth", "wa_auth_snapshots", "wa_auth_senderkeys_backup",
+                ".cache", ".venv", "venv", ".nvm", "All_Backup"
+            ) and not d.endswith("_backup") and not d.startswith(".")]
 
             for fname in files:
                 fpath = Path(root) / fname
                 try:
                     rel = str(fpath.relative_to(repo))
-                    if any(rel == ign or rel.startswith(ign.rstrip("*")) for ign in ignored):
+                    if any(
+                        fnmatch.fnmatch(rel, ign)
+                        or fnmatch.fnmatch(fname, ign)
+                        or fnmatch.fnmatch(f"*/{fname}", ign)
+                        or any(fnmatch.fnmatch(part, ign) for part in fpath.parts)
+                        or rel == ign
+                        or rel.startswith(ign.rstrip("*"))
+                        for ign in ignored
+                    ):
                         continue
                     if fpath.is_file() and not fpath.is_symlink():
                         fingerprints[rel] = cls.get_file_fingerprint(fpath)

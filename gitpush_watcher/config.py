@@ -27,12 +27,20 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         ".pytest_cache",
         ".pytest_cache/*",
         ".project-locks",
-        ".project-locks/*",
         "storage/GITPUSH_WATCHER_STATE.json",
         "storage/GITPUSH_WATCHER_STATE.json.lock",
         "storage/GITPUSH_WATCHER_STATE.json.tmp",
         "projects/CLOUD_PARITY_MATRIX.json",
-        ".mapping-generator.lock"
+        ".mapping-generator.lock",
+        "wa_auth*",
+        "wa_auth/*",
+        "wa_auth_snapshots/*",
+        "wa_auth_senderkeys_backup/*",
+        "node_modules/*",
+        "*.log",
+        "*.log.*",
+        "*.db",
+        "*.sqlite*"
     ],
     "ephemeral_patterns": [
         "*.swp",

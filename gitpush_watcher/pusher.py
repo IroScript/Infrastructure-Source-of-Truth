@@ -12,7 +12,7 @@ from typing import Dict, Optional, Tuple
 
 
 def normalize_git_url(url: str) -> str:
-    """Normalizes git URL for canonical equivalence comparison."""
+    """Normalizes git URL for canonical equivalence comparison across HTTPS and SSH."""
     u = url.strip().rstrip("/")
     if u.lower().endswith(".git"):
         u = u[:-4]
@@ -20,10 +20,17 @@ def normalize_git_url(url: str) -> str:
     if u.lower().startswith("file://"):
         u = u[7:]
     u = u.rstrip("/")
-    # Preserve case in git filesystem paths
-    if u.startswith("/") or u.startswith("./") or u.startswith("../") or not ("://" in u or ("@" in u and ":" in u)):
+    if u.startswith("/") or u.startswith("./") or u.startswith("../"):
         return u
-    return u.lower()
+    # Convert SSH git@host:owner/repo to host/owner/repo
+    if "@" in u and ":" in u and "://" not in u:
+        u = u.split("@", 1)[1].replace(":", "/")
+    # Convert https://host/owner/repo or ssh://git@host/owner/repo
+    if "://" in u:
+        u = u.split("://", 1)[1]
+        if "@" in u:
+            u = u.split("@", 1)[1]
+    return u.lower().strip("/")
 
 
 class GitPusher:
