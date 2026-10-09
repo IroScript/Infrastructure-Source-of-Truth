@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "timestamp": "2026-10-09T04:47:10Z",
+  "timestamp": "2026-10-09T04:48:54Z",
   "WATCHER_PROCESS": {
     "running": true,
     "pid": 1868185,
@@ -20,7 +20,15 @@
     "active_locks": []
   },
   "PENDING_COMMITS": [],
-  "PENDING_PUSHES": [],
+  "PENDING_PUSHES": [
+    {
+      "project_id": "whatsapp_master",
+      "commit_sha": "88cad2de5e02222046eb40b310e50b282e6767cb",
+      "error": "REMOTE_DRIFT: configured 'git@github.com:IroScript/Antigravity-Global-Notifier.git' != canonical 'https://github.com/IroScript/Antigravity-Global-Notifier.git'",
+      "timestamp": "2026-10-09T04:47:34Z",
+      "retry_count": 1
+    }
+  ],
   "LAST_SUCCESSFUL_PUSH": {
     "test_daemon_sandbox": {
       "timestamp": "2026-10-07T16:29:02Z",
@@ -29,14 +37,14 @@
       "remote": "/tmp/sot-watcher-test-33o4d9zr/sandbox_remote.git"
     },
     "infrastructure_source_of_truth": {
-      "timestamp": "2026-10-09T04:47:05Z",
-      "commit_sha": "3ee4d6d5d4531fadc290611158307321bae1f856",
+      "timestamp": "2026-10-09T04:48:30Z",
+      "commit_sha": "3e284d8bed054fbe1f4d06a23aae62a33ad613c3",
       "branch": "main",
       "remote": "git@github.com:IroScript/Infrastructure-Source-of-Truth.git"
     }
   },
   "REMOTE_PARITY": {
-    "whatsapp_master": "REMOTE_DRIFT: configured git@github.com:IroScript/Antigravity-Global-Notifier.git != https://github.com/IroScript/Antigravity-Global-Notifier.git",
+    "whatsapp_master": "PUSH_PENDING_RETRY",
     "youtube_pipeline": "VERIFIED",
     "telegram_bot": "REMOTE_DRIFT: configured git@github.com:IroScript/telegram-scraper-and-automation.git != https://github.com/IroScript/telegram-scraper-and-automation.git",
     "personal_ai_agent": "REMOTE_DRIFT: configured git@github.com:IroScript/personal_ai_agent.git != https://github.com/IroScript/personal_ai_agent.git",
@@ -49,5 +57,5 @@
     "openai_codex": "LOCAL_ONLY",
     "infrastructure_source_of_truth": "VERIFIED"
   },
-  "FAILED_RETRIES": 0
+  "FAILED_RETRIES": 1
 }
