@@ -14,7 +14,13 @@ with open(repo_root / 'infrastructure/SYMLINKS.json') as f:
     symlinks = json.load(f)
 home = os.environ.get('HOME', '/home/azureuser')
 projects_root = os.environ.get('PROJECTS_ROOT', os.path.join(home, 'IroScript_Projects'))
-def exp(p): return p.replace('${HOME}', home).replace('${PROJECTS_ROOT}', projects_root)
+def exp(p):
+    return (
+        p.replace('${PROJECTS_ROOT}', projects_root)
+        .replace('${HOME}', home)
+        .replace('/home/azureuser/IroScript_Projects', projects_root)
+        .replace('/home/azureuser', home)
+    )
 for s in symlinks:
     alias = exp(s['alias_path'])
     real = exp(s['resolved_physical_target'])
@@ -24,7 +30,8 @@ print('[+] Symlinks verified.')
 with open(repo_root / 'projects/PROJECTS.json') as f:
     projects = json.load(f)
 for p in projects:
-    assert os.path.exists(p['canonical_physical_path']), f'Missing folder: {p["canonical_physical_path"]}'
+    target_p = exp(p['canonical_physical_path'])
+    assert os.path.exists(target_p), f'Missing folder: {target_p}'
 print('[+] Project directories verified.')
 PY
 echo "PARITY VERIFICATION: PASS"

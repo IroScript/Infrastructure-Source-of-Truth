@@ -115,10 +115,22 @@ class BackupOrchestratorConfig:
             for p in data.get("projects", []):
                 p_copy = dict(p)
                 raw_path = p_copy.get("canonical_path", "")
-                expanded = raw_path.replace("${HOME}", str(self.home)).replace(
-                    "${PROJECTS_ROOT}", str(self.projects_root)
+                expanded = (
+                    raw_path
+                    .replace("/home/azureuser/IroScript_Projects", str(self.projects_root))
+                    .replace("/home/azureuser", str(self.home))
+                    .replace("${PROJECTS_ROOT}", str(self.projects_root))
+                    .replace("${HOME}", str(self.home))
                 )
                 p_copy["resolved_canonical_path"] = expanded
+                if "aliases" in p_copy:
+                    p_copy["resolved_aliases"] = [
+                        a.replace("/home/azureuser/IroScript_Projects", str(self.projects_root))
+                         .replace("/home/azureuser", str(self.home))
+                         .replace("${PROJECTS_ROOT}", str(self.projects_root))
+                         .replace("${HOME}", str(self.home))
+                        for a in p_copy["aliases"]
+                    ]
                 projects.append(p_copy)
             return projects
         except Exception:

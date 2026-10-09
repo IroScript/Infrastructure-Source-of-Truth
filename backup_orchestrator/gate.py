@@ -520,6 +520,83 @@ class PromptGateCoordinator:
             except OSError:
                 pass
 
+    def acquire_dispatch_claim(self, project_id: str) -> Dict[str, Any]:
+        """
+        Atomically checks gate and acquires project-scoped dispatch claim.
+        Returns acquired=True only if gate is OPEN and no ZIP capture is active.
+        """
+        if os.environ.get("TASK_MODE") == "READ_ONLY":
+            raise PermissionError("POLICY_VIOLATION_READ_ONLY: mutating operations forbidden in READ_ONLY mode")
+        proj_lock = self._get_project_lock(project_id)
+        with proj_lock:
+            with self.db.transaction() as cur:
+                cur.execute(
+                    "SELECT prompt_gate, zip_pid FROM projects_state WHERE project_id = ?;",
+                    (project_id,),
+                )
+                row = cur.fetchone()
+                if row:
+                    gate_raw = (row["prompt_gate"] or "").upper()
+                    zip_pid = row["zip_pid"] if "zip_pid" in row.keys() else None
+                    if gate_raw in ("CLOSED", "ZIP_GATE_CLOSED"):
+                        if is_pid_alive(zip_pid):
+                            return {
+                                "project_id": project_id,
+                                "acquired": False,
+                                "status": "GATE_CLOSED",
+                                "action": "HOLD_FOR_ZIP",
+                                "reason": "Prompt gate is CLOSED for active ZIP capture",
+                            }
+                        else:
+                            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                            cur.execute(
+                                "UPDATE projects_state SET prompt_gate = 'OPEN', zip_pid = NULL, updated_at = ? WHERE project_id = ?;",
+                                (now_str, project_id),
+                            )
+
+                cur.execute(
+                    "SELECT COUNT(*) FROM backup_runs WHERE project_id = ? AND status = 'CAPTURING';",
+                    (project_id,),
+                )
+                if cur.fetchone()[0] > 0:
+                    return {
+                        "project_id": project_id,
+                        "acquired": False,
+                        "status": "CAPTURING_ACTIVE",
+                        "action": "HOLD_FOR_ZIP",
+                        "reason": "Active backup capture in progress for project",
+                    }
+
+                # Prevent dispatch if .partial.zip file exists for project
+                backup_root = Path(os.environ.get("BACKUP_ROOT") or (Path.home() / "IroScript_Backups"))
+                if backup_root.is_dir():
+                    partial_zips = list(backup_root.glob(f"*{project_id}*/**/*.partial.zip")) + list(backup_root.glob(f"*{project_id}*/*.partial.zip"))
+                    if partial_zips:
+                        return {
+                            "project_id": project_id,
+                            "acquired": False,
+                            "status": "PARTIAL_ZIP_ACTIVE",
+                            "action": "HOLD_FOR_ZIP",
+                            "reason": f"Active .partial.zip file present: {partial_zips[0].name}",
+                        }
+
+                self.set_in_flight_lock(project_id, True)
+                return {
+                    "project_id": project_id,
+                    "acquired": True,
+                    "status": "CLAIM_ACQUIRED",
+                    "action": "ALLOW_DISPATCH",
+                }
+
+    def release_dispatch_claim(self, project_id: str) -> Dict[str, Any]:
+        """Releases the project-scoped in-flight delivery claim."""
+        self.set_in_flight_lock(project_id, False)
+        return {
+            "project_id": project_id,
+            "acquired": False,
+            "status": "CLAIM_RELEASED",
+        }
+
     def has_in_flight_delivery_lock(self, project_id: str) -> bool:
         """Checks both database DISPATCHING state and ephemeral in-flight lock marker for project."""
         conn = self.db.get_connection()

@@ -91,22 +91,23 @@ def handle_backup_orchestrator_cli(args: argparse.Namespace, sot_root: Path) -> 
             return 2
 
     if action == "in-flight-lock":
-        p_uuid = getattr(args, "project_uuid", "") or getattr(args, "project", "")
+        p_uuid = getattr(args, "project_uuid", "") or getattr(args, "project", "") or getattr(args, "route", "")
+        p_id = resolve_route_to_project_id(p_uuid, sot_root)
         sub_action = getattr(args, "sub_action", "check")
         from .gate import PromptGateCoordinator
         db = Database(config.db_path)
         coordinator = PromptGateCoordinator(db)
         if sub_action == "acquire":
-            coordinator.set_in_flight_lock(p_uuid, True)
-            print(json.dumps({"project_uuid": p_uuid, "in_flight": True, "status": "LOCKED"}))
-            return 0
+            res = coordinator.acquire_dispatch_claim(p_id)
+            print(json.dumps(res))
+            return 0 if res.get("acquired") else 1
         elif sub_action == "release":
-            coordinator.set_in_flight_lock(p_uuid, False)
-            print(json.dumps({"project_uuid": p_uuid, "in_flight": False, "status": "RELEASED"}))
+            res = coordinator.release_dispatch_claim(p_id)
+            print(json.dumps(res))
             return 0
         else:
-            in_flight = coordinator.has_in_flight_delivery_lock(p_uuid)
-            print(json.dumps({"project_uuid": p_uuid, "in_flight": in_flight}))
+            in_flight = coordinator.has_in_flight_delivery_lock(p_id)
+            print(json.dumps({"project_uuid": p_uuid, "project_id": p_id, "in_flight": in_flight}))
             return 0
 
     if action == "gate-check":

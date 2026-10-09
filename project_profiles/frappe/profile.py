@@ -169,7 +169,7 @@ class FrappeProjectProfile(ProjectProfile):
                 except Exception as exc:
                     errors.append(f"APP_HOOKS_EXEC_FAILED: Execution error importing {app_name} hooks: {exc}")
 
-                # 3. Custom Doctype integrity check
+                # 3. Custom Doctype integrity & Controller linkage check
                 dt_dir = pkg_dir / "doctype"
                 if dt_dir.is_dir():
                     for dt_folder in dt_dir.iterdir():
@@ -182,6 +182,55 @@ class FrappeProjectProfile(ProjectProfile):
                                     json.loads(json_file.read_text(encoding="utf-8"))
                                 except Exception as je:
                                     errors.append(f"DOCTYPE_SCHEMA_CORRUPT: Invalid JSON in {json_file}: {je}")
+
+                            # Controller file linkage and importability
+                            ctrl_file = dt_folder / f"{dt_folder.name}.py"
+                            if ctrl_file.is_file():
+                                ctrl_module = f"{app_name}.doctype.{dt_folder.name}.{dt_folder.name}"
+                                test_ctrl_cmd = [
+                                    py_exec,
+                                    "-c",
+                                    (
+                                        "import sys, importlib; "
+                                        f"sys.path.insert(0, r'{str(c_app)}'); "
+                                        f"sys.path.insert(0, r'{str(apps_dir / 'frappe')}'); "
+                                        f"sys.path.insert(0, r'{str(apps_dir / 'erpnext')}'); "
+                                        f"importlib.import_module('{ctrl_module}');"
+                                    ),
+                                ]
+                                try:
+                                    sub_res = subprocess.run(test_ctrl_cmd, capture_output=True, text=True, timeout=10)
+                                    if sub_res.returncode != 0:
+                                        err_msg = (sub_res.stderr or sub_res.stdout or "Non-zero exit").strip()
+                                        errors.append(f"CONTROLLER_IMPORT_ERROR: Failed to import controller {ctrl_module}: {err_msg}")
+                                    else:
+                                        details[f"{ctrl_module}_imported"] = True
+                                except Exception as exc:
+                                    errors.append(f"CONTROLLER_IMPORT_ERROR: Exception importing controller {ctrl_module}: {exc}")
+
+                # 4. Other key modules importability (e.g. api.py)
+                for py_candidate in pkg_dir.glob("*.py"):
+                    if py_candidate.name in ("hooks.py", "__init__.py") or py_candidate.name.startswith((".", "_")):
+                        continue
+                    mod_name = f"{app_name}.{py_candidate.stem}"
+                    test_mod_cmd = [
+                        py_exec,
+                        "-c",
+                        (
+                            "import sys, importlib; "
+                            f"sys.path.insert(0, r'{str(c_app)}'); "
+                            f"sys.path.insert(0, r'{str(apps_dir / 'frappe')}'); "
+                            f"sys.path.insert(0, r'{str(apps_dir / 'erpnext')}'); "
+                            f"importlib.import_module('{mod_name}');"
+                        ),
+                    ]
+                    try:
+                        sub_res = subprocess.run(test_mod_cmd, capture_output=True, text=True, timeout=10)
+                        if sub_res.returncode != 0:
+                            err_msg = (sub_res.stderr or sub_res.stdout or "Non-zero exit").strip()
+                            errors.append(f"CONTROLLER_IMPORT_ERROR: Failed to import module {mod_name}: {err_msg}")
+                    except Exception as exc:
+                        errors.append(f"CONTROLLER_IMPORT_ERROR: Exception importing module {mod_name}: {exc}")
 
             details["total_compiled_python_files"] = total_compiled
 

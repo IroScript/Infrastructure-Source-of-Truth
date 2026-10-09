@@ -15,6 +15,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+def _normalize_git_url(url: str) -> str:
+    u = url.strip()
+    if u.endswith(".git"):
+        u = u[:-4]
+    u = u.rstrip("/")
+    if u.startswith("git@github.com:"):
+        u = "https://github.com/" + u[len("git@github.com:"):]
+    return u.lower()
+
+
 class ProjectRecoveryOrchestrator:
     """Orchestrates generic project recovery across single and compound projects."""
 
@@ -45,12 +55,15 @@ class ProjectRecoveryOrchestrator:
     def resolve_relative_path(self, canonical_path: str) -> str:
         """Derives clean relative path under PROJECTS_ROOT from canonical path."""
         p_str = canonical_path.strip()
-        prefix1 = "/home/azureuser/IroScript_Projects/"
-        prefix2 = "/home/azureuser/"
-        if p_str.startswith(prefix1):
-            return p_str[len(prefix1):].strip("/")
-        if p_str.startswith(prefix2):
-            return p_str[len(prefix2):].strip("/")
+        for prefix in (
+            "${PROJECTS_ROOT}/",
+            "${HOME}/IroScript_Projects/",
+            "${HOME}/",
+            "/home/azureuser/IroScript_Projects/",
+            "/home/azureuser/",
+        ):
+            if p_str.startswith(prefix):
+                return p_str[len(prefix):].strip("/")
         return Path(p_str).name
 
     def recover_all(
@@ -86,7 +99,7 @@ class ProjectRecoveryOrchestrator:
             target_dir = projects_root / rel_path
 
             if p_type == "frappe_bench":
-                res = self.recover_frappe_bench(target_dir, dry_run=dry_run)
+                res = self.recover_frappe_bench(target_dir, dry_run=dry_run, home=home, projects_root=projects_root)
                 if res.get("status") == "PROJECT_RESTORED":
                     report["restored_projects"].append(p_id)
                 elif res.get("status") == "EXISTING":
@@ -100,16 +113,29 @@ class ProjectRecoveryOrchestrator:
                     continue
 
                 if (target_dir / ".git").is_dir():
-                    report["skipped_existing"].append(p_id)
-                    continue
+                    try:
+                        res_remote = subprocess.run(
+                            ["git", "-C", str(target_dir), "config", "remote.origin.url"],
+                            capture_output=True,
+                            text=True,
+                            timeout=5,
+                        )
+                        curr_remote = res_remote.stdout.strip()
+                        if _normalize_git_url(curr_remote) == _normalize_git_url(remote_url):
+                            files = [f for f in target_dir.iterdir() if f.name != ".git"]
+                            if files:
+                                report["skipped_existing"].append(p_id)
+                                continue
+                    except Exception:
+                        pass
 
                 if dry_run:
                     report["restored_projects"].append(p_id)
                     continue
 
                 target_dir.parent.mkdir(parents=True, exist_ok=True)
-                # Attempt clone if network/git credentials available
                 cloned = False
+                clone_err = ""
                 if shutil.which("git"):
                     try:
                         env = dict(os.environ)
@@ -118,43 +144,101 @@ class ProjectRecoveryOrchestrator:
                             ["git", "clone", "--depth", "1", remote_url, str(target_dir)],
                             env=env,
                             capture_output=True,
-                            timeout=10,
+                            text=True,
+                            timeout=30,
                         )
                         if res_git.returncode == 0:
                             cloned = True
-                    except Exception:
-                        cloned = False
+                        else:
+                            clone_err = res_git.stderr.strip()
+                    except Exception as e:
+                        clone_err = str(e)
 
-                # Fallback to local copy if live repository exists and clone not possible
+                # Fallback to local copy ONLY IF live repository exists, has .git, and has non-empty files
                 if not cloned and Path(c_path).is_dir() and (Path(c_path) / ".git").is_dir():
                     try:
-                        shutil.copytree(c_path, target_dir, symlinks=True, ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"))
-                        (target_dir / ".git").mkdir(parents=True, exist_ok=True)
-                        ((target_dir / ".git") / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
-                        cloned = True
-                    except Exception:
-                        pass
+                        src_files = [f for f in Path(c_path).iterdir() if f.name != ".git"]
+                        if src_files:
+                            shutil.copytree(
+                                c_path,
+                                target_dir,
+                                dirs_exist_ok=True,
+                                symlinks=True,
+                                ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+                            )
+                            cloned = True
+                    except Exception as e:
+                        clone_err = f"{clone_err}; local copy failed: {e}"
 
-                if cloned or target_dir.is_dir():
+                # Strict empirical validation:
+                # 1. target_dir exists and is a directory
+                # 2. (target_dir / ".git") exists and is a directory
+                # 3. git config remote.origin.url matches expected remote
+                # 4. directory has files other than .git
+                is_valid = False
+                validation_err = ""
+                if target_dir.is_dir() and (target_dir / ".git").is_dir():
+                    try:
+                        res_remote = subprocess.run(
+                            ["git", "-C", str(target_dir), "config", "remote.origin.url"],
+                            capture_output=True,
+                            text=True,
+                            timeout=5,
+                        )
+                        curr_remote = res_remote.stdout.strip()
+                        if _normalize_git_url(curr_remote) == _normalize_git_url(remote_url):
+                            files = [f for f in target_dir.iterdir() if f.name != ".git"]
+                            if files:
+                                is_valid = True
+                            else:
+                                validation_err = f"Target directory {target_dir} has no project files"
+                        else:
+                            validation_err = f"Remote mismatch: expected {remote_url}, got {curr_remote}"
+                    except Exception as e:
+                        validation_err = f"Failed to verify git config: {e}"
+                else:
+                    validation_err = clone_err or f"Directory {target_dir} or .git does not exist after recovery attempt"
+
+                if is_valid:
                     report["restored_projects"].append(p_id)
                 else:
-                    target_dir.mkdir(parents=True, exist_ok=True)
-                    report["restored_projects"].append(p_id)
+                    report["errors"].append({"project_id": p_id, "error": validation_err})
 
         if report["errors"]:
-            report["status"] = "BOOTSTRAP_INCOMPLETE"
+            report["status"] = "PROJECT_RESTORE_INCOMPLETE"
             report["failed_stage"] = "PROJECT_RESTORE_BLOCKED"
         else:
             report["stages"].append("PROJECT_RESTORED")
 
         return report
 
-    def recover_frappe_bench(self, target_project_dir: Path, dry_run: bool = False) -> Dict[str, Any]:
-        """Reconstructs the compound Frappe bench structure according to the manifest."""
+    def recover_frappe_bench(
+        self,
+        target_project_dir: Path,
+        dry_run: bool = False,
+        home: Optional[Path] = None,
+        projects_root: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Reconstructs the compound Frappe bench structure according to the manifest without mock stubs."""
         manifest = self.load_frappe_manifest()
         bench_dir = target_project_dir / "frappe-bench"
+        apps_dir = bench_dir / "apps"
 
-        if (bench_dir / "apps" / "frappe").is_dir() and (bench_dir / "apps" / "alco_ecommerce").is_dir():
+        required_apps = manifest.get("installed_apps", ["frappe", "erpnext", "alco_ecommerce"])
+
+        # Check existing apps
+        all_exist = True
+        for app in required_apps:
+            app_path = apps_dir / app
+            if not app_path.is_dir():
+                all_exist = False
+                break
+            files = [f for f in app_path.iterdir() if not f.name.startswith(".")]
+            if not files:
+                all_exist = False
+                break
+
+        if all_exist:
             return {"status": "EXISTING", "bench_root": str(bench_dir)}
 
         if dry_run:
@@ -162,65 +246,67 @@ class ProjectRecoveryOrchestrator:
 
         try:
             bench_dir.mkdir(parents=True, exist_ok=True)
-
-            # 1. Apps structure
-            apps_dir = bench_dir / "apps"
             apps_dir.mkdir(parents=True, exist_ok=True)
 
-            # Frappe core
-            frappe_pkg = apps_dir / "frappe" / "frappe"
-            frappe_pkg.mkdir(parents=True, exist_ok=True)
-            (frappe_pkg / "__init__.py").write_text(
-                '"""Frappe core framework mock/stub for test and offline environments."""\n__version__ = "16.0.0"\n',
-                encoding="utf-8",
-            )
-            (apps_dir / "frappe" / "pyproject.toml").write_text(
-                '[project]\nname = "frappe"\nversion = "16.0.0"\n', encoding="utf-8"
-            )
+            repo_map = {r.get("name"): r for r in manifest.get("repositories", [])}
+            missing_apps = []
 
-            # ERPNext
-            erpnext_pkg = apps_dir / "erpnext" / "erpnext"
-            erpnext_pkg.mkdir(parents=True, exist_ok=True)
-            (erpnext_pkg / "__init__.py").write_text(
-                '"""ERPNext core app mock/stub for test and offline environments."""\n__version__ = "16.0.0"\n',
-                encoding="utf-8",
-            )
-            (apps_dir / "erpnext" / "pyproject.toml").write_text(
-                '[project]\nname = "erpnext"\nversion = "16.0.0"\n', encoding="utf-8"
-            )
+            for app_name in required_apps:
+                target_app_dir = apps_dir / app_name
+                if target_app_dir.is_dir() and [f for f in target_app_dir.iterdir() if not f.name.startswith(".")]:
+                    continue
 
-            # Alco Ecommerce custom app
-            alco_pkg = apps_dir / "alco_ecommerce" / "alco_ecommerce"
-            alco_pkg.mkdir(parents=True, exist_ok=True)
-
-            # Copy existing alco_ecommerce files if source is accessible
-            source_candidates = [
-                Path("/home/azureuser/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce"),
-                Path("/home/azureuser/IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/alco_ecommerce"),
-            ]
-            copied = False
-            for cand in source_candidates:
-                if cand.is_dir() and (cand / "alco_ecommerce" / "hooks.py").is_file():
+                app_restored = False
+                # 1. Attempt git clone if repo URL available
+                repo_info = repo_map.get(app_name, {})
+                repo_url = repo_info.get("url")
+                repo_branch = repo_info.get("branch")
+                if repo_url and shutil.which("git"):
                     try:
-                        shutil.copytree(cand, apps_dir / "alco_ecommerce", dirs_exist_ok=True)
-                        copied = True
-                        break
+                        env = dict(os.environ)
+                        env["GIT_TERMINAL_PROMPT"] = "0"
+                        clone_cmd = ["git", "clone", "--depth", "1"]
+                        if repo_branch:
+                            clone_cmd.extend(["-b", repo_branch])
+                        clone_cmd.extend([repo_url, str(target_app_dir)])
+                        res = subprocess.run(clone_cmd, env=env, capture_output=True, timeout=30)
+                        if res.returncode == 0 and [f for f in target_app_dir.iterdir() if not f.name.startswith(".")]:
+                            app_restored = True
                     except Exception:
                         pass
 
-            if not copied:
-                (alco_pkg / "__init__.py").write_text(
-                    '"""Alco Ecommerce Application."""\n__version__ = "0.0.1"\n', encoding="utf-8"
-                )
-                (alco_pkg / "hooks.py").write_text(
-                    'app_name = "alco_ecommerce"\napp_title = "Alco Ecommerce"\napp_publisher = "IroScript"\n',
-                    encoding="utf-8",
-                )
-                (apps_dir / "alco_ecommerce" / "pyproject.toml").write_text(
-                    '[project]\nname = "alco_ecommerce"\nversion = "0.0.1"\n', encoding="utf-8"
-                )
+                # 2. Check local live source candidates dynamically if clone didn't work
+                if not app_restored:
+                    source_candidates = []
+                    if projects_root:
+                        source_candidates.append(Path(projects_root) / f"Frappe-erp-Alco/frappe-bench/apps/{app_name}")
+                    if home:
+                        source_candidates.append(Path(home) / f"Frappe-erp-Alco/frappe-bench/apps/{app_name}")
+                        source_candidates.append(Path(home) / f"IroScript_Projects/Frappe-erp-Alco/frappe-bench/apps/{app_name}")
+                    if "PROJECTS_ROOT" in os.environ and os.environ["PROJECTS_ROOT"]:
+                        source_candidates.append(Path(os.environ["PROJECTS_ROOT"]) / f"Frappe-erp-Alco/frappe-bench/apps/{app_name}")
 
-            # 2. Sites structure
+                    for cand in source_candidates:
+                        if cand.is_dir() and [f for f in cand.iterdir() if not f.name.startswith(".")]:
+                            try:
+                                shutil.copytree(cand, target_app_dir, dirs_exist_ok=True, symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+                                app_restored = True
+                                break
+                            except Exception:
+                                pass
+
+                if not app_restored or not target_app_dir.is_dir() or not [f for f in target_app_dir.iterdir() if not f.name.startswith(".")]:
+                    missing_apps.append(app_name)
+
+            if missing_apps:
+                return {
+                    "status": "PROJECT_RESTORE_INCOMPLETE",
+                    "error": f"Failed to restore required Frappe apps: {missing_apps}",
+                    "missing_components": missing_apps,
+                    "bench_root": str(bench_dir),
+                }
+
+            # Sites structure
             sites_dir = bench_dir / "sites"
             site_name = manifest.get("site_name", "alco.localhost")
             site_dir = sites_dir / site_name
@@ -238,13 +324,13 @@ class ProjectRecoveryOrchestrator:
                 json.dumps({"auto_order_sequential": True}, indent=2), encoding="utf-8"
             )
 
-            # 3. Compatibility contract
+            # Compatibility contract
             contract_src = self.sot_root / "project_profiles" / "frappe" / "compatibility_contract.json"
             if contract_src.is_file():
                 shutil.copy2(contract_src, bench_dir / "compatibility_contract.json")
                 shutil.copy2(contract_src, target_project_dir / "compatibility_contract.json")
 
-            # 4. Docs reference fallback inside bench if available in SOT
+            # Docs reference fallback
             docs_ref = self.sot_root / "frappe" / "docs-reference"
             if docs_ref.is_dir() and (docs_ref / "MANIFEST.json").is_file():
                 target_docs = target_project_dir / "frappe-docs-latest"
@@ -256,7 +342,7 @@ class ProjectRecoveryOrchestrator:
 
             return {"status": "PROJECT_RESTORED", "bench_root": str(bench_dir)}
         except Exception as exc:
-            return {"status": "FAILED", "error": str(exc)}
+            return {"status": "PROJECT_RESTORE_INCOMPLETE", "error": str(exc), "bench_root": str(bench_dir)}
 
 
 def main() -> int:
