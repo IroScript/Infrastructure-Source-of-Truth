@@ -29,10 +29,10 @@ class SnapshotManager:
         fingerprints: Dict[str, Tuple[int, int, str]] = {}
         ignored = set(ignored_subpaths or [])
 
-        # Sub-second fast path via git status --porcelain
+        # Sub-second fast path via git status --porcelain -uall
         try:
             proc = subprocess.run(
-                ["git", "-C", str(repo), "status", "--porcelain"],
+                ["git", "-C", str(repo), "status", "--porcelain", "-uall"],
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -46,6 +46,24 @@ class SnapshotManager:
                         path_part = path_part.split(" -> ")[1].strip()
                     fpath = repo / path_part
                     try:
+                        if fpath.is_dir():
+                            for child in fpath.rglob("*"):
+                                if child.is_file() and not child.is_symlink():
+                                    try:
+                                        crel = str(child.relative_to(repo))
+                                        if not any(
+                                            fnmatch.fnmatch(crel, ign)
+                                            or fnmatch.fnmatch(child.name, ign)
+                                            or fnmatch.fnmatch(f"*/{child.name}", ign)
+                                            or any(fnmatch.fnmatch(part, ign) for part in child.parts)
+                                            or crel == ign
+                                            or crel.startswith(ign.rstrip("*"))
+                                            for ign in ignored
+                                        ):
+                                            fingerprints[crel] = cls.get_file_fingerprint(child)
+                                    except (OSError, ValueError):
+                                        continue
+                            continue
                         rel = str(fpath.relative_to(repo))
                         if any(
                             fnmatch.fnmatch(rel, ign)

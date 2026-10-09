@@ -40,7 +40,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "*.log",
         "*.log.*",
         "*.db",
-        "*.sqlite*"
+        "*.sqlite*",
+        "*.apk",
+        "output_apk/*"
     ],
     "ephemeral_patterns": [
         "*.swp",
